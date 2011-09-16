@@ -1,0 +1,102 @@
+{% extends "admin/models/base.html" %}
+
+{% block extra_script %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(function() {
+      var admin_filter = new Admin.ModelAdminFilter();
+      admin_filter.bind_listeners();
+    });
+  </script>
+{% endblock %}
+
+{% block content_title %}{{ model_admin.get_display_name() }} Admin{% endblock %}
+
+{% block content %}
+  <p><a href="javascript:void(0);" id="add-filter">Add filter</a></p>
+  <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
+    <div class="hidden" id="filter-fields">
+    {% for field in form %}
+      {{ field(class='field-value') }}
+    {% endfor %}
+    </div>
+    <form method="get" action="." class="modeladmin-filters">
+      {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
+      <ul>
+        <li class="hidden" id="template-row">
+          <select class="field">
+            <option>--- select field ---</option>
+            {% for field in form %}
+              <option name="{{ field.name }}">{{ field.name }}</option>
+            {% endfor %}
+          </select>
+          <a href="javascript:void(0);" class="remove-filter">Remove</a>
+        </li>
+        {% for field_name, field_values in raw_filters %}
+          {% for field_value in field_values %}
+            <li>
+              <select class="field">
+                <option>--- select field ---</option>
+                {% for field in form %}
+                  <option name="{{ field.name }}"{% if field_name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
+                {% endfor %}
+              </select>
+              {{ get_form_field(form, field_name)(value=field_value, class='filter-value') }}
+              <a href="javascript:void(0);" class="remove-filter">Remove</a>
+            </li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+      <p class="submit"><button type="submit" class="small">Apply</button>
+        <a href="." class="small gray button">Reset</a>
+      </p>
+    </form>
+  </div>
+  
+  <form method="post" action=".">
+  <div class="table-wrapper">
+    <table class="admin-list">
+    <thead>
+      <tr>
+        <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
+        {% if model_admin.columns %}
+          {% for column in model_admin.columns %}
+            {% if ordering == column %}
+              {% set sort_by = '-'+column %}
+            {% else %}
+              {% set sort_by = column %}
+            {% endif %}
+            <th>{% if model_admin.column_is_sortable(column) %}<a href="./?{{ update_querystring(request.query_string, 'ordering', sort_by)|safe() }}">{% endif %}{{ get_verbose_name(model_admin.model, column) }}{% if model_admin.column_is_sortable(column) %}</a>{% endif %}</th>
+          {% endfor %}
+        {% else %}
+          <th>{{ model_admin.get_display_name() }}</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for object in query.get_list() %}
+      <tr class="{{ loop.cycle('odd', 'even') }}">
+        <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
+        {% if model_admin.columns %}
+          {% for column in model_admin.columns %}
+            {% if loop.index == 1 %}
+              <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ get_model_field(object, column) }}</a></td>
+            {% else %}
+              <td>{{ get_model_field(object, column) }}</td>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+  </div>
+  <p>
+    <a class="button" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a>
+    <button class="gray" type="submit">Delete selected</button>
+  </p>
+  </form>
+  {% include "admin/includes/pagination.html" %}
+{% endblock %}

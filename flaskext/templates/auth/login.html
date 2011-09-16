@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% from 'macros/forms.html' import with_errors %}
+
+{% block content_title %}Log in{% endblock %}
+
+{% block content %}
+  <form method="post" action="">
+    <input type="hidden" name="next" value="{{ next }}" />
+    {% for field in form %}
+      <p>{{ field.label }} {{ with_errors(field) }}</p>
+    {% endfor %}
+    <p><button type="submit">Log in</button></p>
+  </form>
+{% endblock %}

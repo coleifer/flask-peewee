@@ -1,0 +1,184 @@
+from hashlib import sha1
+import functools
+import os
+
+from flask import Blueprint, render_template, abort, request, session, flash, redirect, url_for, g
+from peewee import *
+from wtforms import Form, TextField, PasswordField
+
+from flaskext.utils import get_next
+
+
+current_dir = os.path.dirname(__file__)
+
+
+class LoginForm(Form):
+    username = TextField('Username')
+    password = PasswordField('Password')
+
+
+class Auth(object):
+    default_next_url = 'homepage'
+    
+    def __init__(self, app, db, user_model=None, prefix='/accounts'):
+        self.app = app
+        self.db = db
+        
+        self.User = user_model or self.get_user_model()
+        
+        self.blueprint = self.get_blueprint()
+        self.url_prefix = prefix
+        
+        self.configure_routes()
+        self.register_blueprint()
+        self.register_handlers()
+        
+        self.app.template_context_processors[None].append(self.get_context_user)
+    
+    def get_context_user(self):
+        return {'user': self.get_logged_in_user()}
+    
+    def get_user_model(self):
+        class User(self.db.Model):
+            username = CharField()
+            password = CharField()
+            email = CharField()
+            active = BooleanField()
+            admin = BooleanField()
+            
+            def __unicode__(self):
+                return self.username
+            
+            def set_password(self, password):
+                self.password = sha1(password).hexdigest()
+        
+        return User
+    
+    def get_model_admin(self, model_admin=None):
+        if model_admin is None:
+            from flaskext.admin import ModelAdmin
+            model_admin = ModelAdmin
+        
+        class UserAdmin(model_admin):
+            columns = ['username', 'email', 'active', 'admin']
+            
+            def save_model(self, instance, form, adding=False):
+                user = super(UserAdmin, self).save_model(instance, form, adding)
+                if adding:
+                    user.set_password(form.password.data)
+                    user.save()
+                return user
+                
+        
+        return UserAdmin
+    
+    def register_admin(self, admin_site, model_admin=None):
+        admin_site.register(self.User, self.get_model_admin(model_admin))
+    
+    def get_blueprint(self):
+        return Blueprint(
+            'auth',
+            'auth',
+            static_folder=os.path.join(current_dir, 'static'),
+            template_folder=os.path.join(current_dir, 'templates'),
+        )
+    
+    def get_urls(self):
+        return (
+            ('/', self.index),
+            ('/logout/', self.logout),
+            ('/login/', self.login),
+        )
+    
+    def get_login_form(self):
+        return LoginForm
+    
+    def login_required(self, func):
+        @functools.wraps(func)
+        def inner(*args, **kwargs):
+            user = self.get_logged_in_user()
+            
+            if not user:
+                login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
+                return redirect(login_url)
+            
+            return func(*args, **kwargs)
+        return inner
+    
+    def authenticate(self, username, password):
+        active = self.User.select().where(active=True)
+        try:
+            user = active.get(
+                username=username,
+                password=sha1(password).hexdigest()
+            )
+        except self.User.DoesNotExist:
+            return False
+        
+        return user
+    
+    def login_user(self, user):
+        session['logged_in'] = True
+        session['user_pk'] = user.get_pk()
+        flash('You are logged in as %s' % user.username)
+    
+    def logout_user(self, user):
+        session.pop('logged_in', None)
+        flash('You are now logged out')
+    
+    def get_logged_in_user(self):
+        if session.get('logged_in'):
+            if getattr(g, 'user', None):
+                return g.user
+            
+            try:
+                return self.User.select().where(active=True).get(id=session.get('user_pk'))
+            except self.User.DoesNotExist:
+                pass
+    
+    def index(self):
+        pass
+    
+    def login(self):
+        error = None
+        Form = self.get_login_form()
+        
+        if request.method == 'POST':
+            form = Form(request.form)
+            if form.validate():
+                authenticated_user = self.authenticate(
+                    form.username.data,
+                    form.password.data,
+                )
+                if authenticated_user:
+                    self.login_user(authenticated_user)
+                    return redirect(
+                        request.args.get('next') or \
+                        url_for(self.default_next_url)
+                    )
+                else:
+                    flash('Incorrect username or password')
+        else:
+            form = Form()
+        
+        return render_template('auth/login.html', error=error, form=form)
+
+    def logout(self):
+        self.logout_user(self.get_logged_in_user())
+        return redirect(
+            request.args.get('next') or \
+            url_for(self.default_next_url)
+        )
+    
+    def configure_routes(self):
+        for url, callback in self.get_urls():
+            self.blueprint.route(url, methods=['GET', 'POST'])(callback)
+    
+    def register_blueprint(self, **kwargs):
+        self.app.register_blueprint(self.blueprint, url_prefix=self.url_prefix, **kwargs)
+    
+    def load_user(self):
+        g.user = self.get_logged_in_user()
+    
+    def register_handlers(self):
+        self.app.before_request(self.load_user)

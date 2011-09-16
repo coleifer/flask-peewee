@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content_title %}Users{% endblock %}
+
+{% block content %}
+  <ul>
+    {% for person in user_list %}
+      <li><a href="{{ url_for('user_detail', username=person.username) }}">{{ person.username }}</a></li>
+    {% endfor %}
+  </ul>
+  {% include "includes/pagination.html" %}
+{% endblock %}

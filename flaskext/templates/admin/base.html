@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+
+  <!--[if IE]><![endif]-->
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>{% block title %}{% endblock %} | Admin</title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <meta name="viewport" content="width=device-width; initial-scale=1.0">
+
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
+ 
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script>!window.jQuery && document.write('<script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"><\/script>')</script>
+  
+  <script src="{{ url_for('admin.static', filename='js/modernizr-1.5.min.js') }}"></script>
+  <script src="{{ url_for('admin.static', filename='js/events.js') }}"></script>
+  <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
+  {% block extra_script %}{% endblock %}
+</head>
+
+<body class="{% block body_class %}admin{% endblock %}">
+  <div id="container">
+    {% block header_wrapper %}
+    <div id="header_wrapper">
+      <header class="clearfix">
+        <div id="branding">
+          <h1>Site Administration</h1>
+          <p>Logged in as {{ user.username }}</p>
+          <p><a class="button blue small" href="{{ url_for('auth.logout') }}">Log out</a></p>
+        </div>
+      </header>
+    </div>
+    {% endblock %}
+  
+    <div id="content_wrapper">
+      {% block content_wrapper %}
+      <div id="main">
+        {% for message in get_flashed_messages() %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+        
+        <h2>{% block content_title %}{% endblock %}</h2>
+        {% block content %}{% endblock %}
+      </div>
+      {% endblock %}
+      
+      {% block sidebar_wrapper %}
+      <div id="sidebar">
+        <ul>
+          <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+        </ul>
+        {% block sidebar %}
+          <ul>
+            {% for iter_admin in model_admins %}
+              <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a>
+                {% if model_admin == iter_admin %}
+                  <ul>
+                    <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
+                  </ul>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endblock %}
+      </div>
+      {% endblock %}
+    </div>
+    
+    {% block footer_wrapper %}
+    <div id="footer_wrapper">
+      <footer>{% block footer %}Site administration{% endblock %}</footer>
+    </div>
+    {% endblock %}
+  </div> <!--! end of #container -->
+</body>
+</html>

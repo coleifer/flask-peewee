@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content_title %}Message from {{ person.username }}{% endblock %}
+
+{% block content %}
+  {% if user %}
+    {% if person.username != user.username %}
+      {% if user|is_following(person) %}
+        <form action="{{ url_for('user_unfollow', username=person.username) }}" method="post">
+          <input type="submit" value="- Un-follow" />
+        </form>
+      {% else %}
+        <form action="{{ url_for('user_follow', username=person.username) }}" method="post">
+          <input type="submit" value="+ Follow" />
+        </form>
+      {% endif %}
+    {% endif %}
+  {% else %}
+    <p><a href="{{ url_for('auth.login', next=request.path) }}">Log-in to follow</a></p>
+  {% endif %}
+  <ul>
+    {% for message in message_list %}
+      <li>{% include "includes/message.html" %}</li>
+    {% endfor %}
+  </ul>
+  {% include "includes/pagination.html" %}
+{% endblock %}

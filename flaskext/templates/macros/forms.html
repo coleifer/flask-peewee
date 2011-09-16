@@ -1,0 +1,11 @@
+{% macro with_errors(field) %}
+  {% if field.errors %}
+    {% set css_class = 'invalid ' + kwargs.pop('class', '') %}
+    {{ field(class=css_class, **kwargs) }}
+    {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
+    <ul class="errors">{% for error in field.errors %}<li>{{ error|e }}</li>{% endfor %}</ul>
+  {% else %}
+    {{ field(**kwargs) }}
+    {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
+  {% endif %}
+{% endmacro %}

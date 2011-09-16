@@ -1,0 +1,6 @@
+{% if page > 1 %}
+  <a class="previous" href="./?page={{ page - 1 }}">Previous</a>
+{% endif %}
+{% if pagination.get_pages() > page %}
+  <a class="next" href="./?page={{ page + 1 }}">Next</a>
+{% endif %}

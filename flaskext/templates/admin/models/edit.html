@@ -1,0 +1,21 @@
+{% extends "admin/models/base.html" %}
+
+{% block content_title %}Edit {{ model_admin.get_display_name() }}{% endblock %}
+
+{% block content %}
+  <form method="post" action="." class="edit">
+    <div class="table-wrapper">
+      <table class="admin-form">
+        {% for field in form %}
+          <tr class="{{ loop.cycle('odd', 'even') }}">
+            <td class="field-label">{{ field.label }}</td>
+            <td>{{ with_errors(field) }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="submit"><td colspan="2"><button type="submit">Save</button>
+          <a href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+        </td></tr>
+      </table>
+    </div>
+  </form>
+{% endblock %}

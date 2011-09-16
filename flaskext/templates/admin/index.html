@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+
+{% block content_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+  {% for panel in panels %}
+    {{ panel.render()|safe() }}
+  {% endfor %}
+  
+  <div class="table-wrapper">
+    <table class="admin-list">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>  
+      {% for model_admin in model_admins %}
+        <tr class="{{ loop.cycle('odd', 'even') }}">
+          <td><a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ model_admin.get_display_name() }}</a></td>
+          <td><a href="{{ url_for(model_admin.get_url_name('add')) }}"><img src="{{ url_for('admin.static', filename='img/icon_addlink.gif') }}" /></a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

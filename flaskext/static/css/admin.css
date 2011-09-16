@@ -1,0 +1,491 @@
+/* resets */
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+abbr, address, cite, code,
+del, dfn, em, img, ins, kbd, q, samp,
+small, strong, sub, sup, var,
+b, i,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section, summary,
+time, mark, audio, video {
+  margin:0;
+  padding:0;
+  border:0;
+  outline:0;
+  font-size:100%;
+  vertical-align:baseline;
+  background:transparent;
+}                  
+
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section { 
+    display:block;
+}
+
+nav ul { list-style:none; }
+
+blockquote, q { quotes:none; }
+
+blockquote:before, blockquote:after,
+q:before, q:after { content:''; content:none; }
+
+a { margin:0; padding:0; font-size:100%; vertical-align:baseline; background:transparent; }
+
+ins { background-color:#ff9; color:#000; text-decoration:none; }
+
+mark { background-color:#ff9; color:#000; font-style:italic; font-weight:bold; }
+
+del { text-decoration: line-through; }
+
+abbr[title], dfn[title] { border-bottom:1px dotted; cursor:help; }
+
+/* tables still need cellspacing="0" in the markup */
+table { border-collapse:collapse; border-spacing:0; }
+
+hr { display:block; height:1px; border:0; border-top:1px solid #ccc; margin:1em 0; padding:0; }
+
+input, select { vertical-align:middle; }
+
+/* application css */
+body { font:13px/1.231 sans-serif; *font-size:small; } /* hack retained to preserve specificity */
+
+select, input, textarea, button { font:99% sans-serif; }
+
+/* normalize monospace sizing 
+ * en.wikipedia.org/wiki/MediaWiki_talk:Common.css/Archive_11#Teletype_style_fix_for_Chrome
+ */
+pre, code, kbd, samp { font-family: monospace, sans-serif; }
+ 
+
+/* 
+ * minimal base styles 
+ */
+
+
+body, select, input, textarea { 
+  color: #444; 
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+/* Headers (h1,h2,etc) have no default font-size or margin,
+   you'll want to define those yourself. */ 
+h1,h2,h3,h4,h5,h6 { font-weight: bold; }
+
+/* always force a scrollbar in non-IE */ 
+html { overflow-y: scroll; }
+
+ 
+a:hover, a:active { outline: none; }
+a, a:active, a:visited { color: #666; }
+a:hover { color: #e33; }
+
+
+ol { list-style-type: decimal; }
+
+small { font-size: 85%; }
+strong, th { font-weight: bold; }
+
+td, td img { vertical-align: top; } 
+
+sub { vertical-align: sub; font-size: smaller; }
+sup { vertical-align: super; font-size: smaller; }
+
+pre { 
+  padding: 15px; 
+  
+  /* www.pathf.com/blogs/2008/05/formatting-quoted-code-in-blog-posts-css21-white-space-pre-wrap/ */
+  white-space: pre; /* CSS2 */
+  white-space: pre-wrap; /* CSS 2.1 */
+  white-space: pre-line; /* CSS 3 (and 2.1 as well, actually) */
+  word-wrap: break-word; /* IE */
+}
+ 
+textarea { overflow: auto; } /* thnx ivannikolic! www.sitepoint.com/blogs/2010/08/20/ie-remove-textarea-scrollbars/ */
+
+.ie6 legend, .ie7 legend { margin-left: -7px; } /* thnx ivannikolic! */
+
+/* align checkboxes, radios, text inputs with their label
+   by: Thierry Koblentz tjkdesign.com/ez-css/css/base.css  */
+input[type="radio"] { vertical-align: text-bottom; }
+input[type="checkbox"] { vertical-align: bottom; }
+.ie7 input[type="checkbox"] { vertical-align: baseline; }
+.ie6 input { vertical-align: text-bottom; }
+
+/* hand cursor on clickable input elements */
+label, input[type=button], input[type=submit], button { cursor: pointer; }
+ 
+/* webkit browsers add a 2px margin outside the chrome of form elements */  
+button, input, select, textarea { margin: 0; }
+
+/* colors for form validity */
+input.valid, textarea.valid   {  }
+input.invalid, textarea.invalid { 
+      border-radius: 1px;
+    -moz-box-shadow: 0px 0px 5px red; 
+ -webkit-box-shadow: 0px 0px 5px red; 
+         box-shadow: 0px 0px 5px red;
+}
+.no-boxshadow input.invalid, 
+.no-boxshadow textarea.invalid { background-color: #f0dddd; }
+
+/*  j.mp/webkit-tap-highlight-color */
+a:link { -webkit-tap-highlight-color: #FF5E99; } 
+
+/* make buttons play nice in IE:    
+   www.viget.com/inspire/styling-the-button-element-in-internet-explorer/ */
+button {  width: auto; overflow: visible; }
+ 
+/* bicubic resizing for non-native sized IMG: 
+   code.flickr.com/blog/2008/11/12/on-ui-quality-the-little-things-client-side-image-resizing/ */
+.ie7 img { -ms-interpolation-mode: bicubic; }
+
+
+
+/* 
+ * Non-semantic helper classes 
+ */
+
+/* for image replacement */
+.ir { display: block; text-indent: -999em; overflow: hidden; background-repeat: no-repeat; text-align: left; direction: ltr; }
+
+/* Hide for both screenreaders and browsers
+   css-discuss.incutio.com/wiki/Screenreader_Visibility */
+.hidden { display: none; visibility: hidden; } 
+
+/* Hide only visually, but have it available for screenreaders 
+   www.webaim.org/techniques/css/invisiblecontent/ 
+   Solution from: j.mp/visuallyhidden - Thanks Jonathan Neal! */
+.visuallyhidden { position: absolute !important;    
+  clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+  clip: rect(1px, 1px, 1px, 1px); }
+
+/* Hide visually and from screenreaders, but maintain layout */
+.invisible { visibility: hidden; }
+
+/* >> The Magnificent CLEARFIX << j.mp/phayesclearfix */
+.clearfix:after  { content: "\0020"; display: block; height: 0; clear: both; visibility: hidden; }
+/* Fix clearfix: blueprintcss.lighthouseapp.com/projects/15318/tickets/5-extra-margin-padding-bottom-of-page */
+.clearfix { zoom: 1; }
+
+/* admin styles */
+
+/* typography */
+h1,h2,h3 { margin: 0 0 12px 0; }
+h4,h5,h6 { margin: 0 0 8px 0; }
+h1 { font-size: 28px; }
+h2 { font-size: 24px; }
+h3 { font-size: 20px; }
+h4 { font-size: 16px; }
+h5 { font-size: 13.5px; }
+
+p { margin: 0 0 8px 0; }
+
+/* forms and input elements */
+form { margin-top: 20px; }
+form p { margin: 0 0 10px; clear: both; }
+form p label { color: #666; display: block; float: left; width: 110px; }
+form p label.required { color: #444; }
+form p input,select,textarea { vertical-align: middle; margin: 2px 0; }
+form p span.help { clear: left; display: block; float: left; margin: 5px 0 5px 110px; }
+form span.help { color: #999;font-size: 12px; }
+form ul.errors { list-style: inside; margin: 3px 0 0; }
+form ul.errors li { color: #d00; }
+
+input[type="text"], input[type="password"], select, textarea {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    padding: 3px;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+}
+
+/* buttons */
+.button:visited, .button:hover, .button:active { color: #fff; }
+
+input[type="submit"], input[type="button"], button, .button {
+    background-image: linear-gradient(top, #dd4b39, #d14836);
+    border: 1px solid transparent;
+    border-radius: 2px;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 1px 0px;
+    color: #fff;
+    font-weight: bold;
+    margin: 10px 10px 0 0;
+    padding: 8px 15px;
+    text-decoration: none;
+    text-shadow: 0 1px rgba(0, 0, 0, 0.1);
+    text-transform: uppercase;
+    -moz-border-radius: 2px;
+    -moz-box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 1px 0px;
+    -o-transition: border-top-color 0.218s,border-right-color 0.218s,border-bottom-color 0.218s,border-left-color .218s;
+    -webkit-border-radius: 2px;
+    -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 1px 0px;
+    -webkit-transition: border-color .218s;
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#dd4b39),to(#d14836));
+    background-image: -moz-linear-gradient(top, #dd4b39, #d14836);
+}
+.button { cursor: pointer; }
+input[type="submit"]:hover, input[type="button"]:hover, button:hover, .button:hover { 
+    background-image: linear-gradient(top,#dd4b39,#c53727);
+    border: 1px solid #b0281a;
+    border-bottom: 1px solid #af301f;
+    color: #fff;
+    background-image: -webkit-gradient(linear,left top, left bottom,from(#dd4b39),to(#c53727));
+    background-image: -moz-linear-gradient(top,#dd4b39,#c53727);
+}
+input[type="submit"]:active, input[type="button"]:active, button:active, .button:active { 
+    background-image: linear-gradient(top,#dd4b39,#b0281a);
+    border: 1px solid #b0281a;
+    border-bottom: 1px solid #af301f;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    -moz-box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    -webkit-box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    background-image: -webkit-gradient(linear,left top, left bottom,from(#dd4b39),to(#b0281a));
+    background-image: -moz-linear-gradient(top,#dd4b39,#b0281a);
+}
+
+/* alternate buttons */
+input.blue[type="submit"], input.blue[type="button"], button.blue, .button.blue {
+    background-image: linear-gradient(top,#4D90FE,#4787ED);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: white;
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#4D90FE),to(#4787ED));
+    background-image: -moz-linear-gradient(top,#4D90FE,#4787ED);
+}
+input.blue[type="submit"]:hover, input.blue[type="button"]:hover, button.blue:hover, .button.blue:hover {
+    background-image: linear-gradient(top,#4D90FE,#357ae8);
+    border-color: #2f5bb7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    color: #fff;
+    -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#4D90FE),to(#357ae8));
+    background-image: -moz-linear-gradient(top,#4D90FE,#357ae8);
+}
+input.blue[type="submit"]:active, input.blue[type="button"]:active, button.blue:active, .button.blue:active {
+    background: #4d90f3;
+    color: white;
+}
+
+input.gray[type="submit"], input.gray[type="button"], button.gray, .button.gray {
+    background: linear-gradient(top,whiteSmoke,#F1F1F1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #666;
+    background: -webkit-gradient(linear,0% 40%,0% 70%,from(whiteSmoke),to(#F1F1F1));
+    background: -moz-linear-gradient(top,whiteSmoke,#F1F1F1);
+}
+input.gray[type="submit"]:hover, input.gray[type="button"]:hover, button.gray:hover, .button.gray:hover {
+    border-color: #444;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    color: #333;
+    -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+input.gray[type="submit"]:active, input.gray[type="button"]:active, button.gray:active, .button.gray:active {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    color: #333;
+    -webkit-box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    -moz-box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+input[type="submit"].small, input[type="button"].small, button.small, .button.small { padding: 3px 7px; font-size: 11px; }
+
+/* tables */
+div.table-wrapper {
+  border: 1px solid #eee;
+  border-radius: 5px;
+  clear: both;
+  margin: 0 0 10px 0;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+}
+table {
+  border-collapse: collapse; 
+  border-color: gray;
+  border-spacing: 2px;
+  display: table;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  -webkit-border-horizontal-spacing: 2px;
+  -webkit-border-vertical-spacing: 2px;
+}
+thead {
+  display: table-header-group;
+  vertical-align: middle;
+  border-color: inherit;
+}
+tbody {
+  display: table-row-group;
+  vertical-align: middle;
+  border-color: inherit;
+}
+tr {
+  display: table-row;
+  vertical-align: inherit;
+  border-color: inherit;
+}
+tr.even {
+  background: #f3f3f3;
+}
+table.admin-list thead tr {
+  background-image: linear-gradient(top, #fff, #eee);
+  border-bottom: 2px solid #ddd;
+  background-image: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#eee));
+  background-image: -moz-linear-gradient(top, #fff, #eee);
+}
+table.admin-form tbody tr:last-child {
+  background-color: #fff;
+}
+td, th {
+  display: table-cell;
+  vertical-align: inherit;
+}
+th {
+  color: #444;
+  font-size: 16px;
+  padding: 10px 8px;
+}
+td {
+  font-size: 13.5px;
+  color: #888;
+  padding: 8px;
+}
+td.field-label {
+  color: #888;
+  width: 120px;
+}
+th.check, td.check {
+  width: 20px;
+}
+
+/* structure 
+
+<body>
+ +--#container-----------------------------------+
+ |                                               |
+ | +--#header_wrapper--------------------------+ |
+ | | <header><div#branding /><nav /></header>  | |
+ | +-------------------------------------------+ |
+ |                                               |
+ | +--#content_wrapper-------------------------+ |
+ | |                                           | |
+ | | +-#sidebar-+  +--#main------------------+ | |
+ | | | <ul />   |  | <div.flash />           | | |
+ | | +----------+  | <h2>title</h2>          | | |
+ | |               | ...content...           | | |
+ | |               +-------------------------+ | |
+ | |                                           | |
+ | +-------------------------------------------+ |
+ |                                               |
+ | +--#footer_wrapper--------------------------+ |
+ | | <footer />                                | |
+ | +-------------------------------------------+ |
+ |                                               |
+ +-----------------------------------------------+
+</body>
+ 
+*/
+div#container { width: 1000px; }
+div#header_wrapper { margin: 0 0 10px;}
+div#main { clear: left; float: right; width: 800px; }
+div#sidebar { clear: left; float: left; margin-right: 15px; padding: 0 7px; width: 170px; }
+div#footer_wrapper { clear: both; margin-top: 40px; padding: 5px 15px; }
+
+body.wide div#main { float: left; width: 1000px; }
+
+/* appearance */
+
+/* header and footer */
+div#header_wrapper { background-color: #444; border-bottom: 1px solid #eee; }
+
+div#footer_wrapper { background-color: #444; color: #bbb; }
+div#footer_wrapper p { text-align: right; }
+
+header { border-bottom: 1px solid #ccc; }
+nav ul { list-style-type: none; margin: 0; }
+nav ul#nav { float: left; }
+nav ul li { float: left; line-height: 24px; }
+nav ul li a { color: #aaa; display: block; line-height: 24px; padding: 5px 15px; text-decoration: none; }
+nav ul li a:visited { color: #aaa; }
+nav ul li a:hover { background-color: #444; color: #aaa; }
+
+div#branding { background-color: #444; color: white; padding: 10px; }
+div#branding h1 { display: inline; margin-left: 10px; margin-top: -5px; }
+div#branding p { display: inline; margin-left: 20px; }
+
+/* sidebar */
+div#sidebar ul {
+  list-style-type: none;
+  border: 1px solid #eee;
+  margin: 0 0 10px 0;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
+}
+div#sidebar ul li {
+  border-bottom: 1px solid #eee;
+}
+div#sidebar ul li a {
+  display: block;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-weight: bold;
+}
+div#sidebar ul li:hover {
+  background-image: linear-gradient(top, #fff, #eee);
+  background-image: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#eee));
+  background-image: -moz-linear-gradient(top, #fff, #eee);
+}
+div#sidebar ul li:last-child {border-bottom: none;}
+div#sidebar ul li ul { border: none; margin: 0; list-style: disc inside; }
+div#sidebar ul li ul li:hover { background-image:none; }
+div#sidebar ul li ul li a { font-weight: normal; }
+
+/* admin panels */
+div.admin-panel {
+  border: 1px solid #eee;
+  border-radius: 3px;
+  float: left;
+  margin: 0 20px 20px 0;
+  width: 370px;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+}
+div.admin-panel h3 {
+  background-image: linear-gradient(top, #fff, #eee);
+  border-bottom: 1px solid #eee;
+  font-size: 16px;
+  padding: 8px;
+  background-image: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#eee));
+  background-image: -moz-linear-gradient(top, #fff, #eee);
+}
+div.admin-panel .panel-content {
+  padding: 8px;
+}
+
+/* modeladmin filters */
+div#filter-wrapper {
+  border: 1px solid #eee;
+  border-radius: 3px;
+  margin: 20px 0;
+  padding: 5px 10px;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+}
+form.modeladmin-filters { margin: 0; }
+form.modeladmin-filters ul { list-style-type: none; }
+form.modeladmin-filters select.field { margin-right: 10px; }
+
+
+.flash {
+  background: #CEE5F5; padding: 10px;
+  border: 1px solid #AACBE2;
+  border-radius: 3px;
+  margin-bottom: 10px;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content_title %}Private Timeline{% endblock %}
+
+{% block content %}
+  <ul>
+    {% for message in message_list %}
+      <li>{% include "includes/message.html" %}</li>
+    {% endfor %}
+  </ul>
+  {% include "includes/pagination.html" %}
+{% endblock %}

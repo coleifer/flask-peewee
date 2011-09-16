@@ -1,0 +1,8 @@
+<p class="pagination">
+{% if query.get_page() > 1 %}
+  <a class="previous" href="./?{{ update_querystring(request.query_string, 'page', query.get_page() - 1) }}">Previous</a>
+{% endif %}
+{% if query.get_pages() > query.get_page() %}
+  <a class="next" href="./?{{ update_querystring(request.query_string, 'page', query.get_page() + 1) }}">Next</a>
+{% endif %}
+</p>

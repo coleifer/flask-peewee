@@ -1,0 +1,12 @@
+{% extends "admin/panels/default.html" %}
+
+{% block panel_content %}
+  {% for note in note_list %}
+    <p>{{ note.user.username }}: {{ note.message }}</p>
+  {% endfor %}
+  <form method="post" action="{{ url_for(panel.get_url_name('create')) }}">
+    <input type="hidden" value="{{ request.url }}" />
+    <p><textarea name="message"></textarea></p>
+    <p><button type="submit" class="small">Save</button></p>
+  </form>
+{% endblock %}
