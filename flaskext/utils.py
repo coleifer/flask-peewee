@@ -2,7 +2,7 @@ import math
 import re
 
 from flask import abort, request, render_template
-from peewee import Model, DoesNotExist
+from peewee import Model, DoesNotExist, SelectQuery
 
 
 def get_object_or_404(query_or_model, **query):
@@ -23,12 +23,12 @@ class PaginatedQuery(object):
     def __init__(self, query_or_model, paginate_by):
         self.paginate_by = paginate_by
         
-        if isinstance(query_or_model, Model):
-            self.model = query_or_model
-            self.query = self.model.select()
-        else:
+        if isinstance(query_or_model, SelectQuery):
             self.query = query_or_model
             self.model = self.query.model
+        else:
+            self.model = query_or_model
+            self.query = self.model.select()
     
     def get_page(self):
         return int(request.args.get(self.page_var) or 1)
