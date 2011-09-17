@@ -74,6 +74,20 @@ a way to expose a RESTful interface for your project's models.
     }
 
 
+installing
+----------
+
+I recommend installing in a virtualenv.  to get started::
+
+    # create a new virtualenv
+    virtualenv --no-site-packages project
+    cd project/
+    source bin/activate
+
+    # install this project (will install dependencies as well)
+    pip install flask-peewee
+
+
 example app
 -----------
 
