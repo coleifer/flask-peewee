@@ -1,3 +1,4 @@
+import math
 import re
 
 from flask import abort, request, render_template
@@ -33,7 +34,7 @@ class PaginatedQuery(object):
         return int(request.args.get(self.page_var) or 1)
     
     def get_pages(self):
-        return self.query.count() / self.paginate_by + 1
+        return math.ceil(float(self.query.count()) / self.paginate_by)
     
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
