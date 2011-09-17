@@ -2,9 +2,9 @@ from setuptools import setup
 
 
 setup(
-    name='Flask-Peewee',
-    version='1.0',
-    url='http://example.com/flask-sqlite3/',
+    name='flask-peewee',
+    version='0.1.0',
+    url='http://github.com/coleifer/flask-peewee/',
     license='BSD',
     author='Charles Leifer',
     author_email='coleifer@gmail.com',
