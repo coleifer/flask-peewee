@@ -3,5 +3,5 @@
 import sys
 sys.path.insert(0, '..')
 
-import app
-app.app.run()
+import main
+main.app.run()
