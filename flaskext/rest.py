@@ -5,7 +5,7 @@ try:
 except ImportError:
     import json
 
-from flask import Blueprint, abort, request, Response, session, redirect, url_for
+from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
 from peewee import *
 
 from flaskext.serializer import Serializer, Deserializer
@@ -32,6 +32,8 @@ class UserAuthentication(Authentication):
         self.auth = auth
     
     def authorize(self):
+        g.user = None
+        
         if request.method not in self.protected_methods:
             return True
         
@@ -39,7 +41,42 @@ class UserAuthentication(Authentication):
         if not basic_auth:
             return False
         
-        return self.auth.authenticate(basic_auth.username, basic_auth.password)
+        g.user = self.auth.authenticate(basic_auth.username, basic_auth.password)
+        return g.user
+
+
+class AdminAuthentication(UserAuthentication):
+    def verify_user(self, user):
+        return user.admin
+    
+    def authorize(self):
+        res = super(AdminAuthentication, self).authorize()
+        
+        if res and g.user:
+            return self.verify_user(g.user)
+        return res
+
+
+class OwnerAuthentication(UserAuthentication):
+    # restrict PUT/DELETE to owner of an object, likewise apply owner to any
+    # incoming POSTs
+    owner_field = 'user'
+    
+    def validate_owner(self, user, obj):
+        self.assertEqual(user, getattr(obj, self.owner_field))
+    
+    def set_owner(self, obj, user):
+        setattr(obj, self.owner_field, user)
+    
+    def check_put(self, obj):
+        return self.validate_owner(g.user, obj)
+    
+    def check_delete(self, obj):
+        return self.validate_owner(g.user, obj)
+    
+    def save_object(self, instance, raw_data):
+        self.set_owner(instance, g.user)
+        return super(OwnerOnlyAuthentication, self).save_object(instance, raw_data)
 
 
 class RestResource(object):
@@ -98,8 +135,11 @@ class RestResource(object):
     def deserialize_object(self, data, instance):
         return self.get_deserializer().deserialize_object(data, instance)
     
+    def response_forbidden(self):
+        return Response('Forbidden', 403)
+    
     def response_bad_method(self):
-        return Response('Unsupported method "%s"' % (request.method), 403)
+        return Response('Unsupported method "%s"' % (request.method), 405)
     
     def response_bad_request(self):
         return Response('Bad request', 400)
@@ -121,7 +161,26 @@ class RestResource(object):
             ('/<pk>/', self.require_method(self.api_detail, ['GET', 'PUT', 'DELETE'])),
         )
     
+    def check_get(self, obj=None):
+        return True
+    
+    def check_post(self):
+        return True
+    
+    def check_put(self, obj):
+        return True
+    
+    def check_delete(self, obj):
+        return True
+    
+    def save_object(self, instance, raw_data):
+        instance.save()
+        return instance
+    
     def api_list(self):
+        if not getattr(self, 'check_%s' % request.method.lower())():
+            return self.response_forbidden()
+        
         if request.method == 'GET':
             return self.object_list()
         elif request.method == 'POST':
@@ -131,6 +190,9 @@ class RestResource(object):
         obj = get_object_or_404(self.get_query(), **{
             self.model._meta.pk_name: pk
         })
+        
+        if not getattr(self, 'check_%s' % request.method.lower())(obj):
+            return self.response_forbidden()
         
         if request.method == 'GET':
             return self.object_detail(obj)
@@ -218,7 +280,7 @@ class RestResource(object):
             return self.response_bad_request()
         
         instance = self.deserialize_object(data, self.model())
-        instance.save()
+        instance = self.save_object(instance, data)
         
         return self.response(self.serialize_object(instance))
     
@@ -229,7 +291,7 @@ class RestResource(object):
             return self.response_bad_request()
         
         obj = self.deserialize_object(data, obj)
-        obj.save()
+        obj = self.save_object(obj, data)
         
         return self.response(self.serialize_object(obj))
     
