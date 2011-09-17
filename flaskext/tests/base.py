@@ -1,5 +1,6 @@
 import unittest
 
+from flaskext.tests import test_app
 from flaskext.tests.test_app import User, Message, Note
 
 
@@ -11,6 +12,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         User.create_table()
         Message.create_table()
         Note.create_table()
+        self.app = test_app.app.test_client() 
     
     def create_user(self, username, password, **kwargs):
         user = User(username=username, **kwargs)

@@ -9,21 +9,11 @@ import datetime
 import unittest
 
 from flaskext.rest import RestAPI, RestResource, Authentication, UserAuthentication
-from flaskext.tests import test_app
 from flaskext.tests.base import FlaskPeeweeTestCase
 from flaskext.tests.test_app import User, Message, Note
 
 
 class RestApiTestCase(FlaskPeeweeTestCase):
-    def setUp(self):
-        super(RestApiTestCase, self).setUp()
-        
-        test_app.app.config['TESTING'] = True
-        self.app = test_app.app.test_client() 
-
-    def tearDown(self):
-        pass
-    
     def response_json(self, response):
         return json.loads(response.data)
     
@@ -663,7 +653,3 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         
         resp_json = self.response_json(resp)
         self.assertEqual(resp_json, {'deleted': 1})
-        
-
-if __name__ == '__main__':
-    unittest.main()
