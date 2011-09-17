@@ -35,8 +35,8 @@ class Serializer(object):
 
 
 class ModelSerializer(Serializer):
-    def serialize_object(self, obj):
-        data = super(ModelSerializer, self).serialize_object(obj)
+    def serialize_object(self, obj, fields=None, exclude=None):
+        data = super(ModelSerializer, self).serialize_object(obj, fields, exclude)
         
         data['__module__'] = obj.__module__
         data['__model__'] = obj.__class__.__name__
@@ -90,4 +90,4 @@ class ModelDeserializer(Deserializer):
         if instance is None:
             instance = self.get_model(module, model)()
         
-        return self.deserialize_object(data, instance)
+        return super(ModelDeserializer, self).deserialize_object(data, instance)
