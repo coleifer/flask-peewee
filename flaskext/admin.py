@@ -23,7 +23,7 @@ class ModelAdmin(object):
         self.pk_name = self.model._meta.pk_name
     
     def get_url_name(self, name):
-        return '%s.%s.%s' % (
+        return '%s.%s_%s' % (
             self.admin.blueprint.name,
             self.get_admin_name(),
             name,
@@ -181,7 +181,7 @@ class AdminPanel(object):
         return ()
     
     def get_url_name(self, name):
-        return '%s.%s.%s' % (
+        return '%s.%s_%s' % (
             self.admin.blueprint.name,
             self.slug,
             name,
@@ -198,9 +198,9 @@ class AdminPanel(object):
 
 
 class BluePrintFactory(object):
-    def __init__(self, name='admin', import_name='admin', **kwargs):
+    def __init__(self, name='admin', **kwargs):
         self.name = name
-        self.import_name = import_name
+        self.import_name = __name__
         self.extra = kwargs
     
     def get_blueprint(self):
@@ -344,7 +344,7 @@ class Admin(object):
                 full_url = '/%s%s' % (admin_name, url)
                 self.blueprint.add_url_rule(
                     full_url,
-                    '%s.%s' % (admin_name, callback.__name__),
+                    '%s_%s' % (admin_name, callback.__name__),
                     self.auth_required(callback),
                     methods=['GET', 'POST'],
                 )
@@ -354,7 +354,7 @@ class Admin(object):
                 full_url = '/%s%s' % (panel.slug, url)
                 self.blueprint.add_url_rule(
                     full_url,
-                    '%s.%s' % (panel.slug, callback.__name__),
+                    '%s_%s' % (panel.slug, callback.__name__),
                     self.auth_required(callback),
                     methods=['GET', 'POST'],
                 )

@@ -61,7 +61,7 @@ class RestResource(object):
         return slugify(self.model.__name__)
     
     def get_url_name(self, name):
-        return '%s.%s.%s' % (
+        return '%s.%s_%s' % (
             self.api.blueprint.name,
             self.get_api_name(),
             name,
@@ -271,7 +271,7 @@ class RestAPI(object):
         return inner
     
     def get_blueprint(self):
-        return Blueprint('api', 'api')
+        return Blueprint('api', __name__)
     
     def get_urls(self):
         return ()
@@ -286,7 +286,7 @@ class RestAPI(object):
                 full_url = '/%s%s' % (api_name, url)
                 self.blueprint.add_url_rule(
                     full_url,
-                    '%s.%s' % (api_name, callback.__name__),
+                    '%s_%s' % (api_name, callback.__name__),
                     self.auth_wrapper(callback, provider),
                     methods=provider.allowed_methods,
                 )

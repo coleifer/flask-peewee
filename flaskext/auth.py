@@ -78,7 +78,7 @@ class Auth(object):
     def get_blueprint(self):
         return Blueprint(
             'auth',
-            'auth',
+            __name__,
             static_folder=os.path.join(current_dir, 'static'),
             template_folder=os.path.join(current_dir, 'templates'),
         )
