@@ -12,6 +12,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         User.create_table()
         Message.create_table()
         Note.create_table()
+        self.flask_app = test_app.app
         self.app = test_app.app.test_client() 
     
     def create_user(self, username, password, **kwargs):
