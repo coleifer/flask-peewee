@@ -110,10 +110,7 @@ api.register(Note)
 # views
 @app.route('/')
 def homepage():
-    if auth.get_logged_in_user():
-        return private_timeline()
-    else:
-        return public_timeline()
+    return render_template('index.html')
 
 @app.route('/private/')
 @auth.login_required
