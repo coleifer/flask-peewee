@@ -14,7 +14,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'Flask', 'peewee', 'wtf-peewee',
+        'Flask', 'werkzeug', 'jinja2', 'peewee', 'wtforms', 'wtf-peewee',
     ],
     classifiers=[
         'Environment :: Web Environment',
