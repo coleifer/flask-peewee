@@ -1,5 +1,5 @@
 import datetime
-from flask import request
+from flask import request, redirect
 
 from flaskext.admin import Admin, ModelAdmin, AdminPanel
 
