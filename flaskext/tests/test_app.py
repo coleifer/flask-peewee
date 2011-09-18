@@ -35,10 +35,13 @@ class User(db.Model):
     password = CharField()
     join_date = DateTimeField(default=datetime.datetime.now)
     active = BooleanField(default=True)
-    admin = BooleanField(default=False)
+    admin = BooleanField(default=False, verbose_name='Can access admin')
 
     def __unicode__(self):
         return self.username
+    
+    def message_count(self):
+        return self.message_set.count()
 
     def set_password(self, password):
         self.password = sha1(password).hexdigest()
