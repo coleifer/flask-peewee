@@ -13,10 +13,21 @@ from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuth
 from flaskext.utils import get_object_or_404, object_list
 
 
-app = Flask(__name__)
+class TestFlask(Flask):
+    def update_template_context(self, context):
+        ret = super(TestFlask, self).update_template_context(context)
+        self._template_context.update(context)
+        return ret
+
+
+app = TestFlask(__name__)
 app.config.from_object('flaskext.tests.test_config.Configuration')
 
 db = Peewee(app)
+
+@app.before_request
+def clear_context():
+    app._template_context = {}
 
 
 class User(db.Model):

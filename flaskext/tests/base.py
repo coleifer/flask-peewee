@@ -12,7 +12,10 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         User.create_table()
         Message.create_table()
         Note.create_table()
+        
         self.flask_app = test_app.app
+        self.flask_app._template_context = {}
+        
         self.app = test_app.app.test_client() 
     
     def create_user(self, username, password, **kwargs):
@@ -32,3 +35,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         ]
         self.admin, self.normal, self.inactive = users
         return users
+    
+    def assertContext(self, key, value):
+        self.assertTrue(key in self.flask_app._template_context)
+        self.assertEqual(self.flask_app._template_context[key], value)
