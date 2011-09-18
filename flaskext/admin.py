@@ -181,7 +181,7 @@ class AdminPanel(object):
         return ()
     
     def get_url_name(self, name):
-        return '%s.%s_%s' % (
+        return '%s.panel_%s_%s' % (
             self.admin.blueprint.name,
             self.slug,
             name,
@@ -354,7 +354,7 @@ class Admin(object):
                 full_url = '/%s%s' % (panel.slug, url)
                 self.blueprint.add_url_rule(
                     full_url,
-                    '%s_%s' % (panel.slug, callback.__name__),
+                    'panel_%s_%s' % (panel.slug, callback.__name__),
                     self.auth_required(callback),
                     methods=['GET', 'POST'],
                 )
