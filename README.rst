@@ -19,14 +19,6 @@ requirements:
 * python 2.5 or greater
 
 
-NOT READY FOR USE
-=================
-
-this project probably has strange bugs, the public and private apis may change
-significantly, and it currently doesn't have unit tests.  that burning smell?
-probably the project.
-
-
 admin interface
 ---------------
 
