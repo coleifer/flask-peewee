@@ -23,6 +23,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
             'active': True,
             'admin': True,
+            'email': '',
         })
         
         serialized = self.s.serialize_object(self.admin, fields=('id', 'username',))
@@ -37,6 +38,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'username': 'admin',
             'active': True,
             'admin': True,
+            'email': '',
         })
     
     def test_deserializer(self):
@@ -93,6 +95,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
             'active': True,
             'admin': True,
+            'email': '',
         })
         
         serialized = self.ms.serialize_object(self.admin, fields=('id', 'username',))

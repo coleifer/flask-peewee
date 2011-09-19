@@ -19,7 +19,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         self.app = test_app.app.test_client() 
     
     def create_user(self, username, password, **kwargs):
-        user = User(username=username, **kwargs)
+        user = User(username=username, email=kwargs.pop('email', ''), **kwargs)
         user.set_password(password)
         user.save()
         return user
@@ -36,6 +36,10 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         self.admin, self.normal, self.inactive = users
         return users
     
+    def get_context(self, var_name):
+        if var_name not in self.flask_app._template_context:
+            raise KeyError('%s not in template context' % var_name)
+        return self.flask_app._template_context[var_name]
+    
     def assertContext(self, key, value):
-        self.assertTrue(key in self.flask_app._template_context)
-        self.assertEqual(self.flask_app._template_context[key], value)
+        self.assertEqual(self.get_context(key), value)

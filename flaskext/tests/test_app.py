@@ -33,6 +33,7 @@ def clear_context():
 class User(db.Model):
     username = CharField()
     password = CharField()
+    email = CharField()
     join_date = DateTimeField(default=datetime.datetime.now)
     active = BooleanField(default=True)
     admin = BooleanField(default=False, verbose_name='Can access admin')
@@ -104,7 +105,7 @@ admin.register_panel('Notes', NotePanel)
 
 
 class UserResource(RestResource):
-    exclude = ('password',)
+    exclude = ('password', 'email',)
     
     def get_query(self):
         return User.filter(active=True)
