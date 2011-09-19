@@ -63,10 +63,16 @@ class Auth(object):
             columns = ['username', 'email', 'active', 'admin']
             
             def save_model(self, instance, form, adding=False):
+                orig_password = ''
+                if not adding:
+                    orig_password = instance.password
+                
                 user = super(UserAdmin, self).save_model(instance, form, adding)
-                if adding:
+                
+                if orig_password != form.password.data:
                     user.set_password(form.password.data)
                     user.save()
+                
                 return user
                 
         
