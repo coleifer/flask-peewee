@@ -11,22 +11,26 @@ from wtfpeewee.orm import model_form
 
 
 class AdminTestCase(FlaskPeeweeTestCase):
-    def login(self):
-        self.app.post('/accounts/login/', data={
+    def login(self, context=None):
+        context = context or self.app
+        context.post('/accounts/login/', data={
             'username': 'admin',
             'password': 'admin',
         })
     
-    def logout(self):
-        self.app.post('/accounts/logout/')
+    def logout(self, context=None):
+        context = context or self.app
+        context.post('/accounts/logout/')
     
     def test_admin_auth(self):
         self.create_users()
         
+        # check login redirect
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.headers['location'], 'http://localhost/accounts/login/?next=%2Fadmin%2F')
         
+        # try logging in as a normal user, get a 403 forbidden
         resp = self.app.post('/accounts/login/?next=%2Fadmin%2F', data={
             'username': 'normal',
             'password': 'normal',
@@ -37,8 +41,10 @@ class AdminTestCase(FlaskPeeweeTestCase):
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 403)
         
+        # log out from normal user
         resp = self.app.get('/accounts/logout/')
         
+        # try logging in as an admin and get a 200
         resp = self.app.post('/accounts/login/?next=%2Fadmin%2F', data={
             'username': 'admin',
             'password': 'admin',
@@ -72,6 +78,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 200)
         
+        # check that we have the stuff from the auth module and the index view
         self.assertContext('user', self.admin)
         self.assertContext('model_admins', [
             admin._registry['message'],
@@ -81,6 +88,259 @@ class AdminTestCase(FlaskPeeweeTestCase):
         self.assertContext('panels', [
             admin._panels['Notes'],
         ])
+    
+    def test_model_admin_add(self):
+        self.create_users()
+        self.assertEqual(User.select().count(), 3)
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # the add url returns a 200
+            resp = c.get('/admin/user/add/')
+            self.assertEqual(resp.status_code, 200)
+            
+            # ensure the user, model_admin and form are correct in the context
+            self.assertContext('user', self.admin)
+            self.assertContext('model_admin', admin._registry['user'])
+            
+            self.assertTrue('form' in self.flask_app._template_context)
+            frm = self.flask_app._template_context['form']
+            self.assertEqual(sorted(frm._fields.keys()), [
+                'active',
+                'admin',
+                'email',
+                'join_date',
+                'password',
+                'username',
+            ])
+            
+            # make an incomplete post and get a 200 with errors
+            resp = c.post('/admin/user/add/', data={
+                'username': '',
+                'password': 'xxx',
+                'active': '1',
+                'email': '',
+                'join_date': '2011-01-01 00:00:00',
+            })
+            self.assertEqual(resp.status_code, 200)
+            
+            # no new user created
+            self.assertEqual(User.select().count(), 3)
+            
+            # check the form for errors
+            frm = self.get_context('form')
+            self.assertEqual(frm.errors, {
+                'username': ['This field is required.'],
+                'email': ['This field is required.'],
+            })
+            
+            # make a complete post and get a 302 to the edit page
+            resp = c.post('/admin/user/add/', data={
+                'username': 'new',
+                'password': 'new',
+                'active': '1',
+                'email': 'new@new.new',
+                'join_date': '2011-01-01 00:00:00',
+            })
+            self.assertEqual(resp.status_code, 302)
+            
+            # new user was created
+            self.assertEqual(User.select().count(), 4)
+            
+            # check they have the correct data on the new instance
+            user = User.get(username='new')
+            self.assertEqual(user.password, sha1('new').hexdigest())
+            self.assertEqual(user.active, True)
+            self.assertEqual(user.admin, False)
+            self.assertEqual(user.email, 'new@new.new')
+            self.assertEqual(user.join_date, datetime.datetime(2011, 1, 1))
+            
+            # check the redirect was correct
+            self.assertTrue(resp.headers['location'].endswith('/admin/user/%d/' % user.id))
+    
+    def test_model_admin_edit(self):
+        users = self.create_users()
+        self.assertEqual(User.select().count(), 3)
+        
+        # grab an id so we can test a 404 on non-existent user
+        unused_id = [x for x in range(1, 5) if not User.filter(id=x).exists()][0]
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # nonexistant user 404s
+            resp = c.get('/admin/user/%d/' % unused_id)
+            self.assertEqual(resp.status_code, 404)
+            
+            # edit page returns a 200
+            resp = c.get('/admin/user/%d/' % self.normal.id)
+            self.assertEqual(resp.status_code, 200)
+            
+            # check the user, model_admin and form are correct in the context
+            self.assertContext('user', self.admin)
+            self.assertContext('model_admin', admin._registry['user'])
+            
+            self.assertTrue('form' in self.flask_app._template_context)
+            frm = self.flask_app._template_context['form']
+            self.assertEqual(sorted(frm._fields.keys()), [
+                'active',
+                'admin',
+                'email',
+                'join_date',
+                'password',
+                'username',
+            ])
+            
+            # check the form pulled the right data off the model
+            self.assertEqual(frm.data, {
+                'username': 'normal',
+                'password': sha1('normal').hexdigest(),
+                'email': '',
+                'admin': False,
+                'active': True,
+                'join_date': frm.join_date.data, # microseconds...bleh
+            })
+            
+            # make an incomplete post to update the user and get a 200 w/errors
+            resp = c.post('/admin/user/%d/' % self.normal.id, data={
+                'username': '',
+                'password': '',
+                'active': '1',
+                'email': 'fap@fap.fap',
+                'join_date': '2011-01-01 00:00:00',
+            })
+            self.assertEqual(resp.status_code, 200)
+            
+            # no new user created
+            self.assertEqual(User.select().count(), 3)
+            
+            # refresh database content
+            normal = User.get(id=self.normal.id)
+            self.assertEqual(normal.username, 'normal') # was not saved
+            
+            # check the form for errors
+            frm = self.get_context('form')
+            self.assertEqual(frm.errors, {
+                'username': ['This field is required.'],
+                'password': ['This field is required.'],
+            })
+            
+            # make a complete post
+            resp = c.post('/admin/user/%d/' % self.normal.id, data={
+                'username': 'edited',
+                'password': 'edited',
+                'active': '1',
+                'email': 'x@x.x',
+                'join_date': '2011-01-01 00:00:00',
+            })
+            self.assertEqual(resp.status_code, 302)
+            
+            # no new user was created
+            self.assertEqual(User.select().count(), 3)
+            
+            # grab from the database
+            user = User.get(username='edited')
+            self.assertEqual(user.id, self.normal.id) # it is the same user
+            
+            self.assertEqual(user.password, sha1('edited').hexdigest())
+            self.assertEqual(user.active, True)
+            self.assertEqual(user.admin, False)
+            self.assertEqual(user.email, 'x@x.x')
+            self.assertEqual(user.join_date, datetime.datetime(2011, 1, 1))
+            
+            self.assertTrue(resp.headers['location'].endswith('/admin/user/%d/' % user.id))
+            
+            # make another post without modifying the password, should stay same
+            resp = c.post('/admin/user/%d/' % user.id, data={
+                'username': 'edited2',
+                'password': user.password,
+                'active': '1',
+                'email': 'x@x.x',
+                'join_date': '2011-01-01 00:00:00',
+            })
+            self.assertEqual(resp.status_code, 302)
+            
+            # no new user was created
+            self.assertEqual(User.select().count(), 3)
+            
+            # grab from the database
+            user = User.get(username='edited2')
+            self.assertEqual(user.id, self.normal.id) # it is the same user
+            
+            # the password has not changed
+            self.assertEqual(user.password, sha1('edited').hexdigest())
+    
+    def test_model_admin_delete(self):
+        self.create_users()
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # do a basic get, nothing much going on
+            resp = c.get('/admin/user/delete/')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('user', self.admin)
+            self.assertContext('model_admin', admin._registry['user'])
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query), [])
+            
+            # send it a single id
+            resp = c.get('/admin/user/delete/?id=%d' % (self.normal.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query), [self.normal])
+            
+            # ensure nothing was deleted
+            self.assertEqual(User.select().count(), 3)
+            
+            # post to it, get a redirect on success
+            resp = c.post('/admin/user/delete/', data={'id': self.normal.id})
+            self.assertEqual(resp.status_code, 302)
+            
+            # ensure the user was deleted
+            self.assertEqual(User.select().count(), 2)
+            self.assertRaises(User.DoesNotExist, User.get, id=self.normal.id)
+            
+            self.assertTrue(resp.headers['location'].endswith('/admin/user/'))
+            
+            # do a multi-delete
+            resp = c.get('/admin/user/delete/?id=%d&id=%d' % (self.admin.id, self.inactive.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query), [self.admin, self.inactive])
+            
+            # post to it and check both deleted
+            resp = c.post('/admin/user/delete/', data={'id': [self.admin.id, self.inactive.id]})
+            self.assertEqual(resp.status_code, 302)
+            
+            self.assertEqual(User.select().count(), 0)
+    
+    def test_model_admin_index(self):
+        self.create_users()
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            resp = c.get('/admin/user/?ordering=username')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('user', self.admin)
+            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('ordering', 'username')
+            self.assertContext('filters', [])
+                        
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [
+                self.admin,
+                self.inactive,
+                self.normal,
+            ])
+
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):
