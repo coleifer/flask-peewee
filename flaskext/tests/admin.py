@@ -424,6 +424,23 @@ class AdminTestCase(FlaskPeeweeTestCase):
             
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), notes[users[2]])
+    
+    def test_panel_simple(self):
+        users = self.create_users()
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            self.assertEqual(Note.select().count(), 0)
+            
+            resp = c.post('/admin/notes/create/', data={'message': 'testing'})
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['location'].endswith('/admin/'))
+            
+            self.assertEqual(Note.select().count(), 1)
+            
+            note = Note.get(user=self.admin)
+            self.assertEqual(note.message, 'testing')
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):
