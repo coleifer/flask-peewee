@@ -340,7 +340,90 @@ class AdminTestCase(FlaskPeeweeTestCase):
                 self.inactive,
                 self.normal,
             ])
+            
+            self.assertEqual(query.get_page(), 1)
+            self.assertEqual(query.get_pages(), 1)
+    
+    def test_model_admin_index_filters(self):
+        users = self.create_users()
+        notes = {}
+        
+        for user in users:
+            notes[user] = [Note.create(user=user, message='test-%d' % i) for i in range(3)]
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # test a simple lookup
+            resp = c.get('/admin/user/?username=admin')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('user', self.admin)
+            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('ordering', '')
+            self.assertContext('filters', [('username', 'admin')])
 
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [
+                self.admin,
+            ])
+            
+            # test a lookup using multiple values
+            resp = c.get('/admin/user/?username=admin&username=normal&ordering=-username')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('filters', [('username__in', ['admin', 'normal'])])
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [
+                self.normal,
+                self.admin,
+            ])
+            
+            # test a lookup spanning a relation
+            resp = c.get('/admin/note/?user=%d' % self.normal.id)
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('model_admin', admin._registry['note'])
+            self.assertContext('filters', [('user', str(self.normal.id))])
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), notes[self.normal])
+        
+    def test_model_admin_index_pagination(self):
+        users = self.create_users()
+        notes = {}
+        
+        for user in users:
+            notes[user] = [Note.create(user=user, message='test-%d' % i) for i in range(20)]
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # test a simple lookup
+            resp = c.get('/admin/note/?ordering=id')
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), notes[users[0]])
+            
+            resp = c.get('/admin/note/?ordering=id&page=2')
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), notes[users[1]])
+            
+            resp = c.get('/admin/note/?ordering=id&page=1&user=%d&user=%d' % (users[1].id, users[2].id))
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), notes[users[1]])
+            
+            resp = c.get('/admin/note/?ordering=id&page=2&user=%d&user=%d' % (users[1].id, users[2].id))
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), notes[users[2]])
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):
