@@ -1,6 +1,6 @@
 import datetime
 
-from flask import Flask, request, redirect, url_for, render_template, flash, g
+from flask import Flask, request, redirect, url_for, render_template, flash, g, Response
 from hashlib import md5, sha1
 
 from peewee import *
@@ -125,12 +125,12 @@ api.register(Note)
 # views
 @app.route('/')
 def homepage():
-    return render_template('index.html')
+    return Response()
 
 @app.route('/private/')
 @auth.login_required
 def private_timeline():
-    user = auth.get_logged_in_user()
+    return Response()
 
 
 admin.setup()

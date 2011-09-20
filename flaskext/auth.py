@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, render_template, abort, request, session, flash, redirect, url_for, g
 from peewee import *
-from wtforms import Form, TextField, PasswordField
+from wtforms import Form, TextField, PasswordField, validators
 
 from flaskext.utils import get_next
 
@@ -13,8 +13,8 @@ current_dir = os.path.dirname(__file__)
 
 
 class LoginForm(Form):
-    username = TextField('Username')
-    password = PasswordField('Password')
+    username = TextField('Username', validators=[validators.Required()])
+    password = PasswordField('Password', validators=[validators.Required()])
 
 
 class Auth(object):
@@ -29,11 +29,7 @@ class Auth(object):
         self.blueprint = self.get_blueprint()
         self.url_prefix = prefix
         
-        self.configure_routes()
-        self.register_blueprint()
-        self.register_handlers()
-        
-        self.app.template_context_processors[None].append(self.get_context_user)
+        self.setup()
     
     def get_context_user(self):
         return {'user': self.get_logged_in_user()}
@@ -188,3 +184,12 @@ class Auth(object):
     
     def register_handlers(self):
         self.app.before_request(self.load_user)
+    
+    def register_context_processors(self):
+        self.app.template_context_processors[None].append(self.get_context_user)
+    
+    def setup(self):
+        self.configure_routes()
+        self.register_blueprint()
+        self.register_handlers()
+        self.register_context_processors()
