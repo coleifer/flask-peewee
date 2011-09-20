@@ -36,31 +36,30 @@ a way to expose a RESTful interface for your project's models.
 
 ::
 
-    GET /api/user/
-    
+    curl localhost:5000/api/user/
     {
-      meta: {
-        model: "user"
-        next: ""
-        page: 1
-        previous: ""
-      },
-      objects: [
+      "meta": {
+        "model": "user", 
+        "next": "", 
+        "page": 1, 
+        "previous": ""
+      }, 
+      "objects": [
         {
-          username: "admin"
-          admin: true
-          email: ""
-          join_date: "2011-09-16 18:34:49"
-          active: true
-          id: 1
-        },
+          "username": "admin", 
+          "admin": true, 
+          "email": "", 
+          "join_date": "2011-09-16 18:34:49", 
+          "active": true, 
+          "id": 1
+        }, 
         {
-          username: "coleifer"
-          admin: false
-          email: "coleifer@gmail.com"
-          join_date: "2011-09-16 18:35:56"
-          active: true
-          id: 2
+          "username": "coleifer", 
+          "admin": false, 
+          "email": "coleifer@gmail.com", 
+          "join_date": "2011-09-16 18:35:56", 
+          "active": true, 
+          "id": 2
         }
       ]
     }
