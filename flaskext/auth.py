@@ -122,10 +122,12 @@ class Auth(object):
     def login_user(self, user):
         session['logged_in'] = True
         session['user_pk'] = user.get_pk()
+        g.user = user
         flash('You are logged in as %s' % user.username)
     
     def logout_user(self, user):
         session.pop('logged_in', None)
+        g.user = None
         flash('You are now logged out')
     
     def get_logged_in_user(self):

@@ -132,15 +132,32 @@ class AuthTestCase(FlaskPeeweeTestCase):
                 'password': 'admin',
             })
             self.assertEqual(auth.get_logged_in_user(), self.admin)
+            
+            # log back in without logging out
+            resp = c.post('/accounts/login/', data={
+                'username': 'normal',
+                'password': 'normal',
+            })
+            self.assertEqual(auth.get_logged_in_user(), self.normal)
     
     def test_login_required(self):
         self.create_users()
         
-        resp = self.app.get('/private/')
-        self.assertEqual(resp.status_code, 302)
-        self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fprivate%2F'))
-        
-        self.login()
-        
-        resp = self.app.get('/private/')
-        self.assertEqual(resp.status_code, 200)
+        with self.flask_app.test_client() as c:
+            resp = c.get('/private/')
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fprivate%2F'))
+            
+            self.login('normal', 'normal', c)
+            
+            resp = c.get('/private/')
+            self.assertEqual(resp.status_code, 200)
+
+            self.assertEqual(auth.get_logged_in_user(), self.normal)
+            
+            self.login('admin', 'admin', c)
+            
+            resp = c.get('/private/')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertEqual(auth.get_logged_in_user(), self.admin)
