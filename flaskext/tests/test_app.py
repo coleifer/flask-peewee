@@ -88,7 +88,7 @@ class NotePanel(AdminPanel):
 
 
 auth = Auth(app, db, user_model=User)
-admin = Admin(app, db, auth)
+admin = Admin(app, auth)
 
 
 class MessageAdmin(ModelAdmin):

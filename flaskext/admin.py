@@ -261,10 +261,9 @@ class AdminTemplateHelper(object):
 
 
 class Admin(object):
-    def __init__(self, app, db, auth, blueprint_factory=blueprint_factory,
+    def __init__(self, app, auth, blueprint_factory=blueprint_factory,
                  template_helper=AdminTemplateHelper, prefix='/admin'):
         self.app = app
-        self.db = db
         self.auth = auth
         
         self._registry = {}
