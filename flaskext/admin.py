@@ -298,7 +298,7 @@ class Admin(object):
             ('/', self.auth_required(self.index)),
         )
     
-    def register(self, model, admin_class=ModelAdmin, skip_urls=False):
+    def register(self, model, admin_class=ModelAdmin):
         model_admin = admin_class(self, model)
         admin_name = model_admin.get_admin_name()
         
