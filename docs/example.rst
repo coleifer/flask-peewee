@@ -1,0 +1,4 @@
+.. _example:
+
+Example App
+===========
