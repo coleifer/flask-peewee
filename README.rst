@@ -19,6 +19,9 @@ requirements:
 * python 2.5 or greater
 
 
+check out the `documentation <http://charlesleifer.com/docs/flask-peewee/>`_.
+
+
 admin interface
 ---------------
 
