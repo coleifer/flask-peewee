@@ -85,7 +85,6 @@ class Auth(object):
     
     def get_urls(self):
         return (
-            ('/', self.index),
             ('/logout/', self.logout),
             ('/login/', self.login),
         )
@@ -137,9 +136,6 @@ class Auth(object):
                 return self.User.select().where(active=True).get(id=session.get('user_pk'))
             except self.User.DoesNotExist:
                 pass
-    
-    def index(self):
-        pass
     
     def login(self):
         error = None
