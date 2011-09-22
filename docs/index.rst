@@ -23,7 +23,7 @@ Contents:
    admin
    auth
    rest-api
-   example
+   utils
 
 Indices and tables
 ==================

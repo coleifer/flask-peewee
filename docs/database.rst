@@ -48,5 +48,3 @@ in your app's configuration.
         and post-request hooks to handle connecting to the database.
         
         :param app: flask application to bind admin to
-
-    .. py:method:: setup(self, foo)
