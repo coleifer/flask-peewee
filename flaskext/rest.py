@@ -304,12 +304,12 @@ class RestrictOwnerResource(RestResource):
 
 
 class RestAPI(object):
-    def __init__(self, app, url_prefix='/api', default_auth=None):
+    def __init__(self, app, prefix='/api', default_auth=None):
         self.app = app
         
         self._registry = {}
         
-        self.url_prefix = url_prefix
+        self.url_prefix = prefix
         self.blueprint = self.get_blueprint()
         
         self.default_auth = default_auth or Authentication()
