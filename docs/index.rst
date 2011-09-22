@@ -18,6 +18,7 @@ Contents:
    :glob:
    
    installation
+   getting-started
    database
    admin
    auth
