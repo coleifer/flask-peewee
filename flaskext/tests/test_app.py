@@ -8,7 +8,7 @@ from peewee import *
 # flask-peewee bindings
 from flaskext.admin import Admin, ModelAdmin, AdminPanel
 from flaskext.auth import Auth
-from flaskext.db import Peewee
+from flaskext.db import Database
 from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication
 from flaskext.utils import get_object_or_404, object_list
 
@@ -23,7 +23,7 @@ class TestFlask(Flask):
 app = TestFlask(__name__)
 app.config.from_object('flaskext.tests.test_config.Configuration')
 
-db = Peewee(app)
+db = Database(app)
 
 @app.before_request
 def clear_context():

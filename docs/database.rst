@@ -11,7 +11,7 @@ apps and the peewee orm.
     from flask import Flask
     from peewee import *
     
-    from flaskext.db import Peewee
+    from flaskext.db import Database
     
     DATABASE = {
         'name': 'example.db',
@@ -22,7 +22,7 @@ apps and the peewee orm.
     app.config.from_object(__name__) # load database configuration from this module
     
     # instantiate the db wrapper
-    db = Peewee(app)
+    db = Database(app)
     
     # start creating models
     class Blog(db.Model):
@@ -36,7 +36,7 @@ also provides a subclass of ``Model`` which works with the database specified
 in your app's configuration.
 
 
-.. py:class:: Peewee
+.. py:class:: Database
 
     .. py:attribute:: Model
     

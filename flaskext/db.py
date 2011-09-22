@@ -4,7 +4,7 @@ from peewee import *
 from flaskext.exceptions import ImproperlyConfigured
 
 
-class Peewee(object):
+class Database(object):
     def __init__(self, app):
         self.app = app
         

@@ -1,13 +1,13 @@
 from flask import Flask
 
 # flask-peewee bindings
-from flaskext.db import Peewee
+from flaskext.db import Database
 
 
 app = Flask(__name__)
 app.config.from_object('config.Configuration')
 
-db = Peewee(app)
+db = Database(app)
 
 
 def create_tables():

@@ -21,10 +21,10 @@ an :py:class:`Auth` backend for your project:
     from flask import Flask
     
     from flaskext.auth import Auth
-    from flaskext.db import Peewee
+    from flaskext.db import Database
     
     app = Flask(__name__)
-    db = Peewee(app)
+    db = Database(app)
     
     # needed for authentication
     auth = Auth(app, db)
@@ -87,7 +87,7 @@ Here's a simple example of extending the auth system to use a custom user model:
 .. code-block:: python
 
     app = Flask(__name__)
-    db = Peewee(app)
+    db = Database(app)
     
     # create our custom user model
     class User(db.Model):
@@ -153,7 +153,7 @@ So, without further ado here's a look at the auth class:
     .. py:method:: __init__(app, db[, user_model=None[, prefix='/accounts']])
     
         :param app: flask application to bind admin to
-        :param db: :py:class:`Peewee` database wrapper for flask app
+        :param db: :py:class:`Database` database wrapper for flask app
         :param user_model: ``User`` model to use
         :param prefix: url to bind authentication views to, defaults to /accounts/
     

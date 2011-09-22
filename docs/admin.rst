@@ -24,10 +24,10 @@ To get started with the admin, there are just a couple steps:
         from flask import Flask
         
         from flaskext.auth import Auth
-        from flaskext.db import Peewee
+        from flaskext.db import Database
         
         app = Flask(__name__)
-        db = Peewee(app)
+        db = Database(app)
         
         # needed for authentication
         auth = Auth(app, db)
