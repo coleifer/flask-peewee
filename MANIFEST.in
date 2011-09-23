@@ -4,3 +4,4 @@ recursive-include docs *
 recursive-include example *
 recursive-include flaskext/templates *
 recursive-include flaskext/tests *
+prune docs/_build
