@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -9,8 +9,19 @@ setup(
     author='Charles Leifer',
     author_email='coleifer@gmail.com',
     description='Peewee integration for flask',
-    packages=['flaskext'],
-    namespace_packages=['flaskext'],
+    packages=find_packages(),
+    package_data = {
+        'flaskext': [
+            'static/*/*.css',
+            'static/*/*.js',
+            'static/*/*.gif',
+            'templates/*.html',
+            'templates/*/*.html',
+            'templates/*/*/*.html',
+            'tests/*.html',
+            'tests/*/*.html',
+        ],
+    },
     zip_safe=False,
     platforms='any',
     install_requires=[
