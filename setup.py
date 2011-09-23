@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='flask-peewee',
-    version='0.1.1',
+    version='0.1.2',
     url='http://github.com/coleifer/flask-peewee/',
     license='BSD',
     author='Charles Leifer',
