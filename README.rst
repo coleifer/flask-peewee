@@ -85,8 +85,14 @@ I recommend installing in a virtualenv.  to get started::
 example app
 -----------
 
-the project ships with an example app, which is a silly twitter clone.  if you
-would like to test out the admin area, log in as "admin/admin" and navigate to:
+the project ships with an example app, which is a silly twitter clone.  to
+start the example app, ``cd`` into the "example" directory and execute
+the ``run_example.py`` script::
+
+    cd example/
+    python run_example.py
+
+if you would like to test out the admin area, log in as "admin/admin" and navigate to:
 
 http://127.0.0.1:5000/admin/
 
