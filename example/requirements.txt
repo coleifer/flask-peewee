@@ -3,4 +3,4 @@ werkzeug
 jinja2
 peewee
 wtforms
-wtforms-peewee
+wtf-peewee
