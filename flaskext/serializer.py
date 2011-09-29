@@ -19,8 +19,14 @@ class Serializer(object):
     
     def serialize_object(self, obj, fields=None, exclude=None):
         data = {}
-        
+
         serialize_fields = []
+        related_objects = {} 
+
+        if obj._meta.rel_fields:
+            for rel in obj._meta.rel_fields:
+                related_objects[rel] = (self.serialize_object(getattr(obj, rel)))
+
         for f in obj._meta.get_field_names():
             if fields and f not in fields:
                 continue
@@ -30,7 +36,9 @@ class Serializer(object):
         
         for field_name in serialize_fields:
             data[field_name] = self.convert_value(getattr(obj, field_name))
-        
+
+        data.update(related_objects)
+
         return data
 
 
