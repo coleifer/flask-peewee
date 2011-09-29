@@ -523,11 +523,12 @@ access to instances, etc.
     
         :rtype: a ``SelectQuery`` containing the model instances to expose by default
     
-    .. py:method:: prepare_data(data)
+    .. py:method:: prepare_data(obj, data)
     
         This method provides a hook for modifying outgoing data.  The default
         implementation no-ops, but you could do any kind of munging here.
     
+        :param obj: the object being serialized
         :param data: the dictionary representation of a model returned by the ``Serializer``
         :rtype: a dictionary of data to hand off
     
