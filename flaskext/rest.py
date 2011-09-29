@@ -91,7 +91,7 @@ class RestResource(object):
     def get_deserializer(self):
         return Deserializer()
     
-    def prepare_data(self, data):
+    def prepare_data(self, obj, data):
         """
         Hook for modifying outgoing data
         """
@@ -100,13 +100,13 @@ class RestResource(object):
     def serialize_object(self, obj):
         s = self.get_serializer()
         return self.prepare_data(
-            s.serialize_object(obj, self.fields, self.exclude)
+            obj, s.serialize_object(obj, self.fields, self.exclude)
         )
     
     def serialize_query(self, query):
         s = self.get_serializer()
         return [
-            self.prepare_data(s.serialize_object(obj, self.fields, self.exclude)) \
+            self.prepare_data(obj, s.serialize_object(obj, self.fields, self.exclude)) \
                 for obj in query
         ]
     
