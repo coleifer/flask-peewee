@@ -1,5 +1,6 @@
 import math
 import re
+import sys
 
 from flask import abort, request, render_template
 from peewee import Model, DoesNotExist, SelectQuery
@@ -47,3 +48,9 @@ def get_next():
 
 def slugify(s):
     return re.sub('[^a-z0-9_\-]+', '-', s.lower())
+
+def load_class(s):
+    path, klass = s.rsplit('.', 1)
+    __import__(path)
+    mod = sys.modules[path]
+    return getattr(mod, klass)

@@ -2,6 +2,7 @@ import peewee
 from peewee import *
 
 from flaskext.exceptions import ImproperlyConfigured
+from flaskext.utils import load_class
 
 
 class Database(object):
@@ -22,9 +23,7 @@ class Database(object):
             raise ImproperlyConfigured('Please specify a "name" and "engine" for your database')
         
         try:
-            mod, klass = self.database_engine.rsplit('.', 1)
-            db_module = __import__(mod)
-            self.database_class = getattr(db_module, klass)
+            self.database_class = load_class(self.database_engine)
             assert issubclass(self.database_class, peewee.Database)
         except ImportError:
             raise ImproperlyConfigured('Unable to import: "%s"' % self.database_engine)
