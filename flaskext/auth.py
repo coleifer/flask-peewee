@@ -119,6 +119,7 @@ class Auth(object):
     def login_user(self, user):
         session['logged_in'] = True
         session['user_pk'] = user.get_pk()
+        session.permanent = True
         g.user = user
         flash('You are logged in as %s' % user.username)
     
