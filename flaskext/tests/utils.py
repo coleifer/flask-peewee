@@ -8,7 +8,7 @@ import datetime
 from flask import request
 from werkzeug.exceptions import NotFound
 
-from flaskext.utils import get_object_or_404
+from flaskext.utils import get_object_or_404, make_password, check_password
 from flaskext.tests.base import FlaskPeeweeTestCase
 from flaskext.tests.test_app import User, Message, Note, app as flask_app
 
@@ -30,3 +30,13 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         self.assertRaises(NotFound, get_object_or_404, active, username='not-here')
         self.assertRaises(NotFound, get_object_or_404, inactive, username='test')
         self.assertEqual(user, get_object_or_404(active, username='test'))
+    
+    def test_passwords(self):
+        p = make_password('testing')
+        self.assertTrue(check_password('testing', p))
+        self.assertFalse(check_password('testing ', p))
+        self.assertFalse(check_password('Testing', p))
+        self.assertFalse(check_password('', p))
+        
+        p2 = make_password('Testing')
+        self.assertFalse(p == p2)

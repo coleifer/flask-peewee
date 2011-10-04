@@ -1,4 +1,3 @@
-from hashlib import sha1
 import datetime
 
 from flask import request, session, url_for, get_flashed_messages

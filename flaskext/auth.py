@@ -1,4 +1,3 @@
-from hashlib import sha1
 import functools
 import os
 
@@ -6,10 +5,11 @@ from flask import Blueprint, render_template, abort, request, session, flash, re
 from peewee import *
 from wtforms import Form, TextField, PasswordField, validators
 
-from flaskext.utils import get_next
+from flaskext.utils import get_next, make_password, check_password
 
 
 current_dir = os.path.dirname(__file__)
+
 
 
 class LoginForm(Form):
@@ -46,7 +46,7 @@ class Auth(object):
                 return self.username
             
             def set_password(self, password):
-                self.password = sha1(password).hexdigest()
+                self.password = make_password(password)
         
         return User
     
@@ -109,10 +109,12 @@ class Auth(object):
         try:
             user = active.get(
                 username=username,
-                password=sha1(password).hexdigest()
             )
         except self.User.DoesNotExist:
             return False
+        else:
+            if not check_password(password, user.password):
+                return False
         
         return user
     

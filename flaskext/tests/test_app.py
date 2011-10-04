@@ -1,7 +1,6 @@
 import datetime
 
 from flask import Flask, request, redirect, url_for, render_template, flash, g, Response
-from hashlib import md5, sha1
 
 from peewee import *
 
@@ -10,7 +9,7 @@ from flaskext.admin import Admin, ModelAdmin, AdminPanel
 from flaskext.auth import Auth
 from flaskext.db import Database
 from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication
-from flaskext.utils import get_object_or_404, object_list
+from flaskext.utils import get_object_or_404, object_list, make_password
 
 
 class TestFlask(Flask):
@@ -45,7 +44,7 @@ class User(db.Model):
         return self.message_set.count()
 
     def set_password(self, password):
-        self.password = sha1(password).hexdigest()
+        self.password = make_password(password)
 
 
 class Message(db.Model):

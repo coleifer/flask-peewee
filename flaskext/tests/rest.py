@@ -3,7 +3,6 @@ try:
 except ImportError:
     import json
 
-from hashlib import sha1
 import base64
 import datetime
 import unittest
@@ -11,6 +10,7 @@ import unittest
 from flaskext.rest import RestAPI, RestResource, Authentication, UserAuthentication
 from flaskext.tests.base import FlaskPeeweeTestCase
 from flaskext.tests.test_app import User, Message, Note
+from flaskext.utils import get_next, make_password, check_password
 
 
 class RestApiTestCase(FlaskPeeweeTestCase):
@@ -543,7 +543,9 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
     def test_auth_create(self):
         self.create_users()
         
-        user_data = {'username': 'test', 'password': sha1('test').hexdigest()}
+        new_pass = make_password('test')
+        
+        user_data = {'username': 'test', 'password': new_pass}
         serialized = json.dumps(user_data)
         
         # this request is not authorized
@@ -565,7 +567,9 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
     def test_create(self):
         self.create_users()
         
-        user_data = {'username': 'test', 'password': sha1('test').hexdigest()}
+        new_pass = make_password('test')
+        
+        user_data = {'username': 'test', 'password': new_pass}
         serialized = json.dumps(user_data)
         
         # authorized as an admin
@@ -573,6 +577,7 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         self.assertEqual(resp.status_code, 200)
         
         new_user = User.get(username='test')
+        self.assertTrue(check_password('test', new_user.password))
         
         resp_json = self.response_json(resp)
         self.assertAPIUser(resp_json, new_user)

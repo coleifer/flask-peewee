@@ -1,6 +1,8 @@
 import math
+import random
 import re
 import sys
+from hashlib import sha1
 
 from flask import abort, request, render_template
 from peewee import Model, DoesNotExist, SelectQuery
@@ -54,3 +56,17 @@ def load_class(s):
     __import__(path)
     mod = sys.modules[path]
     return getattr(mod, klass)
+
+
+# borrowing these methods, slightly modified, from django.contrib.auth
+def get_hexdigest(salt, raw_password):
+    return sha1(salt + raw_password).hexdigest()
+
+def make_password(raw_password):
+    salt = get_hexdigest(str(random.random()), str(random.random()))[:5]
+    hsh = get_hexdigest(salt, raw_password)
+    return '%s$%s' % (salt, hsh)
+
+def check_password(raw_password, enc_password):
+    salt, hsh = enc_password.split('$', 1)
+    return hsh == get_hexdigest(salt, raw_password)

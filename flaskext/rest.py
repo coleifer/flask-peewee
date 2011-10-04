@@ -1,5 +1,4 @@
 import functools
-import hashlib
 try:
     import simplejson as json
 except ImportError:

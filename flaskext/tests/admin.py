@@ -1,4 +1,3 @@
-from hashlib import sha1
 import datetime
 
 from flask import request, session, url_for
@@ -6,6 +5,7 @@ from flask import request, session, url_for
 from flaskext.admin import ModelAdmin, AdminPanel
 from flaskext.tests.base import FlaskPeeweeTestCase
 from flaskext.tests.test_app import User, Message, Note, admin
+from flaskext.utils import get_next, make_password, check_password
 
 from wtfpeewee.orm import model_form
 
@@ -150,11 +150,11 @@ class AdminTestCase(FlaskPeeweeTestCase):
             
             # check they have the correct data on the new instance
             user = User.get(username='new')
-            self.assertEqual(user.password, sha1('new').hexdigest())
             self.assertEqual(user.active, True)
             self.assertEqual(user.admin, False)
             self.assertEqual(user.email, 'new@new.new')
             self.assertEqual(user.join_date, datetime.datetime(2011, 1, 1))
+            self.assertTrue(check_password('new', user.password))
             
             # check the redirect was correct
             self.assertTrue(resp.headers['location'].endswith('/admin/user/%d/' % user.id))
@@ -195,7 +195,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             # check the form pulled the right data off the model
             self.assertEqual(frm.data, {
                 'username': 'normal',
-                'password': sha1('normal').hexdigest(),
+                'password': frm.password.data, # skip this
                 'email': '',
                 'admin': False,
                 'active': True,
@@ -243,7 +243,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             user = User.get(username='edited')
             self.assertEqual(user.id, self.normal.id) # it is the same user
             
-            self.assertEqual(user.password, sha1('edited').hexdigest())
+            self.assertTrue(check_password('edited', user.password))
             self.assertEqual(user.active, True)
             self.assertEqual(user.admin, False)
             self.assertEqual(user.email, 'x@x.x')
@@ -269,7 +269,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertEqual(user.id, self.normal.id) # it is the same user
             
             # the password has not changed
-            self.assertEqual(user.password, sha1('edited').hexdigest())
+            self.assertTrue(check_password('edited', user.password))
     
     def test_model_admin_delete(self):
         self.create_users()
