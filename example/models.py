@@ -1,6 +1,7 @@
 from hashlib import md5, sha1
 import datetime
 
+from flaskext.utils import make_password
 from peewee import *
 
 from app import db
@@ -18,7 +19,7 @@ class User(db.Model):
         return self.username
 
     def set_password(self, password):
-        self.password = sha1(password).hexdigest()
+        self.password = make_password(password)
 
     def following(self):
         return User.select().join(
