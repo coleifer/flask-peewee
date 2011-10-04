@@ -33,18 +33,20 @@
           <a href="javascript:void(0);" class="remove-filter">Remove</a>
         </li>
         {% for field_name, field_values in raw_filters %}
-          {% for field_value in field_values %}
-            <li>
-              <select class="field">
-                <option>--- select field ---</option>
-                {% for field in form %}
-                  <option name="{{ field.name }}"{% if field_name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
-                {% endfor %}
-              </select>
-              {{ get_form_field(form, field_name)(value=field_value, class='filter-value') }}
-              <a href="javascript:void(0);" class="remove-filter">Remove</a>
-            </li>
-          {% endfor %}
+          {% if field_name in form %}
+            {% for field_value in field_values %}
+              <li>
+                <select class="field">
+                  <option>--- select field ---</option>
+                  {% for field in form %}
+                    <option name="{{ field.name }}"{% if field_name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
+                  {% endfor %}
+                </select>
+                {{ get_form_field(form, field_name)(value=field_value, class='filter-value') }}
+                <a href="javascript:void(0);" class="remove-filter">Remove</a>
+              </li>
+            {% endfor %}
+          {% endif %}
         {% endfor %}
       </ul>
       <p class="submit"><button type="submit" class="small">Apply</button>
