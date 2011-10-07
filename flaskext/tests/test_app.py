@@ -6,7 +6,7 @@ from peewee import *
 
 # flask-peewee bindings
 from flaskext.admin import Admin, ModelAdmin, AdminPanel
-from flaskext.auth import Auth
+from flaskext.auth import Auth, BaseUser
 from flaskext.db import Database
 from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication
 from flaskext.utils import get_object_or_404, object_list, make_password
@@ -29,7 +29,7 @@ def clear_context():
     app._template_context = {}
 
 
-class User(db.Model):
+class User(db.Model, BaseUser):
     username = CharField()
     password = CharField()
     email = CharField()
@@ -42,9 +42,6 @@ class User(db.Model):
     
     def message_count(self):
         return self.message_set.count()
-
-    def set_password(self, password):
-        self.password = make_password(password)
 
 
 class Message(db.Model):

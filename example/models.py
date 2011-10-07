@@ -1,13 +1,13 @@
 from hashlib import md5, sha1
 import datetime
 
-from flaskext.utils import make_password
+from flaskext.auth import BaseUser
 from peewee import *
 
 from app import db
 
 
-class User(db.Model):
+class User(db.Model, BaseUser):
     username = CharField()
     password = CharField()
     email = CharField()
@@ -17,9 +17,6 @@ class User(db.Model):
 
     def __unicode__(self):
         return self.username
-
-    def set_password(self, password):
-        self.password = make_password(password)
 
     def following(self):
         return User.select().join(

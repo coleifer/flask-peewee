@@ -17,6 +17,14 @@ class LoginForm(Form):
     password = PasswordField('Password', validators=[validators.Required()])
 
 
+class BaseUser(object):
+    def set_password(self, password):
+        self.password = make_password(password)
+
+    def check_password(self, password):
+        return check_password(password, self.password)
+
+
 class Auth(object):
     default_next_url = 'homepage'
     
@@ -35,7 +43,7 @@ class Auth(object):
         return {'user': self.get_logged_in_user()}
     
     def get_user_model(self):
-        class User(self.db.Model):
+        class User(self.db.Model, BaseUser):
             username = CharField()
             password = CharField()
             email = CharField()
@@ -44,9 +52,6 @@ class Auth(object):
             
             def __unicode__(self):
                 return self.username
-            
-            def set_password(self, password):
-                self.password = make_password(password)
         
         return User
     
@@ -113,7 +118,7 @@ class Auth(object):
         except self.User.DoesNotExist:
             return False
         else:
-            if not check_password(password, user.password):
+            if not user.check_password(password):
                 return False
         
         return user
