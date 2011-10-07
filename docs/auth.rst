@@ -82,15 +82,29 @@ It is easy to use your own model for the ``User``, though depending on the amoun
 of changes it may be necessary to override methods in both the :py:class:`Auth` and
 :py:class:`Admin` classes.
 
+Unless you want to override the default behavior of the :py:class:`Auth` class' mechanism
+for actually authenticating users (which you may want to do if relying on a 3rd-party
+for auth) -- you will want to be sure your ``User`` model implements two methods:
+
+* ``set_password(password)`` -- takes a raw password and stores an encrypted version on model
+* ``check_password(password)`` -- returns whether or not the supplied password matches
+  the one stored on the model instance
+
+.. note::
+    The ``flaskext.auth.BaseUser`` mixin provides default implementations of these two methods.
+
 Here's a simple example of extending the auth system to use a custom user model:
 
 .. code-block:: python
 
+    from flaskext.auth import BaseModel # <-- implements set_password and check_password
+
     app = Flask(__name__)
     db = Database(app)
     
-    # create our custom user model
-    class User(db.Model):
+    # create our custom user model note that we're mixing in the BaseModel in order to
+    # use the default auth methods it implements, "set_password" and "check_password"
+    class User(db.Model, BaseModel):
         username = CharField()
         password = CharField()
         email = CharField()
@@ -134,6 +148,9 @@ Here's how you might integrate the custom auth with the admin area of your site:
 
 Components of the auth system
 -----------------------------
+
+Auth
+^^^^
 
 The :py:class:`Auth` system is comprised of a single class which is responsible
 for coordinating incoming requests to your project with known users.  It provides
@@ -242,3 +259,21 @@ So, without further ado here's a look at the auth class:
     .. py:method:: logout_user()
     
         Mark the requesting user as logged-out
+
+BaseUser mixin
+^^^^^^^^^^^^^^
+
+.. py:class:: BaseUser(object)
+
+    Provides default implementations for password hashing and validation
+
+    .. py:method:: set_password(password)
+        
+        Encrypts the given password and stores the encrypted version on the model
+
+    .. py:method:: check_password(password)
+
+        Verifies if the given plaintext password matches the encrypted version stored
+        on the model
+
+        :rtype: Boolean

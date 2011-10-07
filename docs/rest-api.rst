@@ -40,7 +40,9 @@ we will expose via the API.  Here is a truncated version of what they look like:
 
 .. code-block:: python
 
-    class User(db.Model):
+    from flaskext.auth import BaseUser
+
+    class User(db.Model, BaseUser):
         username = CharField()
         password = CharField()
         email = CharField()
