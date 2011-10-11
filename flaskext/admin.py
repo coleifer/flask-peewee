@@ -4,10 +4,41 @@ import re
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
 from flaskext.utils import get_next, PaginatedQuery, slugify
-from wtfpeewee.orm import model_form
+from peewee import BooleanField
+from wtforms import fields, widgets
+from wtfpeewee.orm import model_form, ModelConverter
 
 
 current_dir = os.path.dirname(__file__)
+
+
+class BooleanSelectField(fields.SelectFieldBase):
+    widget = widgets.Select()
+
+    def iter_choices(self):
+        yield ('1', 'True', self.data)
+        yield ('', 'False', not self.data)
+
+    def process_data(self, value):
+        try:
+            self.data = bool(value)
+        except (ValueError, TypeError):
+            self.data = None
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                self.data = bool(valuelist[0])
+            except ValueError:
+                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+
+
+def convert_boolean(model, field, **kwargs):
+    return field.name, BooleanSelectField()
+
+converter = ModelConverter({
+    BooleanField: convert_boolean
+})
 
 
 class ModelAdmin(object):
@@ -31,7 +62,7 @@ class ModelAdmin(object):
         )
     
     def get_form(self):
-        return model_form(self.model)
+        return model_form(self.model, converter=converter)
     
     def get_add_form(self):
         return self.get_form()
