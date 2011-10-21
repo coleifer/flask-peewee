@@ -460,12 +460,15 @@ div.admin-panel h3 {
   border-bottom: 1px solid #eee;
   font-size: 16px;
   padding: 8px;
+  margin-bottom: 0;
   background-image: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#eee));
   background-image: -moz-linear-gradient(top, #fff, #eee);
 }
 div.admin-panel .panel-content {
   padding: 8px;
 }
+div.admin-panel ul { list-style: disc inside; margin: 0 0 12px 0; }
+div.admin-panel li { padding-left: 20px; }
 
 /* modeladmin filters */
 div#filter-wrapper {
