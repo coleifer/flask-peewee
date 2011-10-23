@@ -42,7 +42,7 @@
                     <option name="{{ field.name }}"{% if field_name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
                   {% endfor %}
                 </select>
-                {{ get_form_field(form, field_name)(value=field_value, class='filter-value') }}
+                {{ get_form_field(form, field_name)(value=field_value, class='field-value') }}
                 <a href="javascript:void(0);" class="remove-filter">Remove</a>
               </li>
             {% endfor %}
