@@ -13,70 +13,68 @@
 
   <meta name="viewport" content="width=device-width; initial-scale=1.0">
 
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
  
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  {#<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>#}
   <script>!window.jQuery && document.write('<script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"><\/script>')</script>
   
-  <script src="{{ url_for('admin.static', filename='js/modernizr-1.5.min.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/events.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
   {% block extra_script %}{% endblock %}
 </head>
 
 <body class="{% block body_class %}admin{% endblock %}">
-  <div id="container">
-    {% block header_wrapper %}
-    <div id="header_wrapper">
-      <header class="clearfix">
-        <div id="branding">
-          <h1>Site Administration</h1>
-          <p>Logged in as {{ user.username }}</p>
-          <p><a class="button blue small" href="{{ url_for('auth.logout') }}">Log out</a></p>
-        </div>
-      </header>
-    </div>
-    {% endblock %}
-  
-    <div id="content_wrapper">
-      {% block content_wrapper %}
-      <div id="main">
-        {% for message in get_flashed_messages() %}
-          <div class="flash">{{ message }}</div>
-        {% endfor %}
-        
-        <h2>{% block content_title %}{% endblock %}</h2>
-        {% block content %}{% endblock %}
-      </div>
-      {% endblock %}
-      
-      {% block sidebar_wrapper %}
-      <div id="sidebar">
-        <ul>
-          <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+  <div class="topbar">
+    <div class="fill">
+      <div class="container">
+        <a class="brand" href="{{ url_for('admin.index') }}">Site Admin</a>
+
+        <ul class="nav">
+          <li class="active"><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+          <li><a href="{{ url_for('homepage') }}">View site</a></li>
         </ul>
-        {% block sidebar %}
-          <ul>
-            {% for iter_admin in model_admins %}
-              <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a>
-                {% if model_admin == iter_admin %}
-                  <ul>
-                    <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
-                  </ul>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% endblock %}
+        <form class="pull-right" action="{{ url_for('auth.logout') }}" method="get">
+          <button class="btn primary">Logout</button>
+        </form>
       </div>
-      {% endblock %}
     </div>
-    
-    {% block footer_wrapper %}
-    <div id="footer_wrapper">
-      <footer>{% block footer %}Site administration{% endblock %}</footer>
+  </div>
+
+  <div class="container">
+    <div class="content">
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="alert-message {{ category }}">{{ message }}</div>
+      {% endfor %}
+      <div class="page-header">
+        <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
+      </div>
+      <div class="row">
+        <div class="span12">
+          {% block content %}{% endblock %}
+        </div>
+        <div class="span4">
+          <h3>Models</h3>
+          {% block sidebar %}
+            <ul>
+              {% for iter_admin in model_admins %}
+                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a>
+                  {% if model_admin == iter_admin %}
+                    <ul>
+                      <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
+                    </ul>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endblock %}
+        </div>
+      </div>
     </div>
-    {% endblock %}
-  </div> <!--! end of #container -->
+
+    <footer>
+      <p>{% block footer %}Site administration{% endblock %}</p>
+    </footer>
+  </div> <!-- /container -->
 </body>
 </html>

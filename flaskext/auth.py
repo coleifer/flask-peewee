@@ -128,12 +128,12 @@ class Auth(object):
         session['user_pk'] = user.get_pk()
         session.permanent = True
         g.user = user
-        flash('You are logged in as %s' % user.username)
+        flash('You are logged in as %s' % user.username, 'success')
     
     def logout_user(self, user):
         session.pop('logged_in', None)
         g.user = None
-        flash('You are now logged out')
+        flash('You are now logged out', 'success')
     
     def get_logged_in_user(self):
         if session.get('logged_in'):

@@ -1,14 +1,26 @@
 {% extends "admin/models/base.html" %}
 
-{% block content_title %}Delete the following {{ model_admin.get_display_name() }}s?{% endblock %}
-
 {% block content %}
   <form method="post" action=".">
-    {% for object in query %}
-      <p><input type="checkbox" name="id" value="{{ object.get_pk() }}" checked="checked"> {{ object }}</p>
-    {% endfor %}
-    <p><button type="submit">Confirm Delete</button>
-      <a href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
-    </p>
+    <fieldset>
+      <legend>Select {{ model_admin.get_display_name() }}s to delete</legend>
+      <div class="clearfix">
+        <label>Selected models</label>
+        <div class="input">
+          <ul class="inputs-list">
+          {% for object in query %}
+            <li>
+              <label><input type="checkbox" name="id" value="{{ object.get_pk() }}" checked="checked"> <span>{{ object }}</span></label>
+            </li>
+          {% endfor %}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="actions">
+        <button class="btn danger" type="submit">Confirm Delete</button>
+        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+      </div>
+    </fieldset>
   </form>
 {% endblock %}

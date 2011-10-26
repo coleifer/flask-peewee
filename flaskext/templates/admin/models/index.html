@@ -10,10 +10,8 @@
   </script>
 {% endblock %}
 
-{% block content_title %}{{ model_admin.get_display_name() }} Admin{% endblock %}
-
 {% block content %}
-  <p><a href="javascript:void(0);" id="add-filter">Add filter</a></p>
+  <p><a class="btn small" href="javascript:void(0);" id="add-filter">Add filter</a></p>
   <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
     <div class="hidden" id="filter-fields">
     {% for field in form %}
@@ -30,12 +28,13 @@
               <option name="{{ field.name }}">{{ field.name }}</option>
             {% endfor %}
           </select>
-          <a href="javascript:void(0);" class="remove-filter">Remove</a>
+          <a class="remove-filter" href="javascript:void(0);">Remove</a>
         </li>
         {% for field_name, field_values in raw_filters %}
           {% if field_name in form %}
             {% for field_value in field_values %}
               <li>
+                <div class="clearfix">
                 <select class="field">
                   <option>--- select field ---</option>
                   {% for field in form %}
@@ -43,21 +42,22 @@
                   {% endfor %}
                 </select>
                 {{ get_form_field(form, field_name)(value=field_value, class='field-value') }}
-                <a href="javascript:void(0);" class="remove-filter">Remove</a>
+                <a class="remove-filter" href="javascript:void(0);">Remove</a>
+                </div>
               </li>
             {% endfor %}
           {% endif %}
         {% endfor %}
       </ul>
-      <p class="submit"><button type="submit" class="small">Apply</button>
-        <a href="." class="small gray button">Reset</a>
+      <p class="submit">
+        <button class="btn primary small" type="submit">Apply</button>
+        <a class="btn small" href=".">Reset</a>
       </p>
     </form>
   </div>
   
   <form method="post" action=".">
-  <div class="table-wrapper">
-    <table class="admin-list">
+  <table class="zebra-striped">
     <thead>
       <tr>
         <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
@@ -77,7 +77,7 @@
     </thead>
     <tbody>
     {% for object in query.get_list() %}
-      <tr class="{{ loop.cycle('odd', 'even') }}">
+      <tr>
         <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
@@ -93,12 +93,12 @@
       </tr>
     {% endfor %}
     </tbody>
-    </table>
+  </table>
+
+  <div class="actions">
+    <a class="btn primary" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a>
+    <button class="btn danger" type="submit">Delete selected</button>
   </div>
-  <p>
-    <a class="button" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a>
-    <button class="gray" type="submit">Delete selected</button>
-  </p>
   </form>
   {% include "admin/includes/pagination.html" %}
 {% endblock %}

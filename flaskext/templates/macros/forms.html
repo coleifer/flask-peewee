@@ -9,3 +9,21 @@
     {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
   {% endif %}
 {% endmacro %}
+
+{% macro admin_field(field) %}
+  <div class="clearfix{% if field.errors %} error{% endif %}">
+    {{ field.label }}
+    <div class="input">
+      {% if field.errors %}
+        {% set css_class = 'error span8 ' + kwargs.pop('class', '') %}
+        {{ field(class=css_class, **kwargs) }}
+        {% if field.description %}<span class="help-inline">{{ field.description|safe() }}</span>{% endif %}
+        {% for error in field.errors %}<span class="help-inline">{{ error|e }}</span>{% endfor %}
+      {% else %}
+        {% set css_class = 'span8 ' + kwargs.pop('class', '') %}
+        {{ field(class=css_class, **kwargs) }}
+        {% if field.description %}<span class="help-inline">{{ field.description|safe() }}</span>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}

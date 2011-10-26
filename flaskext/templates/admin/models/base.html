@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
 
-{% from 'macros/forms.html' import with_errors %}
+{% from 'macros/forms.html' import admin_field %}
 
 {% block body_class %}{{ super() }} model-admin{% endblock %}
+
+{% block content_title %}{{ model_admin.get_display_name() }} Admin{% endblock %}

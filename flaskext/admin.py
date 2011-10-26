@@ -150,10 +150,12 @@ class ModelAdmin(object):
             form = Form(request.form)
             if form.validate():
                 instance = self.save_model(self.model(), form, True)
-                flash('New %s saved successfully' % self.get_display_name())                
+                flash('New %s saved successfully' % self.get_display_name(), 'success')                
                 return redirect(
                     url_for(self.get_url_name('edit'), pk=instance.get_pk())
                 )
+            else:
+                flash('Error adding %s' % self.get_display_name(), 'error')
         else:
             form = Form()
         
@@ -171,10 +173,12 @@ class ModelAdmin(object):
             form = Form(request.form, obj=instance)
             if form.validate():
                 self.save_model(instance, form, False)
-                flash('Changes to %s saved successfully' % self.get_display_name())
+                flash('Changes to %s saved successfully' % self.get_display_name(), 'success')
                 return redirect(
                     url_for(self.get_url_name('edit'), pk=instance.get_pk())
                 )
+            else:
+                flash('Error saving changes to %s' % self.get_display_name(), 'error')
         else:
             form = Form(obj=instance)
         
@@ -192,7 +196,7 @@ class ModelAdmin(object):
                 '%s__in' % self.model._meta.pk_name: id_list
             })
             results = query.execute()
-            flash('Successfully deleted %s %ss' % (results, self.get_display_name()))
+            flash('Successfully deleted %s %ss' % (results, self.get_display_name()), 'success')
             return redirect(url_for(self.get_url_name('index')))
         
         return render_template('admin/models/delete.html', model_admin=self, query=query)
