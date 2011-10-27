@@ -16,9 +16,9 @@
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
  
-  {#<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>#}
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
   <script>!window.jQuery && document.write('<script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"><\/script>')</script>
-  
+  <script src="{{ url_for('admin.static', filename='js/bootstrap-alerts.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/events.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
   {% block extra_script %}{% endblock %}
@@ -44,7 +44,10 @@
   <div class="container">
     <div class="content">
       {% for category, message in get_flashed_messages(with_categories=true) %}
-        <div class="alert-message {{ category }}">{{ message }}</div>
+        <div class="alert-message {{ category }}">
+          <a class="close" href="#">×</a>
+          <p>{{ message }}</p>
+        </div>
       {% endfor %}
       <div class="page-header">
         <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>

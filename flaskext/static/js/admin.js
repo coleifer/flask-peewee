@@ -1,12 +1,6 @@
 var Admin = window.Admin || {};
 
 (function(A, $) {
-  A.MessageHandler = function(selector) {
-    setTimeout(function() {
-      $(selector).fadeOut();
-    }, 3000);
-  };
-  
   var ModelAdminFilter = function(options) {
     this.wrapper = '#filter-wrapper';
     this.form = 'form.modeladmin-filters';
@@ -65,5 +59,5 @@ var Admin = window.Admin || {};
 })(Admin, jQuery);
 
 jQuery(function() {
-  Admin.MessageHandler('.flash');
+  jQuery(".alert-message").alert()
 });

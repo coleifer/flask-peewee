@@ -92,13 +92,11 @@
         {% endif %}
       </tr>
     {% endfor %}
+      <tr><td colspan="2">
+        <button class="btn danger small" type="submit">Delete selected</button>
+      </td></tr>
     </tbody>
   </table>
-
-  <div class="actions">
-    <a class="btn primary" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a>
-    <button class="btn danger" type="submit">Delete selected</button>
-  </div>
   </form>
   {% include "admin/includes/pagination.html" %}
 {% endblock %}

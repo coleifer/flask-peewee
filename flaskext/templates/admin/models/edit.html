@@ -10,6 +10,7 @@
       <div class="actions">
         <button class="btn primary" type="submit">Save</button>
         <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+        <a class="btn danger pull-right" href="{{ url_for(model_admin.get_url_name('delete'), id=instance.get_pk()) }}">Delete</a>
       </div>
     </fieldset>
   </form>
