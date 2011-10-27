@@ -1,6 +1,12 @@
 {% extends "admin/models/base.html" %}
 
 {% block content %}
+  {% if form.errors %}
+    <div class="alert-message block-message error">
+      <a class="close" href="#">×</a>
+      <p>There were errors with your form submission</p>
+    </div>
+  {% endif %}
   <form method="post" action="." class="edit">
     <fieldset>
       <legend>Edit {{ model_admin.get_display_name() }}</legend>

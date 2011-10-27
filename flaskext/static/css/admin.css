@@ -37,5 +37,9 @@ form.modeladmin-filters { margin: 0; }
 form.modeladmin-filters ul { list-style-type: none; }
 form.modeladmin-filters select.field { margin-right: 10px; }
 
+form textarea { height: 150px; }
+
+div.sidebar li.active { font-weight: bold; }
+
 /* helpers */
 .hidden { display: none; }

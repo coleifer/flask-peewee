@@ -154,8 +154,6 @@ class ModelAdmin(object):
                 return redirect(
                     url_for(self.get_url_name('edit'), pk=instance.get_pk())
                 )
-            else:
-                flash('Error adding %s' % self.get_display_name(), 'error')
         else:
             form = Form()
         
@@ -177,8 +175,6 @@ class ModelAdmin(object):
                 return redirect(
                     url_for(self.get_url_name('edit'), pk=instance.get_pk())
                 )
-            else:
-                flash('Error saving changes to %s' % self.get_display_name(), 'error')
         else:
             form = Form(obj=instance)
         
