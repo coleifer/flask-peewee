@@ -4,8 +4,10 @@
 
 {% block content %}
   {% if panels %}
+    <div class="row">
     {% for panel in panels %}
       {{ panel.render()|safe() }}
     {% endfor %}
+    </div>
   {% endif %}
 {% endblock %}
