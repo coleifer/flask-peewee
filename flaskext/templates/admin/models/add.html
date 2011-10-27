@@ -9,7 +9,7 @@
   {% endif %}
   <form method="post" action="." class="add">
     <fieldset>
-      <legend>{{ model_admin.get_display_name() }}</legend>
+      <legend>Add a new {{ model_admin.get_display_name() }}</legend>
       {% for field in form %}
         {{ admin_field(field) }}
       {% endfor %}
