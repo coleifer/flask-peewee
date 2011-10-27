@@ -11,7 +11,10 @@
 {% endblock %}
 
 {% block content %}
-  <p><a class="btn small" href="javascript:void(0);" id="add-filter">Add filter</a></p>
+  <p>
+    <a class="btn small" href="javascript:void(0);" id="add-filter">Add filter</a>
+    <a class="btn small primary" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new {{ model_admin.get_display_name() }}</a>
+  </p>
   <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
     <div class="hidden" id="filter-fields">
     {% for field in form %}
