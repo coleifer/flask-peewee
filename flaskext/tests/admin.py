@@ -361,7 +361,6 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertContext('user', self.admin)
             self.assertContext('model_admin', admin._registry['user'])
             self.assertContext('ordering', '')
-            self.assertContext('filters', [('username', 'admin')])
 
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), [
@@ -371,8 +370,6 @@ class AdminTestCase(FlaskPeeweeTestCase):
             # test a lookup using multiple values
             resp = c.get('/admin/user/?username=admin&username=normal&ordering=-username')
             self.assertEqual(resp.status_code, 200)
-            
-            self.assertContext('filters', [('username__in', ['admin', 'normal'])])
 
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), [
@@ -385,7 +382,6 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('model_admin', admin._registry['note'])
-            self.assertContext('filters', [('user', str(self.normal.id))])
             
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), notes[self.normal])

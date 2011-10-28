@@ -1,0 +1,14 @@
+{% macro admin_filter(form, name=None, value=None) %}
+<div class="clearfix">
+  <select class="field">
+    <option>--- select field ---</option>
+    {% for field in form %}
+      <option name="{{ field.name }}"{% if name and name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
+    {% endfor %}
+  </select>
+  {% if name %}
+    {{ get_form_field(form, name)(value=value, class='field-value') }}
+  {% endif %}
+  <a class="remove-filter" href="javascript:void(0);">Remove</a>
+</div>
+{% endmacro %}

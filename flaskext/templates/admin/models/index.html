@@ -1,5 +1,7 @@
 {% extends "admin/models/base.html" %}
 
+{% from 'macros/filters.html' import admin_filter %}
+
 {% block extra_script %}
   {{ super() }}
   <script type="text/javascript">
@@ -24,30 +26,11 @@
     <form method="get" action="." class="modeladmin-filters">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
       <ul>
-        <li class="hidden" id="template-row">
-          <select class="field">
-            <option>--- select field ---</option>
-            {% for field in form %}
-              <option name="{{ field.name }}">{{ field.name }}</option>
-            {% endfor %}
-          </select>
-          <a class="remove-filter" href="javascript:void(0);">Remove</a>
-        </li>
+        <li class="hidden" id="template-row">{{ admin_filter(form) }}</li>
         {% for field_name, field_values in raw_filters %}
           {% if field_name in form %}
             {% for field_value in field_values %}
-              <li>
-                <div class="clearfix">
-                <select class="field">
-                  <option>--- select field ---</option>
-                  {% for field in form %}
-                    <option name="{{ field.name }}"{% if field_name == field.name %} selected="selected"{% endif %}>{{ field.name }}</option>
-                  {% endfor %}
-                </select>
-                {{ get_form_field(form, field_name)(value=field_value, class='field-value') }}
-                <a class="remove-filter" href="javascript:void(0);">Remove</a>
-                </div>
-              </li>
+              <li>{{ admin_filter(form, field_name, field_value) }}</li>
             {% endfor %}
           {% endif %}
         {% endfor %}
@@ -55,6 +38,7 @@
       <p class="submit">
         <button class="btn primary small" type="submit">Apply</button>
         <a class="btn small" href=".">Reset</a>
+        <span class="help-inline">Use the wildcard "*" to partially match text, e.g. <em>*phrase*</em> or <em>starts with*</em></span>
       </p>
     </form>
   </div>

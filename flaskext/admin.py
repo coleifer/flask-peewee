@@ -1,10 +1,11 @@
 import functools
+import operator
 import os
 import re
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
 from flaskext.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField
+from peewee import BooleanField, Q
 from wtforms import fields, widgets
 from wtfpeewee.orm import model_form, ModelConverter
 
@@ -120,13 +121,26 @@ class ModelAdmin(object):
             values = request.args.getlist(key)
             raw_filters.append((key, values))
             
-            if len(values) == 1:
-                filters.append((key, values[0]))
+            lookups = []
+            
+            for value in values:
+                if value.startswith('*') and value.endswith('*'):
+                    lookup = 'icontains'
+                elif value.endswith('*'):
+                    lookup = 'istartswith'
+                else:
+                    lookup = 'eq'
+                
+                value = value.strip('*')
+                lookups.append(Q(**{'%s__%s' % (key, lookup): value}))
+            
+            if len(lookups) == 1:
+                filters.append(lookups[0])
             else:
-                filters.append(('%s__in' % key, values))
+                filters.append(reduce(operator.or_, lookups))
         
         if filters:
-            query = query.filter(**dict(filters))
+            query = query.filter(*filters)
         
         pq = PaginatedQuery(query, self.paginate_by)
         
