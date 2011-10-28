@@ -162,6 +162,8 @@ After cleaning up the imports and declarations, we have something like the follo
         'name': 'example.db',
         'engine': 'peewee.SqliteDatabase',
     }
+    DEBUG = True
+    SECRET_KEY = 'ssshhhh'
 
     app = Flask(__name__)
     app.config.from_object(__name__)
@@ -221,8 +223,7 @@ It should now be possible to:
 
 .. image:: fp-getting-started.jpg
 
-The dashboard is pretty empty right now.  Go ahead and add a few notes (the green
-"plus" icon on the dashboard next to Note).  If you navigate now to the note
+The dashboard is pretty empty right now.  Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/).  If you navigate now to the note
 modeladmin you will see something like this:
 
 .. image:: fp-note-admin.jpg

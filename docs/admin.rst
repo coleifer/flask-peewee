@@ -82,7 +82,7 @@ Screenshot showing a typical :py:class:`ModelAdmin` -- this one exposing ``Messa
 objects.  Currently the list of messages is filtered to only list those by the
 user "coleifer".
 
-.. image:: fp-model-admin-cropped.jpg
+.. image:: fp-model-admin.jpg
 
 Typical usage:
 
