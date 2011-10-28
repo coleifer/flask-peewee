@@ -708,3 +708,31 @@ blocks any HTTP request other than a GET:
     
         :param user: the ``auth.User`` instance of the requesting user
         :rtype: Boolean indicating whether the user is an administrator
+
+
+.. py:class:: APIKeyAuthentication(Authentication)
+
+    Subclass that allows you to provide an API Key model to authenticate requests
+    with.
+    
+    .. note:: Must provide an API key model with at least the following two
+        fields:
+        
+        * key
+        * secret
+    
+    
+    .. code-block:: python
+    
+        # example API key model
+        class APIKey(db.Model):
+            key = CharField()
+            secret = CharField()
+            user = ForeignKeyField(User)
+        
+        # instantiating the auth
+        api_key_auth = APIKeyAuthentication(model=APIKey)
+    
+    .. py:method:: __init__(model, protected_methods=None)
+    
+        :param model: a :py:class:`Database.Model` subclass to persist API keys.
