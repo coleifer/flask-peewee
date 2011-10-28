@@ -5,7 +5,7 @@ import re
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
 from flaskext.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField, Q
+from peewee import BooleanField, TextField, Q
 from wtforms import fields, widgets
 from wtfpeewee.orm import model_form, ModelConverter
 
@@ -37,8 +37,16 @@ class BooleanSelectField(fields.SelectFieldBase):
 def convert_boolean(model, field, **kwargs):
     return field.name, BooleanSelectField()
 
+def convert_textfield(model, field, **kwargs):
+    return field.name, fields.TextField()
+
 converter = ModelConverter({
-    BooleanField: convert_boolean
+    BooleanField: convert_boolean,
+})
+
+filter_converter = ModelConverter({
+    BooleanField: convert_boolean,
+    TextField: convert_textfield,
 })
 
 
@@ -64,6 +72,9 @@ class ModelAdmin(object):
     
     def get_form(self):
         return model_form(self.model, converter=converter)
+    
+    def get_filter_form(self):
+        return model_form(self.model, converter=filter_converter)
     
     def get_add_form(self):
         return self.get_form()
@@ -104,7 +115,7 @@ class ModelAdmin(object):
     
     def index(self):
         query = self.get_query()
-        form = self.get_form()(request.args)
+        form = self.get_filter_form()(request.args)
         
         ordering = request.args.get('ordering') or ''
         if ordering:
