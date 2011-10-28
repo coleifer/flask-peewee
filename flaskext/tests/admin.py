@@ -351,6 +351,8 @@ class AdminTestCase(FlaskPeeweeTestCase):
         for user in users:
             notes[user] = [Note.create(user=user, message='test-%d' % i) for i in range(3)]
         
+        norm2 = self.create_user('normal2', 'normal2')
+        
         with self.flask_app.test_client() as c:
             self.login(c)
             
@@ -377,6 +379,16 @@ class AdminTestCase(FlaskPeeweeTestCase):
                 self.admin,
             ])
             
+            # test a lookup using partial string
+            resp = c.get('/admin/user/?username=norm*&ordering=-username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [
+                norm2,
+                self.normal,
+            ])
+            
             # test a lookup spanning a relation
             resp = c.get('/admin/note/?user=%d' % self.normal.id)
             self.assertEqual(resp.status_code, 200)
@@ -385,6 +397,16 @@ class AdminTestCase(FlaskPeeweeTestCase):
             
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), notes[self.normal])
+            
+            # test a multi-value lookup spanning a relation
+            resp = c.get('/admin/note/?user=%d&user=%d' % (self.normal.id, self.admin.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertContext('model_admin', admin._registry['note'])
+            
+            query = self.get_context('query')
+            expected_notes = notes[self.admin] + notes[self.normal]
+            self.assertEqual(list(query.get_list()), expected_notes)
         
     def test_model_admin_index_pagination(self):
         users = self.create_users()
