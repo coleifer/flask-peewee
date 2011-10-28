@@ -7,13 +7,22 @@ import base64
 import datetime
 import unittest
 
+from flask import g
+
 from flaskext.rest import RestAPI, RestResource, Authentication, UserAuthentication
 from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, Message, Note
+from flaskext.tests.test_app import User, Message, Note, TestModel, APIKey
 from flaskext.utils import get_next, make_password, check_password
 
 
 class RestApiTestCase(FlaskPeeweeTestCase):
+    def setUp(self):
+        super(RestApiTestCase, self).setUp()
+        TestModel.drop_table(True)
+        APIKey.drop_table(True)
+        APIKey.create_table()
+        TestModel.create_table()
+    
     def response_json(self, response):
         return json.loads(response.data)
     
@@ -65,6 +74,16 @@ class RestApiTestCase(FlaskPeeweeTestCase):
     def assertAPIMessages(self, json_data, messages):
         for json_item, message in zip(json_data['objects'], messages):
             self.assertAPIMessage(json_item, message)
+        
+    def assertAPITestModel(self, json_data, tm):
+        self.assertEqual(json_data, {
+            'data': tm.data,
+            'id': tm.id,
+        })
+    
+    def assertAPITestModels(self, json_data, tms):
+        for json_item, tm in zip(json_data['objects'], tms):
+            self.assertAPITestModel(json_item, tm)
 
 
 class RestApiBasicTestCase(RestApiTestCase):
@@ -658,3 +677,55 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         
         resp_json = self.response_json(resp)
         self.assertEqual(resp_json, {'deleted': 1})
+
+
+class RestApiKeyAuthTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiKeyAuthTestCase, self).setUp()
+        
+        self.tm1 = TestModel.create(data='test1')
+        self.tm2 = TestModel.create(data='test2')
+        
+        self.k1 = APIKey.create(key='k', secret='s')
+        self.k2 = APIKey.create(key='k2', secret='s2')
+    
+    def test_list_get(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/testmodel/')
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+            
+            resp = c.get('/api/testmodel/?key=k&secret=s2')
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+            
+            resp = c.get('/api/testmodel/?key=k&secret=s')
+            self.assertEqual(g.api_key, self.k1)
+            resp_json = self.response_json(resp)
+
+            self.assertAPITestModels(resp_json, [
+                self.tm1,
+                self.tm2,
+            ])
+            self.assertAPIMeta(resp_json, {'model': 'testmodel', 'next': '', 'page': 1, 'previous': ''})
+    
+    def test_create(self):
+        with self.flask_app.test_client() as c:
+            test_data = {'data': 't3'}
+            serialized = json.dumps(test_data)
+            
+            resp = c.post('/api/testmodel/', data=serialized)
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+            
+            resp = c.post('/api/testmodel/?key=k&secret=s2', data=serialized)
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+
+            # test passing in via get args
+            resp = c.post('/api/testmodel/?key=k&secret=s', data=serialized)
+            self.assertEqual(g.api_key, self.k1)
+            resp_json = self.response_json(resp)
+            
+            self.assertEqual(TestModel.select().count(), 3)
+            self.assertEqual(resp_json['data'], 't3')

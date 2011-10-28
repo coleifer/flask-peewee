@@ -25,6 +25,36 @@ class Authentication(object):
         return True
 
 
+class APIKeyAuthentication(Authentication):
+    """
+    Requires a model that has at least two fields, "key" and "secret", which will
+    be searched for when authing a request
+    """
+    def __init__(self, model, protected_methods=None):
+        super(APIKeyAuthentication, self).__init__(protected_methods)
+        self.model = model
+    
+    def get_query(self):
+        return self.model.select()
+    
+    def get_key(self, k, s):
+        try:
+            return self.get_query().get(key=k, secret=s)
+        except self.model.DoesNotExist:
+            pass
+    
+    def authorize(self):
+        g.api_key = None
+        
+        if request.method not in self.protected_methods:
+            return True
+
+        if 'key' in request.args and 'secret' in request.args:
+            g.api_key = self.get_key(request.args['key'], request.args['secret'])
+        
+        return g.api_key
+
+
 class UserAuthentication(Authentication):
     def __init__(self, auth, protected_methods=None):
         super(UserAuthentication, self).__init__(protected_methods)
@@ -60,7 +90,7 @@ class RestResource(object):
     paginate_by = 20
     fields = None
     exclude = None
-    ignore_filters = ('ordering', 'page', 'limit',)
+    ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
     
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api

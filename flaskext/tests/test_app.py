@@ -8,7 +8,7 @@ from peewee import *
 from flaskext.admin import Admin, ModelAdmin, AdminPanel
 from flaskext.auth import Auth, BaseUser
 from flaskext.db import Database
-from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication
+from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication
 from flaskext.utils import get_object_or_404, object_list, make_password
 
 
@@ -57,6 +57,18 @@ class Note(db.Model):
     user = ForeignKeyField(User)
     message = TextField()
     created_date = DateTimeField(default=datetime.datetime.now)
+
+
+class TestModel(db.Model):
+    data = TextField()
+    
+    class Meta:
+        ordering = ('id',)
+
+
+class APIKey(db.Model):
+    key = CharField()
+    secret = CharField()
 
 
 class NotePanel(AdminPanel):
@@ -110,12 +122,14 @@ class UserResource(RestResource):
 # rest api stuff
 user_auth = UserAuthentication(auth)
 admin_auth = AdminAuthentication(auth)
+api_key_auth = APIKeyAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
 
 api = RestAPI(app, default_auth=user_auth)
 
 api.register(Message, RestrictOwnerResource)
 api.register(User, UserResource, auth=admin_auth)
 api.register(Note)
+api.register(TestModel, auth=api_key_auth)
 
 
 # views
