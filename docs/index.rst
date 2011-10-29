@@ -11,14 +11,6 @@ Welcome to the flask-peewee documentation!
 provides a layer of integration between the `flask <http://flask.pocoo.org/>`_ 
 web framework and the `peewee orm <http://charlesleifer.com/docs/peewee/>`_.
 
-API in depth:
-
-.. toctree::
-    :maxdepth: 2
-    :glob:
-
-    api/
-
 Contents:
 
 .. toctree::
@@ -32,6 +24,14 @@ Contents:
    auth
    rest-api
    utils
+
+API in depth:
+
+.. toctree::
+    :maxdepth: 2
+    :glob:
+
+    api/
 
 Indices and tables
 ==================
