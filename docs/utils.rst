@@ -6,57 +6,72 @@ Utilities
 flask-peewee ships with several useful utilities.  If you're coming from the
 django world, some of these functions may look familiar to you.
 
-.. py:function:: get_object_or_404(query_or_model, **query)
 
-    Given any number of keyword arguments, retrieve a single instance of the
-    ``query_or_model`` parameter or return a 404
-    
-    :param query_or_model: either a ``Model`` class or a ``SelectQuery``
-    :param **query: any number of keyword arguments, e.g. ``id=1``
-    :rtype: either a single model instance or raises a ``NotFound`` (404 response)
+Getting objects
+---------------
 
-.. py:function:: object_list(template_name, qr[, var_name='object_list'[, **kwargs]])
+:py:func:`get_object_or_404`
 
-    Returns a rendered template, passing in a paginated version of the query.
+    .. code-block:: python
     
-    :param template_name: a string representation of a path to a template
-    :param qr: a ``SelectQuery``
-    :param var_name: context variable name to use when rendering the template
-    :param **kwargs: any arbitrary keyword arguments to pass to the template during rendering
-    :rtype: rendered ``Response``
+        @app.route('/blog/<title>/')
+        def blog_detail(title):
+            blog = get_object_or_404(Blog.select().where(active=True), title=title)
+            return render_template('blog/detail.html', blog=blog)
 
-.. py:function:: get_next()
+:py:func:`object_list`
 
-    :rtype: a URL suitable for redirecting to
+    .. code-block:: python
+    
+        @app.route('/blog/')
+        def blog_list():
+            active = Blog.select().where(active=True)
+            return object_list('blog/index.html', active)
+    
+    .. code-block:: html
+    
+        <!-- template -->
+        {% for blog in object_list %}
+          {# render the blog here #}
+        {% endfor %}
+        
+        {% if page > 1 %}
+          <a href="./?page={{ page - 1 }}">Prev</a>
+        {% endif %}
+        {% if page < pagination.get_pages() %}
+          <a href="./?page={{ page + 1 }}">Next</a>
+        {% endif %}
 
-.. py:function:: slugify(s)
+:py:class:`PaginatedQuery`
 
-    Use a regular expression to make arbitrary string ``s`` URL-friendly
+    .. code-block:: python
+    
+        query = Blog.select().where(active=True)
+        pq = PaginatedQuery(query)
+        
+        # assume url was /?page=3
+        obj_list = pq.get_list()  # returns 3rd page of results
+        
+        pq.get_page() # returns "3"
+        
+        pq.get_pages() # returns total objects / objects-per-page
 
-    :param s: any string to be slugified
-    :rtype: url-friendly version of string ``s``
 
-.. py:class:: PaginatedQuery
+Misc
+----
 
-    Wraps a ``SelectQuery`` with helpers for paginating.
+
+:py:func:`slugify`
+
+    .. code-block:: python
     
-    .. py:attribute:: page_var = 'page'
-    
-        GET argument to use for determining request page
-    
-    .. py:method:: __init__(query_or_model, paginate_by)
-    
-        :param query_or_model: either a ``Model`` class or a ``SelectQuery``
-        :param paginate_by: number of results to return per-page
-    
-    .. py:method:: get_list()
-    
-        :rtype: a list of objects for the request page
-    
-    .. py:method:: get_page()
-    
-        :rtype: an integer representing the currently requested page
-    
-    .. py:method:: get_pages()
-    
-        :rtype: the number of pages in the entire result set
+        from flaskext.utils import slugify
+        
+        
+        class Blog(db.Model):
+            title = CharField()
+            slug = CharField()
+            
+            def save(self):
+                self.slug = slugify(self.title)
+                super(Blog, self).save()
