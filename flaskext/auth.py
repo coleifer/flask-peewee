@@ -28,13 +28,13 @@ class BaseUser(object):
 class Auth(object):
     default_next_url = 'homepage'
     
-    def __init__(self, app, db, user_model=None, prefix='/accounts'):
+    def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth'):
         self.app = app
         self.db = db
         
         self.User = user_model or self.get_user_model()
         
-        self.blueprint = self.get_blueprint()
+        self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
         
         self.setup()
@@ -80,9 +80,9 @@ class Auth(object):
     def register_admin(self, admin_site, model_admin=None):
         admin_site.register(self.User, self.get_model_admin(model_admin))
     
-    def get_blueprint(self):
+    def get_blueprint(self, blueprint_name):
         return Blueprint(
-            'auth',
+            blueprint_name,
             __name__,
             static_folder=os.path.join(current_dir, 'static'),
             template_folder=os.path.join(current_dir, 'templates'),

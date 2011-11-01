@@ -335,13 +335,13 @@ class RestrictOwnerResource(RestResource):
 
 
 class RestAPI(object):
-    def __init__(self, app, prefix='/api', default_auth=None):
+    def __init__(self, app, prefix='/api', default_auth=None, name='api'):
         self.app = app
         
         self._registry = {}
         
         self.url_prefix = prefix
-        self.blueprint = self.get_blueprint()
+        self.blueprint = self.get_blueprint(name)
         
         self.default_auth = default_auth or Authentication()
     
@@ -364,8 +364,8 @@ class RestAPI(object):
             return func(*args, **kwargs)
         return inner
     
-    def get_blueprint(self):
-        return Blueprint('api', __name__)
+    def get_blueprint(self, blueprint_name):
+        return Blueprint(blueprint_name, __name__)
     
     def get_urls(self):
         return ()

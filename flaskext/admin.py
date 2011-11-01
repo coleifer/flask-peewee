@@ -254,24 +254,6 @@ class AdminPanel(object):
         return render_template(self.get_template_name(), panel=self, **self.get_context())
 
 
-class BluePrintFactory(object):
-    def __init__(self, name='admin', **kwargs):
-        self.name = name
-        self.import_name = __name__
-        self.extra = kwargs
-    
-    def get_blueprint(self):
-        return Blueprint(
-            self.name,
-            self.import_name,
-            static_folder=os.path.join(current_dir, 'static'),
-            template_folder=os.path.join(current_dir, 'templates'),
-            **self.extra
-        )
-
-blueprint_factory = BluePrintFactory()
-
-
 class AdminTemplateHelper(object):
     def __init__(self, admin):
         self.admin = admin
@@ -318,15 +300,15 @@ class AdminTemplateHelper(object):
 
 
 class Admin(object):
-    def __init__(self, app, auth, blueprint_factory=blueprint_factory,
-                 template_helper=AdminTemplateHelper, prefix='/admin'):
+    def __init__(self, app, auth, template_helper=AdminTemplateHelper,
+                 prefix='/admin', name='admin'):
         self.app = app
         self.auth = auth
         
         self._registry = {}
         self._panels = {}
         
-        self.blueprint = blueprint_factory.get_blueprint()
+        self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
         
         self.template_helper = template_helper(self)
@@ -381,6 +363,14 @@ class Admin(object):
         return render_template('admin/index.html',
             model_admins=self.get_model_admins(),
             panels=self.get_panels(),
+        )
+    
+    def get_blueprint(self, blueprint_name):
+        return Blueprint(
+            blueprint_name,
+            __name__,
+            static_folder=os.path.join(current_dir, 'static'),
+            template_folder=os.path.join(current_dir, 'templates'),
         )
     
     def register_blueprint(self, **kwargs):
