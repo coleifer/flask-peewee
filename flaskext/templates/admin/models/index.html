@@ -44,46 +44,48 @@
   </div>
   
   <form method="post" action=".">
-  <table class="zebra-striped">
-    <thead>
-      <tr>
-        <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
-        {% if model_admin.columns %}
-          {% for column in model_admin.columns %}
-            {% if ordering == column %}
-              {% set sort_by = '-'+column %}
-            {% else %}
-              {% set sort_by = column %}
-            {% endif %}
-            <th>{% if model_admin.column_is_sortable(column) %}<a href="./?{{ update_querystring(request.query_string, 'ordering', sort_by)|safe() }}">{% endif %}{{ get_verbose_name(model_admin.model, column) }}{% if model_admin.column_is_sortable(column) %}</a>{% endif %}</th>
-          {% endfor %}
-        {% else %}
-          <th>{{ model_admin.get_display_name() }}</th>
-        {% endif %}
-      </tr>
-    </thead>
-    <tbody>
-    {% for object in query.get_list() %}
-      <tr>
-        <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
-        {% if model_admin.columns %}
-          {% for column in model_admin.columns %}
-            {% if loop.index == 1 %}
-              <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ get_model_field(object, column) }}</a></td>
-            {% else %}
-              <td>{{ get_model_field(object, column) }}</td>
-            {% endif %}
-          {% endfor %}
-        {% else %}
-          <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
-        {% endif %}
-      </tr>
-    {% endfor %}
-      <tr><td colspan="2">
-        <button class="btn danger small" type="submit">Delete selected</button>
-      </td></tr>
-    </tbody>
-  </table>
+  <div class="form-wrapper">
+    <table class="zebra-striped">
+      <thead>
+        <tr>
+          <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
+          {% if model_admin.columns %}
+            {% for column in model_admin.columns %}
+              {% if ordering == column %}
+                {% set sort_by = '-'+column %}
+              {% else %}
+                {% set sort_by = column %}
+              {% endif %}
+              <th>{% if model_admin.column_is_sortable(column) %}<a href="./?{{ update_querystring(request.query_string, 'ordering', sort_by)|safe() }}">{% endif %}{{ get_verbose_name(model_admin.model, column) }}{% if model_admin.column_is_sortable(column) %}</a>{% endif %}</th>
+            {% endfor %}
+          {% else %}
+            <th>{{ model_admin.get_display_name() }}</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for object in query.get_list() %}
+        <tr>
+          <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
+          {% if model_admin.columns %}
+            {% for column in model_admin.columns %}
+              {% if loop.index == 1 %}
+                <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ get_model_field(object, column) }}</a></td>
+              {% else %}
+                <td>{{ get_model_field(object, column) }}</td>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+        <tr><td colspan="2">
+          <button class="btn danger small" type="submit">Delete selected</button>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
   </form>
   {% include "admin/includes/pagination.html" %}
 {% endblock %}
