@@ -82,6 +82,7 @@ class ModelAdmin(object):
             ('/', self.index),
             ('/add/', self.add),
             ('/delete/', self.delete),
+            ('/export/', self.export),
             ('/<pk>/', self.edit),
         )
     
@@ -144,8 +145,11 @@ class ModelAdmin(object):
         pq = PaginatedQuery(query, self.paginate_by)
         
         if request.method == 'POST':
-            id_list = request.form.getlist('id')
-            return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            if request.form['action'] == 'delete':
+                id_list = request.form.getlist('id')
+                return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            else:
+                return redirect(url_for(self.get_url_name('export')))
         
         return render_template('admin/models/index.html',
             model_admin=self,
@@ -214,6 +218,10 @@ class ModelAdmin(object):
             return redirect(url_for(self.get_url_name('index')))
         
         return render_template('admin/models/delete.html', model_admin=self, query=query)
+    
+    def export(self):
+        query=None
+        return render_template('admin/models/export.html', model_admin=self, query=query)
 
 
 class AdminPanel(object):

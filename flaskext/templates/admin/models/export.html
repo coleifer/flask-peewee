@@ -1,0 +1,29 @@
+{% extends "admin/models/base.html" %}
+
+{% block breadcrumbs %}
+ {{ super() }}
+ <li><span class="divider">/</span> <a href=".">Export</a></li>
+{% endblock %}
+
+{% block tab_export_class %}active{% endblock %}
+
+{% block content %}
+  <form method="post" action=".">
+    <fieldset>
+      <legend>Select {{ model_admin.get_display_name() }}s to export</legend>
+      <div class="clearfix">
+        <label>Selected models</label>
+        <div class="input">
+          <ul class="inputs-list">
+          
+          </ul>
+        </div>
+      </div>
+      
+      <div class="actions">
+        <button class="btn primary" type="submit">Export</button>
+        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+      </div>
+    </fieldset>
+  </form>
+{% endblock %}
