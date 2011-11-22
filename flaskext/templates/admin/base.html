@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="en">
 <head>
   <meta charset="utf-8">
 
@@ -19,7 +19,7 @@
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
   <script>!window.jQuery && document.write('<script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"><\/script>')</script>
   <script src="{{ url_for('admin.static', filename='js/bootstrap-alerts.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/events.js') }}"></script>
+  <script src="{{ url_for('admin.static', filename='js/bootstrap-dropdown.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
   {% block extra_script %}{% endblock %}
 </head>
@@ -27,57 +27,57 @@
 <body class="{% block body_class %}admin{% endblock %}">
   <div class="topbar">
     <div class="fill">
-      <div class="container">
-        <a class="brand" href="{{ url_for('admin.index') }}">Site Admin</a>
+      <div class="container-fluid">
+        <h3><a class="brand" href="{{ url_for('admin.index') }}">Site Admin <small>flask-peewee</small></a></h3>
 
-        <ul class="nav">
+        <ul class="nav secondary-nav">
           <li class="active"><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
           <li><a href="/">View site</a></li>
+          <li>
+            <form action="{{ url_for('auth.logout') }}" method="get">
+              <button class="btn danger">Logout</button>
+            </form>
+          </li>
         </ul>
-        <form class="pull-right" action="{{ url_for('auth.logout') }}" method="get">
-          <button class="btn primary">Logout</button>
-        </form>
       </div>
     </div>
   </div>
 
-  <div class="container">
+  <div class="container-fluid">
+    <div class="sidebar">
+      <div class="well">
+      <h3>Navigation</h3>
+      {% block sidebar %}
+        <ul id="nav" class="navigation">
+          {% for iter_admin in model_admins %}
+            <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endblock %}
+      </div>
+    </div><!-- /sidebar -->
+
     <div class="content">
+      <div class="page-header">
+        <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
+      </div>
+      <ul class="breadcrumb">
+        <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+        {% block breadcrumbs %}{% endblock %}
+      </ul>
       {% for category, message in get_flashed_messages(with_categories=true) %}
         <div class="alert-message {{ category }}">
           <a class="close" href="#">×</a>
           <p>{{ message }}</p>
         </div>
       {% endfor %}
-      <div class="page-header">
-        <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
-      </div>
-      <div class="row">
-        <div class="span12 main">
-          {% block content %}{% endblock %}
-        </div>
-        <div class="span4 sidebar">
-          <h3>Models</h3>
-          {% block sidebar %}
-            <ul>
-              {% for iter_admin in model_admins %}
-                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a>
-                  {% if model_admin == iter_admin %}
-                    <ul>
-                      <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
-                    </ul>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          {% endblock %}
-        </div>
-      </div><!-- /row -->
+      {% block pre_content %}{% endblock %}
+      {% block content %}{% endblock %}
     </div><!-- /content -->
 
     <footer>
       <p>{% block footer %}Site administration{% endblock %}</p>
     </footer>
-  </div> <!-- /container -->
+  </div> <!-- /container-fluid -->
 </body>
 </html>

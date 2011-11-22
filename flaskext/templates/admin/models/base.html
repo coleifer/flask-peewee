@@ -4,4 +4,17 @@
 
 {% block body_class %}{{ super() }} model-admin{% endblock %}
 
-{% block content_title %}{{ model_admin.get_display_name() }} Admin{% endblock %}
+{% block content_title %}{{ model_admin.get_display_name()|fix_underscores }} Admin{% endblock %}
+
+{% block breadcrumbs %}
+  <li><span class="divider">/</span> <a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ model_admin.get_display_name()|fix_underscores }}</a></li>
+{% endblock %}
+
+{% block pre_content %}
+  <ul class="tabs">
+    <li class="{% block tab_index_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ model_admin.get_display_name()|fix_underscores }}</a></li>
+    <li class="{% block tab_add_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a></li>
+    <li class="{% block tab_export_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('add')) }}">Export</a></li>
+    {% block extra_tabs %}{% endblock %}
+  </ul>
+{% endblock %}

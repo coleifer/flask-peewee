@@ -12,29 +12,38 @@
   </script>
 {% endblock %}
 
+{% block tab_index_class %}active{% endblock %}
+
+{% block extra_tabs %}
+    <li class="dropdown" data-dropdown="dropdown" style="float:right">
+      <a class="dropdown-toggle" href="#">With selected...</a>
+      <ul class="dropdown-menu">
+        <li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>
+        <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
+      </ul>
+    </li>
+    <li class="dropdown" data-dropdown="dropdown" style="float:right">
+      <a class="dropdown-toggle" href="#">Add filter...</a>
+      <ul class="dropdown-menu" id="filters">
+        <li><a href="#">Id</a></li>
+        <li><a href="#">Other</a></li>
+      </ul>
+    </li>
+{% endblock %}
+
 {% block content %}
-  <p>
-    <a class="btn small" href="javascript:void(0);" id="add-filter">Add filter</a>
-    <a class="btn small primary" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new {{ model_admin.get_display_name() }}</a>
-  </p>
-  <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
+  <div class="row">
     <div class="hidden" id="filter-fields">
-    {% for field in form %}
-      {{ field(class='field-value') }}
-    {% endfor %}
+      {% for field in form %}
+        {{ field(class='field-value') }}
+      {% endfor %}
     </div>
+  </div>
+  <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
+    
     <form method="get" action="." class="modeladmin-filters">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
-      <ul>
-        <li class="hidden" id="template-row">{{ admin_filter(form) }}</li>
-        {% for field_name, field_values in raw_filters %}
-          {% if field_name in form %}
-            {% for field_value in field_values %}
-              <li>{{ admin_filter(form, field_name, field_value) }}</li>
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-      </ul>
+      
       <p class="submit">
         <button class="btn primary small" type="submit">Apply</button>
         <a class="btn small" href=".">Reset</a>
@@ -43,11 +52,11 @@
     </form>
   </div>
   
-  <form method="post" action=".">
+  <form method="post" action="." id="model-list"><input type="hidden" name="action" value="" />
   <table class="zebra-striped">
     <thead>
       <tr>
-        <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
+        <th class="check first shrink"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
             {% if ordering == column %}
@@ -60,6 +69,7 @@
         {% else %}
           <th>{{ model_admin.get_display_name() }}</th>
         {% endif %}
+        <th class="last shrink"></th>
       </tr>
     </thead>
     <tbody>
@@ -77,11 +87,14 @@
         {% else %}
           <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
         {% endif %}
+        <td class="last links">
+          <ul class="inline">
+            <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">Edit</a></li>
+            <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object.get_pk()) }}">Delete</a></li>
+          </ul>
+        </td>
       </tr>
     {% endfor %}
-      <tr><td colspan="2">
-        <button class="btn danger small" type="submit">Delete selected</button>
-      </td></tr>
     </tbody>
   </table>
   </form>

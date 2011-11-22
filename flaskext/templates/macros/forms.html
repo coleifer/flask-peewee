@@ -14,7 +14,7 @@
   <div class="clearfix{% if field.errors %} error{% endif %}">
     {{ field.label }}
     <div class="input">
-      {% set css_class = 'span6 ' + kwargs.pop('class', '') %}
+      {% set css_class = 'span8 ' + kwargs.pop('class', '') %}
       {% if field.errors %}
         {% set css_class = 'error ' + css_class %}
       {% endif %}

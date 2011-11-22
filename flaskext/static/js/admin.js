@@ -3,12 +3,6 @@ var Admin = window.Admin || {};
 (function(A, $) {
   var ModelAdminFilter = function(options) {
     this.wrapper = '#filter-wrapper';
-    this.form = 'form.modeladmin-filters';
-    this.add_button = 'a#add-filter';
-    this.remove_button = this.form + ' .remove-filter';
-    this.filters = this.form + ' ul';
-    this.template_row = this.form + ' #template-row';
-    this.field_select = this.form + ' select.field';
   };
   
   ModelAdminFilter.prototype.bind_listeners = function() {
@@ -56,6 +50,11 @@ var Admin = window.Admin || {};
   };
   
   A.ModelAdminFilter = ModelAdminFilter;
+  
+  A.index_submit = function(action) {
+    $('form#model-list input[name=action]').val(action);
+    $('form#model-list').submit();
+  };
 })(Admin, jQuery);
 
 jQuery(function() {

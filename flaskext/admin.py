@@ -37,16 +37,8 @@ class BooleanSelectField(fields.SelectFieldBase):
 def convert_boolean(model, field, **kwargs):
     return field.name, BooleanSelectField()
 
-def convert_textfield(model, field, **kwargs):
-    return field.name, fields.TextField()
-
 converter = ModelConverter({
     BooleanField: convert_boolean,
-})
-
-filter_converter = ModelConverter({
-    BooleanField: convert_boolean,
-    TextField: convert_textfield,
 })
 
 
@@ -72,9 +64,6 @@ class ModelAdmin(object):
     
     def get_form(self):
         return model_form(self.model, converter=converter)
-    
-    def get_filter_form(self):
-        return model_form(self.model, converter=filter_converter)
     
     def get_add_form(self):
         return self.get_form()
@@ -115,7 +104,6 @@ class ModelAdmin(object):
     
     def index(self):
         query = self.get_query()
-        form = self.get_filter_form()(request.args)
         
         ordering = request.args.get('ordering') or ''
         if ordering:
@@ -163,10 +151,19 @@ class ModelAdmin(object):
             model_admin=self,
             query=pq,
             ordering=ordering,
-            form=form,
             filters=filters,
             raw_filters=raw_filters,
         )
+    
+    def dispatch_save_redirect(self, instance):
+        if 'save' in request.form:
+            return redirect(url_for(self.get_url_name('index')))
+        elif 'save_add' in request.form:
+            return redirect(url_for(self.get_url_name('add')))
+        else:
+            return redirect(
+                url_for(self.get_url_name('edit'), pk=instance.get_pk())
+            )
     
     def add(self):
         Form = self.get_add_form()
@@ -175,10 +172,8 @@ class ModelAdmin(object):
             form = Form(request.form)
             if form.validate():
                 instance = self.save_model(self.model(), form, True)
-                flash('New %s saved successfully' % self.get_display_name(), 'success')                
-                return redirect(
-                    url_for(self.get_url_name('edit'), pk=instance.get_pk())
-                )
+                flash('New %s saved successfully' % self.get_display_name(), 'success') 
+                return self.dispatch_save_redirect(instance)
         else:
             form = Form()
         
@@ -197,9 +192,7 @@ class ModelAdmin(object):
             if form.validate():
                 self.save_model(instance, form, False)
                 flash('Changes to %s saved successfully' % self.get_display_name(), 'success')
-                return redirect(
-                    url_for(self.get_url_name('edit'), pk=instance.get_pk())
-                )
+                return self.dispatch_save_redirect(instance)
         else:
             form = Form(obj=instance)
         

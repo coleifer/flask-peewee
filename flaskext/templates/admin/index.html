@@ -10,4 +10,28 @@
     {% endfor %}
     </div>
   {% endif %}
+
+  <table class="zebra-striped">
+    <thead>
+      <tr>
+        <th class="shrink model-name">Model name</th>
+        <th class="records">Records</th>
+        <th class="shrink controls"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for iter_admin in model_admins %}
+        <tr class="link">
+          <td><span class="show"><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></span></td>
+          <td><span>{{ iter_admin.get_query().count() }}</span></td>
+          <td class="links">
+            <ul class="inline">
+              <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
+              <li><a href="{{ url_for(iter_admin.get_url_name('index')) }}">Export</a></li>
+            </ul>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endblock %}
