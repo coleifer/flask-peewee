@@ -7,7 +7,7 @@
   <script type="text/javascript">
     $(function() {
       var admin_filter = new Admin.ModelAdminFilter();
-      admin_filter.bind_listeners();
+      admin_filter.init();
     });
   </script>
 {% endblock %}
@@ -25,22 +25,25 @@
     <li class="dropdown" data-dropdown="dropdown" style="float:right">
       <a class="dropdown-toggle" href="#">Add filter...</a>
       <ul class="dropdown-menu" id="filters">
-        <li><a href="#">Id</a></li>
-        <li><a href="#">Other</a></li>
+        {% for field, choices in lookups %}
+          <li><a class="field-filter" id="filter-{{ field.name }}" href="#">{{ get_verbose_name(model_admin.model, field.name) }}</a>
+            <select class="lookup-select hidden">
+              <option value="">---------------</option>
+              {% for lookup, label in choices %}
+                <option value="{{ lookup }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </li>
+        {% endfor %}
       </ul>
     </li>
 {% endblock %}
 
 {% block content %}
-  <div class="row">
-    <div class="hidden" id="filter-fields">
-      {% for field in form %}
-        {{ field(class='field-value') }}
-      {% endfor %}
+  <div id="filter-wrapper">
+    <div class="hidden" id="lookup-fields">
+      {% for field in form %}{{ field(class='lookup-input') }}{% endfor %}
     </div>
-  </div>
-  <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
-    
     <form method="get" action="." class="modeladmin-filters">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
       

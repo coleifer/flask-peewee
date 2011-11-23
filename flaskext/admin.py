@@ -4,6 +4,7 @@ import os
 import re
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
+from flaskext.filters import BooleanSelectField, get_filter_form, get_lookups, FilterPreprocessor
 from flaskext.utils import get_next, PaginatedQuery, slugify
 from peewee import BooleanField, TextField, Q
 from wtforms import fields, widgets
@@ -11,27 +12,6 @@ from wtfpeewee.orm import model_form, ModelConverter
 
 
 current_dir = os.path.dirname(__file__)
-
-
-class BooleanSelectField(fields.SelectFieldBase):
-    widget = widgets.Select()
-
-    def iter_choices(self):
-        yield ('1', 'True', self.data)
-        yield ('', 'False', not self.data)
-
-    def process_data(self, value):
-        try:
-            self.data = bool(value)
-        except (ValueError, TypeError):
-            self.data = None
-
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                self.data = bool(valuelist[0])
-            except ValueError:
-                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
 
 
 def convert_boolean(model, field, **kwargs):
@@ -71,6 +51,15 @@ class ModelAdmin(object):
     def get_edit_form(self):
         return self.get_form()
     
+    def get_filter_form(self):
+        return get_filter_form(self.model)
+    
+    def get_filter_lookups(self):
+        return get_lookups(self.model)
+    
+    def get_filter_preprocessor(self):
+        return FilterPreprocessor()
+    
     def get_query(self):
         return self.model.select()
     
@@ -103,17 +92,12 @@ class ModelAdmin(object):
         instance.save()
         return instance
     
-    def index(self):
-        query = self.get_query()
-        
-        ordering = request.args.get('ordering') or ''
-        if ordering:
-            desc, column = ordering.startswith('-'), ordering.lstrip('-')
-            if self.column_is_sortable(column):
-                query = query.order_by((column, desc and 'desc' or 'asc'))
-        
+    def process_filters(self):
         filters = []
         raw_filters = []
+        
+        preprocessor = self.get_filter_preprocessor()
+        
         for key in request.args:
             if key in self.ignore_filters:
                 continue
@@ -124,20 +108,25 @@ class ModelAdmin(object):
             lookups = []
             
             for value in values:
-                if value.startswith('*') and value.endswith('*'):
-                    lookup = 'icontains'
-                elif value.endswith('*'):
-                    lookup = 'istartswith'
-                else:
-                    lookup = 'eq'
-                
-                value = value.strip('*')
-                lookups.append(Q(**{'%s__%s' % (key, lookup): value}))
+                lookups.append(Q(**preprocessor.process_lookup(key, value)))
             
-            if len(lookups) == 1:
-                filters.append(lookups[0])
-            else:
-                filters.append(reduce(operator.or_, lookups))
+            filters.extend(lookups)
+        
+        return filters, raw_filters
+    
+    def index(self):
+        query = self.get_query()
+        
+        filter_form = self.get_filter_form()
+        filter_lookups = self.get_filter_lookups()
+        
+        ordering = request.args.get('ordering') or ''
+        if ordering:
+            desc, column = ordering.startswith('-'), ordering.lstrip('-')
+            if self.column_is_sortable(column):
+                query = query.order_by((column, desc and 'desc' or 'asc'))
+        
+        filters, raw_filters = self.process_filters()
         
         if filters:
             query = query.filter(*filters)
@@ -155,7 +144,8 @@ class ModelAdmin(object):
             model_admin=self,
             query=pq,
             ordering=ordering,
-            filters=filters,
+            form=filter_form,
+            lookups=filter_lookups,
             raw_filters=raw_filters,
         )
     
