@@ -8,6 +8,10 @@
     $(function() {
       var admin_filter = new Admin.ModelAdminFilter();
       admin_filter.init();
+      
+      {% for lookup, value in raw_filters %}
+      admin_filter.add_filter_request('{{ lookup }}', {{ value|tojson|safe }});
+      {% endfor %}
     });
   </script>
 {% endblock %}
