@@ -1,0 +1,15 @@
+{% extends "admin/models/base.html" %}
+
+{% block extra_script %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(function() {
+      var admin_filter = new Admin.ModelAdminFilter();
+      admin_filter.init();
+      
+      {% for lookup, value in query_filter.raw_lookups %}
+      admin_filter.add_filter_request('{{ lookup }}', {{ value|tojson|safe }});
+      {% endfor %}
+    });
+  </script>
+{% endblock %}

@@ -35,6 +35,8 @@ var Admin = window.Admin || {};
       self.display_lookup(row_elem, field_name, this.value);
     });
     
+    $(this.wrapper).show();
+    
     return row_elem;
   }
   
@@ -72,7 +74,11 @@ var Admin = window.Admin || {};
   }
   
   A.ModelAdminFilter = ModelAdminFilter;
-
+  
+  A.index_submit = function(action) {
+    $('form#model-list input[name=action]').val(action);
+    $('form#model-list').submit();
+  };
 })(Admin, jQuery);
 
 jQuery(function() {

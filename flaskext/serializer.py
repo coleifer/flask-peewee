@@ -20,15 +20,13 @@ class Serializer(object):
     def serialize_object(self, obj, fields=None, exclude=None):
         data = {}
         
-        serialize_fields = []
-        for f in obj._meta.get_field_names():
-            if fields and f not in fields:
-                continue
-            if exclude and f in exclude:
-                continue
-            serialize_fields.append(f)
+        field_list = obj._meta.get_field_names()
+        if fields:
+            field_list = fields
+        if exclude:
+            field_list = [f for f in field_list if f not in exclude]
         
-        for field_name in serialize_fields:
+        for field_name in field_list:
             data[field_name] = self.convert_value(getattr(obj, field_name))
         
         return data

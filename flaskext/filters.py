@@ -1,6 +1,7 @@
 import datetime
 import operator
 
+from flask import request
 from peewee import *
 from wtforms import fields, form, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
@@ -100,9 +101,9 @@ def get_filter_form(model):
     frm.process(None)
     return frm
 
-def get_lookups(model):
+def get_lookups(model, exclude):
     return [
-        (f, lookups_for_field(f)) for f in model._meta.get_fields()
+        (f, lookups_for_field(f)) for f in model._meta.get_fields() if f not in exclude
     ]
 
 def _rd(n):
@@ -111,19 +112,14 @@ def _rd(n):
 class FilterPreprocessor(object):
     def process_lookup(self, raw_lookup, values=None):
         """
-        Returns a Q() or Node() object representing the desired filter
+        Returns a list of dictionaries
         """
-        lookups = [{raw_lookup: value} for value in values]
-        
         if '__' in raw_lookup:
             field_part, lookup = raw_lookup.rsplit('__', 1)
             if hasattr(self, 'process_%s' % lookup):
-                lookups = getattr(self, 'process_%s' % lookup)(field_part, values)
+                return getattr(self, 'process_%s' % lookup)(field_part, values)
         
-        return reduce(operator.or_, [Q(**l) for l in lookups])
-    
-    def process_in(self, field_part, values):
-        return [{'%s__in' % field_part: values}]
+        return [{raw_lookup: values}]
     
     def process_today(self, field_part, values):
         return [{
@@ -145,10 +141,71 @@ class FilterPreprocessor(object):
     
     def process_lte_days_ago(self, field_part, values):
         return [{
-            '%s__lte' % field_part: _rd(-1 * int(value)),
+            '%s__gte' % field_part: _rd(-1 * int(value)),
         } for value in values]
     
     def process_gte_days_ago(self, field_part, values):
         return [{
-            '%s__gte' % field_part: _rd(-1 * int(value)),
+            '%s__lte' % field_part: _rd(-1 * int(value)),
         } for value in values]
+
+
+class QueryFilter(object):
+    def __init__(self, query, exclude_lookups=None, ignore_filters=None):
+        self.query = query
+        self.model = self.query.model
+
+        self.exclude_lookups = exclude_lookups or ()
+        self.ignore_filters = ignore_filters or ()
+    
+    def get_form(self):
+        return get_filter_form(self.model)
+    
+    def get_lookups(self):
+        return get_lookups(self.model, self.exclude_lookups)
+    
+    def get_preprocessor(self):
+        return FilterPreprocessor()
+    
+    def process_request(self):
+        self.raw_lookups = []
+        
+        filters = []
+        lookups_by_column = {}
+        
+        preprocessor = self.get_preprocessor()
+        
+        # preprocessing -- essentially a place to store "raw" filters (used to
+        # reconstruct filter widgets on frontend), and a place to munge filters
+        # that have special meaning, i.e. "today"
+        for key in request.args:
+            if key in self.ignore_filters:
+                continue
+            
+            values = request.args.getlist(key)
+            self.raw_lookups.append((key, values))
+            
+            # preprocessor returns a list of filters to apply
+            filters.extend(preprocessor.process_lookup(key, values))
+        
+        # at this point, need to figure out which parts of the query to "AND"
+        # together and which to "OR" together ... this is naive and simply groups
+        # lookups on the same column together in an OR clause.
+        for filter_dict in filters:
+            for field_part, value in filter_dict.items():
+                if '__' in field_part:
+                    column, lookup = field_part.rsplit('__', 1)
+                else:
+                    column = field_part
+            
+            lookups_by_column.setdefault(column, [])
+            lookups_by_column[column].append(Q(**filter_dict))
+        
+        return [reduce(operator.or_, lookups) for lookups in lookups_by_column.values()]
+    
+    def get_filtered_query(self):
+        nodes = self.process_request()
+        if nodes:
+            return self.query.filter(*nodes)
+        
+        return self.query

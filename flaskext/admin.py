@@ -2,11 +2,17 @@ import functools
 import operator
 import os
 import re
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
-from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
-from flaskext.filters import BooleanSelectField, get_filter_form, get_lookups, FilterPreprocessor
+from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
+from flaskext.filters import BooleanSelectField, QueryFilter
+from flaskext.serializer import Serializer
 from flaskext.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField, TextField, Q
+from peewee import BooleanField, ForeignKeyField, TextField, Q
+from werkzeug import Headers
 from wtforms import fields, widgets
 from wtfpeewee.orm import model_form, ModelConverter
 
@@ -29,6 +35,7 @@ class ModelAdmin(object):
     paginate_by = 20
     columns = None
     ignore_filters = ('ordering', 'page',)
+    exclude_lookups = None
     
     def __init__(self, admin, model):
         self.admin = admin
@@ -51,20 +58,14 @@ class ModelAdmin(object):
     def get_edit_form(self):
         return self.get_form()
     
-    def get_filter_form(self):
-        return get_filter_form(self.model)
-    
-    def get_filter_lookups(self):
-        return get_lookups(self.model)
-    
-    def get_filter_preprocessor(self):
-        return FilterPreprocessor()
-    
     def get_query(self):
         return self.model.select()
     
     def get_object(self, pk):
         return self.get_query().get(**{self.pk_name: pk})
+    
+    def get_query_filter(self, query):
+        return QueryFilter(query, self.ignore_filters)
     
     def get_urls(self):
         return (
@@ -92,58 +93,40 @@ class ModelAdmin(object):
         instance.save()
         return instance
     
-    def process_filters(self):
-        filters = []
-        raw_filters = []
-        
-        preprocessor = self.get_filter_preprocessor()
-        
-        for key in request.args:
-            if key in self.ignore_filters:
-                continue
-            
-            values = request.args.getlist(key)
-            raw_filters.append((key, values))
-            
-            processed = preprocessor.process_lookup(key, values)
-            if processed:
-                filters.append(processed)
-        
-        return filters, raw_filters
-    
-    def index(self):
-        query = self.get_query()
-        
-        filter_form = self.get_filter_form()
-        filter_lookups = self.get_filter_lookups()
-        
-        ordering = request.args.get('ordering') or ''
+    def apply_ordering(self, query, ordering):
         if ordering:
             desc, column = ordering.startswith('-'), ordering.lstrip('-')
             if self.column_is_sortable(column):
                 query = query.order_by((column, desc and 'desc' or 'asc'))
+        return query
+    
+    def index(self):
+        query = self.get_query()
         
-        filters, raw_filters = self.process_filters()
+        ordering = request.args.get('ordering') or ''
+        query = self.apply_ordering(query, ordering)
         
-        if filters:
-            query = query.filter(*filters)
+        # create a QueryFilter object with our current query
+        query_filter = self.get_query_filter(query)
         
-        pq = PaginatedQuery(query, self.paginate_by)
+        # process the filters from the request
+        filtered_query = query_filter.get_filtered_query()
+
+        # create a paginated query out of our filtered results
+        pq = PaginatedQuery(filtered_query, self.paginate_by)
         
         if request.method == 'POST':
+            id_list = request.form.getlist('id')
             if request.form['action'] == 'delete':
-                id_list = request.form.getlist('id')
                 return redirect(url_for(self.get_url_name('delete'), id=id_list))
             else:
-                return redirect(url_for(self.get_url_name('export')))
+                return redirect(url_for(self.get_url_name('export'), id__in=id_list))
         
         return render_template('admin/models/index.html',
             model_admin=self,
             query=pq,
             ordering=ordering,
-            form=filter_form,
-            lookups=filter_lookups,
-            raw_filters=raw_filters,
+            query_filter=query_filter,
         )
     
     def dispatch_save_redirect(self, instance):
@@ -206,9 +189,42 @@ class ModelAdmin(object):
         
         return render_template('admin/models/delete.html', model_admin=self, query=query)
     
+    def collect_related_fields(self, model, accum, path):
+        path_str = '__'.join(path)
+        for field in model._meta.get_fields():
+            if isinstance(field, ForeignKeyField):
+                self.collect_related_fields(field.to, accum, path + [field.descriptor])
+            elif model != self.model:
+                accum.setdefault((model, path_str), [])
+                accum[(model, path_str)].append(field)
+        
+        return accum
+    
     def export(self):
-        query=None
-        return render_template('admin/models/export.html', model_admin=self, query=query)
+        query = self.get_query()
+        
+        ordering = request.args.get('ordering') or ''
+        query = self.apply_ordering(query, ordering)
+        
+        # create a QueryFilter object with our current query
+        query_filter = self.get_query_filter(query)
+        
+        # process the filters from the request
+        filtered_query = query_filter.get_filtered_query()
+        
+        related = self.collect_related_fields(self.model, {}, [])
+        
+        if request.method == 'POST':
+            export = Export(filtered_query, related, request.form.getlist('fields'))
+            return export.json_response()
+        
+        return render_template('admin/models/export.html',
+            model_admin=self,
+            model=filtered_query.model,
+            query=filtered_query,
+            query_filter=query_filter,
+            related_fields=related,
+        )
 
 
 class AdminPanel(object):
@@ -396,3 +412,63 @@ class Admin(object):
     def setup(self):
         self.configure_routes()
         self.register_blueprint()
+
+
+class Export(object):
+    def __init__(self, query, related, fields):
+        self.query = query
+        self.related = related
+        self.fields = fields
+    
+    def prepare_query(self):
+        clone = self.query.clone()
+        
+        alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
+        select = {}
+        
+        def ensure_join(query, m, p):
+            if m not in query._joined_models:
+                if '__' not in p:
+                    next_model = query.model
+                else:
+                    next, _ = p.rsplit('__', 1)
+                    next_model = alias_to_model[next]
+                    query = ensure_join(query, next_model, next)
+                
+                return query.switch(next_model).join(m)
+            else:
+                return query
+        
+        for field in self.fields:
+            # field may be something like "content" or "user__user_name"
+            if '__' in field:
+                path, column = field.rsplit('__', 1)
+                model = alias_to_model[path]
+                clone = ensure_join(clone, model, path)
+            else:
+                model = self.query.model
+                column = field
+            
+            select.setdefault(model, [])
+            select[model].append((column, field))
+
+        clone.query = select
+        return clone
+    
+    def json_response(self):
+        serializer = Serializer()
+        prepared_query = self.prepare_query()
+        
+        def generate():
+            i = prepared_query.count()
+            yield '[\n'
+            for obj in prepared_query:
+                i -= 1
+                yield json.dumps(serializer.serialize_object(obj, self.fields))
+                if i > 0:
+                    yield ',\n'
+            yield '\n]'
+        headers = Headers()
+        headers.add('Content-Type', 'application/javascript')
+        headers.add('Content-Disposition', 'attachment; filename=export.json') 
+        return Response(generate(), mimetype='text/javascript', headers=headers, direct_passthrough=True)
