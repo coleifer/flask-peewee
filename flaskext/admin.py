@@ -105,12 +105,9 @@ class ModelAdmin(object):
             values = request.args.getlist(key)
             raw_filters.append((key, values))
             
-            lookups = []
-            
-            for value in values:
-                lookups.append(Q(**preprocessor.process_lookup(key, value)))
-            
-            filters.extend(lookups)
+            processed = preprocessor.process_lookup(key, values)
+            if processed:
+                filters.append(processed)
         
         return filters, raw_filters
     

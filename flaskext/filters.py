@@ -1,4 +1,6 @@
 import datetime
+import operator
+
 from peewee import *
 from wtforms import fields, form, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
@@ -107,38 +109,46 @@ def _rd(n):
     return datetime.date.today() + datetime.timedelta(days=n)
 
 class FilterPreprocessor(object):
-    def process_lookup(self, raw_lookup, value=None):
+    def process_lookup(self, raw_lookup, values=None):
+        """
+        Returns a Q() or Node() object representing the desired filter
+        """
+        lookups = [{raw_lookup: value} for value in values]
+        
         if '__' in raw_lookup:
             field_part, lookup = raw_lookup.rsplit('__', 1)
             if hasattr(self, 'process_%s' % lookup):
-                return getattr(self, 'process_%s' % lookup)(field_part, value)
+                lookups = getattr(self, 'process_%s' % lookup)(field_part, values)
         
-        return {raw_lookup: value}
+        return reduce(operator.or_, [Q(**l) for l in lookups])
     
-    def process_today(self, field_part, value):
-        return {
+    def process_in(self, field_part, values):
+        return [{'%s__in' % field_part: values}]
+    
+    def process_today(self, field_part, values):
+        return [{
             '%s__gte' % field_part: _rd(0),
             '%s__lt' % field_part: _rd(1),
-        }
+        }]
     
-    def process_yesterday(self, field_part, value):
-        return {
+    def process_yesterday(self, field_part, values):
+        return [{
             '%s__gte' % field_part: _rd(-1),
             '%s__lt' % field_part: _rd(0),
-        }
+        }]
     
-    def process_this_week(self, field_part, value):
-        return {
+    def process_this_week(self, field_part, values):
+        return [{
             '%s__gte' % field_part: _rd(-6),
             '%s__lt' % field_part: _rd(1),
-        }
+        }]
     
-    def process_lte_days_ago(self, field_part, value):
-        return {
+    def process_lte_days_ago(self, field_part, values):
+        return [{
             '%s__lte' % field_part: _rd(-1 * int(value)),
-        }
+        } for value in values]
     
-    def process_gte_days_ago(self, field_part, value):
-        return {
+    def process_gte_days_ago(self, field_part, values):
+        return [{
             '%s__gte' % field_part: _rd(-1 * int(value)),
-        }
+        } for value in values]
