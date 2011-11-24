@@ -28,7 +28,7 @@ admin interface
 influenced heavily by the `django <http://djangoproject.com>`_ admin, provides easy
 create/edit/delete functionality for your project's models.
 
-.. image:: http://i.imgur.com/qauNF.jpg
+.. image:: http://i.imgur.com/EtzdO.jpg
 
 
 rest api
