@@ -1,91 +1,68 @@
-{% extends "admin/models/base.html" %}
+{% extends "admin/models/base_filters.html" %}
 
 {% from 'macros/filters.html' import admin_filter %}
 
-{% block extra_script %}
-  {{ super() }}
-  <script type="text/javascript">
-    $(function() {
-      var admin_filter = new Admin.ModelAdminFilter();
-      admin_filter.bind_listeners();
-    });
-  </script>
+{% block tab_index_class %}active{% endblock %}
+
+{% block extra_tabs %}
+    <li class="dropdown" data-dropdown="dropdown" style="float:right">
+      <a class="dropdown-toggle" href="#">With selected...</a>
+      <ul class="dropdown-menu">
+        <li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>
+        <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
+      </ul>
+    </li>
+    {% include "admin/includes/filter_dropdown.html" %}
 {% endblock %}
 
 {% block content %}
-  <p>
-    <a class="btn small" href="javascript:void(0);" id="add-filter">Add filter</a>
-    <a class="btn small primary" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new {{ model_admin.get_display_name() }}</a>
-  </p>
-  <div {% if not filters %}style="display:none;" {% endif %}id="filter-wrapper">
-    <div class="hidden" id="filter-fields">
-    {% for field in form %}
-      {{ field(class='field-value') }}
-    {% endfor %}
-    </div>
-    <form method="get" action="." class="modeladmin-filters">
-      {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
-      <ul>
-        <li class="hidden" id="template-row">{{ admin_filter(form) }}</li>
-        {% for field_name, field_values in raw_filters %}
-          {% if field_name in form %}
-            {% for field_value in field_values %}
-              <li>{{ admin_filter(form, field_name, field_value) }}</li>
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-      </ul>
-      <p class="submit">
-        <button class="btn primary small" type="submit">Apply</button>
-        <a class="btn small" href=".">Reset</a>
-        <span class="help-inline">Use the wildcard "*" to partially match text, e.g. <em>*phrase*</em> or <em>starts with*</em></span>
-      </p>
-    </form>
-  </div>
+  {% include "admin/includes/filter_widgets.html" %}
   
-  <form method="post" action=".">
-  <div class="form-wrapper">
-    <table class="zebra-striped">
-      <thead>
-        <tr>
-          <th class="check"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
-          {% if model_admin.columns %}
-            {% for column in model_admin.columns %}
-              {% if ordering == column %}
-                {% set sort_by = '-'+column %}
-              {% else %}
-                {% set sort_by = column %}
-              {% endif %}
-              <th>{% if model_admin.column_is_sortable(column) %}<a href="./?{{ update_querystring(request.query_string, 'ordering', sort_by)|safe() }}">{% endif %}{{ get_verbose_name(model_admin.model, column) }}{% if model_admin.column_is_sortable(column) %}</a>{% endif %}</th>
-            {% endfor %}
-          {% else %}
-            <th>{{ model_admin.get_display_name() }}</th>
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-      {% for object in query.get_list() %}
-        <tr>
-          <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
-          {% if model_admin.columns %}
-            {% for column in model_admin.columns %}
-              {% if loop.index == 1 %}
-                <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ get_model_field(object, column) }}</a></td>
-              {% else %}
-                <td>{{ get_model_field(object, column) }}</td>
-              {% endif %}
-            {% endfor %}
-          {% else %}
-            <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
-          {% endif %}
-        </tr>
-      {% endfor %}
-        <tr><td colspan="2">
-          <button class="btn danger small" type="submit">Delete selected</button>
-        </td></tr>
-      </tbody>
-    </table>
-  </div>
+  <form method="post" action="." id="model-list"><input type="hidden" name="action" value="" />
+  <table class="zebra-striped">
+    <thead>
+      <tr>
+        <th class="check first shrink"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
+        {% if model_admin.columns %}
+          {% for column in model_admin.columns %}
+            {% if ordering == column %}
+              {% set sort_by = '-'+column %}
+            {% else %}
+              {% set sort_by = column %}
+            {% endif %}
+            <th>{% if model_admin.column_is_sortable(column) %}<a href="./?{{ update_querystring(request.query_string, 'ordering', sort_by)|safe() }}">{% endif %}{{ get_verbose_name(model_admin.model, column) }}{% if model_admin.column_is_sortable(column) %}</a>{% endif %}</th>
+          {% endfor %}
+        {% else %}
+          <th>{{ model_admin.get_display_name() }}</th>
+        {% endif %}
+        <th class="last shrink"></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for object in query.get_list() %}
+      <tr>
+        <td class="check"><input type="checkbox" name="id" value="{{ object.get_pk() }}" /></td>
+        {% if model_admin.columns %}
+          {% for column in model_admin.columns %}
+            {% if loop.index == 1 %}
+              <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ get_model_field(object, column) }}</a></td>
+            {% else %}
+              <td>{{ get_model_field(object, column) }}</td>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">{{ object }}</a></td>
+        {% endif %}
+        <td class="last links">
+          <ul class="inline">
+            <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_pk()) }}">Edit</a></li>
+            <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object.get_pk()) }}">Delete</a></li>
+          </ul>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
   </form>
   {% include "admin/includes/pagination.html" %}
 {% endblock %}

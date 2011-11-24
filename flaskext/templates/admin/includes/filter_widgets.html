@@ -1,0 +1,15 @@
+  <div id="filter-wrapper" style="display: none;">
+    <div class="hidden" id="lookup-fields">
+      {% for field in query_filter.get_form() %}{{ field(class='lookup-input span4') }}{% endfor %}
+    </div>
+    <form method="get" action="." class="modeladmin-filters row">
+      {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
+      <div class="span10 filter-list"></div>
+      <div class="span4">
+        <p class="submit">
+          <button class="btn primary small" type="submit">Apply selected filters</button>
+          <a class="btn small" href=".">Reset</a>
+        </p>
+      </div>
+    </form>
+  </div>

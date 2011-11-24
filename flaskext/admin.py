@@ -2,10 +2,17 @@ import functools
 import operator
 import os
 import re
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
-from flask import Blueprint, render_template, abort, request, url_for, redirect, flash
+from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
+from flaskext.filters import BooleanSelectField, QueryFilter
+from flaskext.serializer import Serializer
 from flaskext.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField, TextField, Q
+from peewee import BooleanField, ForeignKeyField, TextField, Q
+from werkzeug import Headers
 from wtforms import fields, widgets
 from wtfpeewee.orm import model_form, ModelConverter
 
@@ -13,40 +20,11 @@ from wtfpeewee.orm import model_form, ModelConverter
 current_dir = os.path.dirname(__file__)
 
 
-class BooleanSelectField(fields.SelectFieldBase):
-    widget = widgets.Select()
-
-    def iter_choices(self):
-        yield ('1', 'True', self.data)
-        yield ('', 'False', not self.data)
-
-    def process_data(self, value):
-        try:
-            self.data = bool(value)
-        except (ValueError, TypeError):
-            self.data = None
-
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                self.data = bool(valuelist[0])
-            except ValueError:
-                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
-
-
 def convert_boolean(model, field, **kwargs):
     return field.name, BooleanSelectField()
 
-def convert_textfield(model, field, **kwargs):
-    return field.name, fields.TextField()
-
 converter = ModelConverter({
     BooleanField: convert_boolean,
-})
-
-filter_converter = ModelConverter({
-    BooleanField: convert_boolean,
-    TextField: convert_textfield,
 })
 
 
@@ -57,6 +35,7 @@ class ModelAdmin(object):
     paginate_by = 20
     columns = None
     ignore_filters = ('ordering', 'page',)
+    exclude_lookups = None
     
     def __init__(self, admin, model):
         self.admin = admin
@@ -73,9 +52,6 @@ class ModelAdmin(object):
     def get_form(self):
         return model_form(self.model, converter=converter)
     
-    def get_filter_form(self):
-        return model_form(self.model, converter=filter_converter)
-    
     def get_add_form(self):
         return self.get_form()
     
@@ -88,11 +64,15 @@ class ModelAdmin(object):
     def get_object(self, pk):
         return self.get_query().get(**{self.pk_name: pk})
     
+    def get_query_filter(self, query):
+        return QueryFilter(query, self.exclude_lookups, self.ignore_filters)
+    
     def get_urls(self):
         return (
             ('/', self.index),
             ('/add/', self.add),
             ('/delete/', self.delete),
+            ('/export/', self.export),
             ('/<pk>/', self.edit),
         )
     
@@ -113,60 +93,51 @@ class ModelAdmin(object):
         instance.save()
         return instance
     
-    def index(self):
-        query = self.get_query()
-        form = self.get_filter_form()(request.args)
-        
-        ordering = request.args.get('ordering') or ''
+    def apply_ordering(self, query, ordering):
         if ordering:
             desc, column = ordering.startswith('-'), ordering.lstrip('-')
             if self.column_is_sortable(column):
                 query = query.order_by((column, desc and 'desc' or 'asc'))
+        return query
+    
+    def index(self):
+        query = self.get_query()
         
-        filters = []
-        raw_filters = []
-        for key in request.args:
-            if key in self.ignore_filters:
-                continue
-            
-            values = request.args.getlist(key)
-            raw_filters.append((key, values))
-            
-            lookups = []
-            
-            for value in values:
-                if value.startswith('*') and value.endswith('*'):
-                    lookup = 'icontains'
-                elif value.endswith('*'):
-                    lookup = 'istartswith'
-                else:
-                    lookup = 'eq'
-                
-                value = value.strip('*')
-                lookups.append(Q(**{'%s__%s' % (key, lookup): value}))
-            
-            if len(lookups) == 1:
-                filters.append(lookups[0])
-            else:
-                filters.append(reduce(operator.or_, lookups))
+        ordering = request.args.get('ordering') or ''
+        query = self.apply_ordering(query, ordering)
         
-        if filters:
-            query = query.filter(*filters)
+        # create a QueryFilter object with our current query
+        query_filter = self.get_query_filter(query)
         
-        pq = PaginatedQuery(query, self.paginate_by)
+        # process the filters from the request
+        filtered_query = query_filter.get_filtered_query()
+
+        # create a paginated query out of our filtered results
+        pq = PaginatedQuery(filtered_query, self.paginate_by)
         
         if request.method == 'POST':
             id_list = request.form.getlist('id')
-            return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            if request.form['action'] == 'delete':
+                return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            else:
+                return redirect(url_for(self.get_url_name('export'), id__in=id_list))
         
         return render_template('admin/models/index.html',
             model_admin=self,
             query=pq,
             ordering=ordering,
-            form=form,
-            filters=filters,
-            raw_filters=raw_filters,
+            query_filter=query_filter,
         )
+    
+    def dispatch_save_redirect(self, instance):
+        if 'save' in request.form:
+            return redirect(url_for(self.get_url_name('index')))
+        elif 'save_add' in request.form:
+            return redirect(url_for(self.get_url_name('add')))
+        else:
+            return redirect(
+                url_for(self.get_url_name('edit'), pk=instance.get_pk())
+            )
     
     def add(self):
         Form = self.get_add_form()
@@ -175,10 +146,8 @@ class ModelAdmin(object):
             form = Form(request.form)
             if form.validate():
                 instance = self.save_model(self.model(), form, True)
-                flash('New %s saved successfully' % self.get_display_name(), 'success')                
-                return redirect(
-                    url_for(self.get_url_name('edit'), pk=instance.get_pk())
-                )
+                flash('New %s saved successfully' % self.get_display_name(), 'success') 
+                return self.dispatch_save_redirect(instance)
         else:
             form = Form()
         
@@ -197,9 +166,7 @@ class ModelAdmin(object):
             if form.validate():
                 self.save_model(instance, form, False)
                 flash('Changes to %s saved successfully' % self.get_display_name(), 'success')
-                return redirect(
-                    url_for(self.get_url_name('edit'), pk=instance.get_pk())
-                )
+                return self.dispatch_save_redirect(instance)
         else:
             form = Form(obj=instance)
         
@@ -221,6 +188,43 @@ class ModelAdmin(object):
             return redirect(url_for(self.get_url_name('index')))
         
         return render_template('admin/models/delete.html', model_admin=self, query=query)
+    
+    def collect_related_fields(self, model, accum, path):
+        path_str = '__'.join(path)
+        for field in model._meta.get_fields():
+            if isinstance(field, ForeignKeyField):
+                self.collect_related_fields(field.to, accum, path + [field.descriptor])
+            elif model != self.model:
+                accum.setdefault((model, path_str), [])
+                accum[(model, path_str)].append(field)
+        
+        return accum
+    
+    def export(self):
+        query = self.get_query()
+        
+        ordering = request.args.get('ordering') or ''
+        query = self.apply_ordering(query, ordering)
+        
+        # create a QueryFilter object with our current query
+        query_filter = self.get_query_filter(query)
+        
+        # process the filters from the request
+        filtered_query = query_filter.get_filtered_query()
+        
+        related = self.collect_related_fields(self.model, {}, [])
+        
+        if request.method == 'POST':
+            export = Export(filtered_query, related, request.form.getlist('fields'))
+            return export.json_response()
+        
+        return render_template('admin/models/export.html',
+            model_admin=self,
+            model=filtered_query.model,
+            query=filtered_query,
+            query_filter=query_filter,
+            related_fields=related,
+        )
 
 
 class AdminPanel(object):
@@ -408,3 +412,63 @@ class Admin(object):
     def setup(self):
         self.configure_routes()
         self.register_blueprint()
+
+
+class Export(object):
+    def __init__(self, query, related, fields):
+        self.query = query
+        self.related = related
+        self.fields = fields
+    
+    def prepare_query(self):
+        clone = self.query.clone()
+        
+        alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
+        select = {}
+        
+        def ensure_join(query, m, p):
+            if m not in query._joined_models:
+                if '__' not in p:
+                    next_model = query.model
+                else:
+                    next, _ = p.rsplit('__', 1)
+                    next_model = alias_to_model[next]
+                    query = ensure_join(query, next_model, next)
+                
+                return query.switch(next_model).join(m)
+            else:
+                return query
+        
+        for field in self.fields:
+            # field may be something like "content" or "user__user_name"
+            if '__' in field:
+                path, column = field.rsplit('__', 1)
+                model = alias_to_model[path]
+                clone = ensure_join(clone, model, path)
+            else:
+                model = self.query.model
+                column = field
+            
+            select.setdefault(model, [])
+            select[model].append((column, field))
+
+        clone.query = select
+        return clone
+    
+    def json_response(self):
+        serializer = Serializer()
+        prepared_query = self.prepare_query()
+        
+        def generate():
+            i = prepared_query.count()
+            yield '[\n'
+            for obj in prepared_query:
+                i -= 1
+                yield json.dumps(serializer.serialize_object(obj, self.fields))
+                if i > 0:
+                    yield ',\n'
+            yield '\n]'
+        headers = Headers()
+        headers.add('Content-Type', 'application/javascript')
+        headers.add('Content-Disposition', 'attachment; filename=export.json') 
+        return Response(generate(), mimetype='text/javascript', headers=headers, direct_passthrough=True)

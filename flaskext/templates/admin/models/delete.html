@@ -1,5 +1,14 @@
 {% extends "admin/models/base.html" %}
 
+{% block breadcrumbs %}
+ {{ super() }}
+ <li><span class="divider">/</span> <a href=".">Delete</a></li>
+{% endblock %}
+
+{% block extra_tabs %}
+   <li class="active"><a href=".">Delete</a></li>
+{% endblock %}
+
 {% block content %}
   <form method="post" action=".">
     <fieldset>

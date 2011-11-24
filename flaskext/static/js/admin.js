@@ -3,59 +3,86 @@ var Admin = window.Admin || {};
 (function(A, $) {
   var ModelAdminFilter = function(options) {
     this.wrapper = '#filter-wrapper';
-    this.form = 'form.modeladmin-filters';
-    this.add_button = 'a#add-filter';
-    this.remove_button = this.form + ' .remove-filter';
-    this.filters = this.form + ' ul';
-    this.template_row = this.form + ' #template-row';
-    this.field_select = this.form + ' select.field';
+    this.add_selector = 'a.field-filter';
+    this.lookups_wrapper = '#lookup-fields';
   };
   
-  ModelAdminFilter.prototype.bind_listeners = function() {
+  ModelAdminFilter.prototype.init = function() {
     var self = this;
     
-    $(this.add_button).click(function(e) {
-      self.add_row(e);
-    });
+    this.filter_list = $(this.wrapper + ' form div.filter-list');
+    this.lookups_elem = $(this.lookups_wrapper);
     
-    $(this.remove_button).live('click', function(e) {
-      self.remove_row(e, $(this));
+    $(this.add_selector).click(function(e) {
+      e.preventDefault();
+      self.add_filter($(this));
     });
-    
-    $(this.field_select).live('change', function(e) {
-      self.choose_field(this.value, $(this));
-    });
-  };
+  }
   
-  ModelAdminFilter.prototype.choose_field = function(value, elem) {
-    var filter_clone = $('#filter-fields').find('#'+value).clone(true),
-        filter_elem = $(filter_clone);
+  ModelAdminFilter.prototype.add_row = function(field_label, field_name, filter_select) {
+    var self = this,
+        row = [
+          , '<div class="clearfix row">'
+          , '<span class="span2"><a class="btn small" href="#">'
+          , field_label
+          , '</a></span> </div>'
+        ].join('\n'),
+        row_elem = $(row).append(filter_select);
     
-    elem.siblings('.field-value').remove();
-    elem.after(filter_elem);
-  };
-  
-  ModelAdminFilter.prototype.add_row = function(e) {
-    var filter_elem = $(this.filters),
-        template_row = $(this.template_row),
-        row_clone = template_row.clone(true),
-        row_elem = $(row_clone);
+    row_elem.find('a.btn').click(function(e) {
+      row_elem.remove();
+    });
+    
+    this.filter_list.prepend(row_elem);
+    
+    filter_select.change(function(e) {
+      self.display_lookup(row_elem, field_name, this.value);
+    });
     
     $(this.wrapper).show();
     
-    row_elem.attr('id', '');
-    row_elem.removeClass('hidden');
-    filter_elem.append(row_elem);
-  };
+    return row_elem;
+  }
   
-  ModelAdminFilter.prototype.remove_row = function(e, elem) {
-    elem.parents('li').remove();
+  ModelAdminFilter.prototype.display_lookup = function(row, field_name, lookup) {
+    var desired_elem = this.lookups_elem.find('#' + field_name + '__' + lookup);
+    if (desired_elem) {
+      var clone = desired_elem.clone();
+      row.find('.lookup-input').remove();
+      row.append(clone);
+      return clone;
+    }
+  }
+
+  ModelAdminFilter.prototype.add_filter = function(elem) {
+    var field_label = elem.text(),
+        field_name = elem.attr('id').replace(/^filter\-/, ''),
+        filter_select = elem.siblings('select').clone().removeClass('hidden');
     
-    if ($(this.filters).children('li').length == 1)
-      $(this.wrapper).hide();
-  };
+    return this.add_row(field_label, field_name, filter_select);
+  }
+  
+  ModelAdminFilter.prototype.add_filter_request = function(filter, value) {
+    var pieces = filter.split('__'),
+        lookup = pieces.pop(),
+        field = pieces.join('__'),
+        elem = $('a#filter-' + field);
+    
+    if (elem) {
+      var row = this.add_filter(elem);
+      row.find('select').val(lookup);
+      
+      var input_elem = this.display_lookup(row, field, lookup);
+      input_elem.val(value);
+    }
+  }
   
   A.ModelAdminFilter = ModelAdminFilter;
+  
+  A.index_submit = function(action) {
+    $('form#model-list input[name=action]').val(action);
+    $('form#model-list').submit();
+  };
 })(Admin, jQuery);
 
 jQuery(function() {
