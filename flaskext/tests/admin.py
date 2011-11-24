@@ -332,7 +332,9 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertContext('user', self.admin)
             self.assertContext('model_admin', admin._registry['user'])
             self.assertContext('ordering', 'username')
-            self.assertContext('filters', [])
+            
+            query_filter = self.get_context('query_filter')
+            self.assertEqual(query_filter.raw_lookups, [])
                         
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), [
@@ -357,7 +359,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.login(c)
             
             # test a simple lookup
-            resp = c.get('/admin/user/?username=admin')
+            resp = c.get('/admin/user/?username__eq=admin')
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('user', self.admin)
@@ -369,8 +371,18 @@ class AdminTestCase(FlaskPeeweeTestCase):
                 self.admin,
             ])
             
-            # test a lookup using multiple values
-            resp = c.get('/admin/user/?username=admin&username=normal&ordering=-username')
+            # test a lookup using multiple values joined with "eq"
+            resp = c.get('/admin/user/?username__eq=admin&username__eq=normal&ordering=-username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [
+                self.normal,
+                self.admin,
+            ])
+            
+            # test a lookup using "in"
+            resp = c.get('/admin/user/?username__in=admin&username__in=normal&ordering=-username')
             self.assertEqual(resp.status_code, 200)
 
             query = self.get_context('query')
@@ -380,7 +392,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             ])
             
             # test a lookup using partial string
-            resp = c.get('/admin/user/?username=norm*&ordering=-username')
+            resp = c.get('/admin/user/?username__startswith=norm&ordering=-username')
             self.assertEqual(resp.status_code, 200)
 
             query = self.get_context('query')
@@ -390,7 +402,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             ])
             
             # test a lookup spanning a relation
-            resp = c.get('/admin/note/?user=%d' % self.normal.id)
+            resp = c.get('/admin/note/?user_id__eq=%d' % self.normal.id)
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('model_admin', admin._registry['note'])
@@ -399,7 +411,7 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertEqual(list(query.get_list()), notes[self.normal])
             
             # test a multi-value lookup spanning a relation
-            resp = c.get('/admin/note/?user=%d&user=%d' % (self.normal.id, self.admin.id))
+            resp = c.get('/admin/note/?user_id__in=%d&user_id__in=%d' % (self.normal.id, self.admin.id))
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('model_admin', admin._registry['note'])

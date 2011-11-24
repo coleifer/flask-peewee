@@ -121,10 +121,10 @@ class FilterPreprocessor(object):
             if hasattr(self, 'process_%s' % lookup):
                 return getattr(self, 'process_%s' % lookup)(field_part, values)
         
-        if len(values) == 1:
-            return [{raw_lookup: values[0]}]
-        
-        return [{raw_lookup: values}]
+        return [{raw_lookup: v} for v in values]
+    
+    def process_in(self, field_part, values):
+        return [{'%s__in' % field_part: values}]
     
     def process_today(self, field_part, values):
         return [{
