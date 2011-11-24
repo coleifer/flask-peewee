@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 try:
     import simplejson as json
 except ImportError:
