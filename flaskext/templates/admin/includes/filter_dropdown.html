@@ -3,7 +3,7 @@
       <ul class="dropdown-menu" id="filters">
         {% for field, choices in query_filter.get_lookups() %}
           <li><a class="field-filter" id="filter-{{ field.name }}" href="#">{{ get_verbose_name(model_admin.model, field.name) }}</a>
-            <select class="lookup-select hidden">
+            <select class="lookup-select span3 hidden">
               <option value="">---------------</option>
               {% for lookup, label in choices %}
                 <option value="{{ lookup }}">{{ label }}</option>

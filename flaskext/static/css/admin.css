@@ -17,14 +17,6 @@ body {
 }
 
 /* modeladmin filters */
-div#filter-wrapper {
-  border: 1px solid #eee;
-  border-radius: 3px;
-  margin: 20px 0;
-  padding: 5px 10px;
-  -moz-border-radius: 3px;
-  -webkit-border-radius: 3px;
-}
 form.modeladmin-filters { margin: 0; }
 form.modeladmin-filters ul { list-style-type: none; }
 form.modeladmin-filters select.field { margin-right: 10px; }

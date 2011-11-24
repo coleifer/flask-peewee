@@ -10,7 +10,7 @@ var Admin = window.Admin || {};
   ModelAdminFilter.prototype.init = function() {
     var self = this;
     
-    this.form = $(this.wrapper + ' form');
+    this.filter_list = $(this.wrapper + ' form div.filter-list');
     this.lookups_elem = $(this.lookups_wrapper);
     
     $(this.add_selector).click(function(e) {
@@ -22,14 +22,18 @@ var Admin = window.Admin || {};
   ModelAdminFilter.prototype.add_row = function(field_label, field_name, filter_select) {
     var self = this,
         row = [
-        , '<div class="clearfix">'
-        , '<a class="btn small" href="#" onclick="$(this).parent().remove();">'
-        , field_label
-        , '</a> </div>'
-      ].join('\n'),
-      row_elem = $(row).append(filter_select);
+          , '<div class="clearfix row">'
+          , '<span class="span2"><a class="btn small" href="#">'
+          , field_label
+          , '</a></span> </div>'
+        ].join('\n'),
+        row_elem = $(row).append(filter_select);
     
-    this.form.prepend(row_elem);
+    row_elem.find('a.btn').click(function(e) {
+      row_elem.remove();
+    });
+    
+    this.filter_list.prepend(row_elem);
     
     filter_select.change(function(e) {
       self.display_lookup(row_elem, field_name, this.value);
