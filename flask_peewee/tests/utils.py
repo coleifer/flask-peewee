@@ -8,9 +8,9 @@ import datetime
 from flask import request
 from werkzeug.exceptions import NotFound
 
-from flaskext.utils import get_object_or_404, make_password, check_password
-from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, Message, Note, app as flask_app
+from flask_peewee.utils import get_object_or_404, make_password, check_password
+from flask_peewee.tests.base import FlaskPeeweeTestCase
+from flask_peewee.tests.test_app import User, Message, Note, app as flask_app
 
 
 class UtilsTestCase(FlaskPeeweeTestCase):

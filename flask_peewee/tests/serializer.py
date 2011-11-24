@@ -1,8 +1,8 @@
 import datetime
 
-from flaskext.serializer import Serializer, ModelSerializer, Deserializer, ModelDeserializer
-from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, Message, Note
+from flask_peewee.serializer import Serializer, ModelSerializer, Deserializer, ModelDeserializer
+from flask_peewee.tests.base import FlaskPeeweeTestCase
+from flask_peewee.tests.test_app import User, Message, Note
 
 
 class SerializerTestCase(FlaskPeeweeTestCase):
@@ -88,7 +88,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         serialized = self.ms.serialize_object(self.admin)
         self.assertEqual(serialized, {
             '__model__': 'User',
-            '__module__': 'flaskext.tests.test_app',
+            '__module__': 'flask_peewee.tests.test_app',
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
@@ -101,7 +101,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         serialized = self.ms.serialize_object(self.admin, fields=('id', 'username',))
         self.assertEqual(serialized, {
             '__model__': 'User',
-            '__module__': 'flaskext.tests.test_app',
+            '__module__': 'flask_peewee.tests.test_app',
             'id': self.admin.id,
             'username': 'admin',
         })
@@ -111,7 +111,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         
         deserialized = self.md.deserialize_object({
             '__model__': 'User',
-            '__module__': 'flaskext.tests.test_app',
+            '__module__': 'flask_peewee.tests.test_app',
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
@@ -135,7 +135,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         
         deserialized = self.md.deserialize_object({
             '__model__': 'User',
-            '__module__': 'flaskext.tests.test_app',
+            '__module__': 'flask_peewee.tests.test_app',
             'username': 'edited',
             'active': False,
             'admin': False,

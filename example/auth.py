@@ -1,4 +1,4 @@
-from flaskext.auth import Auth
+from flask_peewee.auth import Auth
 
 from app import app, db
 from models import User

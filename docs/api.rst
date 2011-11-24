@@ -24,9 +24,9 @@ Admin
     
         from flask import Flask
         
-        from flaskext.admin import Admin
-        from flaskext.auth import Auth
-        from flaskext.db import Database
+        from flask_peewee.admin import Admin
+        from flask_peewee.auth import Auth
+        from flask_peewee.db import Database
         
         app = Flask(__name__)
         db = Database(app)
@@ -391,8 +391,8 @@ Auth
     
         from flask import Flask
         
-        from flaskext.auth import Auth
-        from flaskext.db import Database
+        from flask_peewee.auth import Auth
+        from flask_peewee.db import Database
         
         app = Flask(__name__)
         db = Database(app)
@@ -608,7 +608,7 @@ REST API
     
     .. code-block:: python
     
-        from flaskext.rest import RestAPI
+        from flask_peewee.rest import RestAPI
         
         from app import app # our project's Flask app
         
@@ -858,7 +858,7 @@ Authenticating requests to the API
     
         from auth import auth # import the Auth object used by our project
 
-        from flaskext.rest import RestAPI, RestResource, UserAuthentication
+        from flask_peewee.rest import RestAPI, RestResource, UserAuthentication
 
         # create an instance of UserAuthentication
         user_auth = UserAuthentication(auth)
@@ -908,7 +908,7 @@ Authenticating requests to the API
     
         from auth import auth # import the Auth object used by our project
 
-        from flaskext.rest import RestAPI, RestResource, UserAuthentication, AdminAuthentication
+        from flask_peewee.rest import RestAPI, RestResource, UserAuthentication, AdminAuthentication
 
         # create an instance of UserAuthentication and AdminAuthentication
         user_auth = UserAuthentication(auth)

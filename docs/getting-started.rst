@@ -59,7 +59,7 @@ initialize the peewee database wrapper and configure the database:
     from flask import Flask
 
     # flask-peewee bindings
-    from flaskext.db import Database
+    from flask_peewee.db import Database
 
     # configure our database
     DATABASE = {
@@ -131,7 +131,7 @@ among other things, and is required by the :py:class:`Admin`.
 
 .. code-block:: python
 
-    from flaskext.auth import Auth
+    from flask_peewee.auth import Auth
     
     # create an Auth object for use with our flask app and database wrapper
     auth = Auth(app, db)
@@ -153,8 +153,8 @@ After cleaning up the imports and declarations, we have something like the follo
 
     import datetime
     from flask import Flask
-    from flaskext.auth import Auth
-    from flaskext.db import Database
+    from flask_peewee.auth import Auth
+    from flask_peewee.db import Database
     from peewee import *
 
     # configure our database
@@ -196,7 +196,7 @@ the initialization of the ``Auth`` class:
 
 .. code-block:: python
 
-    from flaskext.admin import Admin
+    from flask_peewee.admin import Admin
 
     admin = Admin(app, auth)
     admin.register(Note)
@@ -234,7 +234,7 @@ the following changes:
 
 .. code-block:: python
 
-    from flaskext.admin import Admin, ModelAdmin
+    from flask_peewee.admin import Admin, ModelAdmin
 
     class NoteAdmin(ModelAdmin):
         columns = ('message', 'created',)
@@ -270,7 +270,7 @@ The first step, then, is to create the :py:class:`RestAPI` object:
 
 .. code-block:: python
 
-    from flaskext.rest import RestAPI
+    from flask_peewee.rest import RestAPI
 
     # create a RestAPI container
     api = RestAPI(app)
@@ -353,7 +353,7 @@ auth credentials match those of one of the ``auth.User`` models.
 
 .. code-block:: python
 
-    from flaskext.rest import RestAPI, UserAuthentication
+    from flask_peewee.rest import RestAPI, UserAuthentication
 
     # instantiate the user auth
     user_auth = UserAuthentication(auth)

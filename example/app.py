@@ -1,7 +1,7 @@
 from flask import Flask
 
 # flask-peewee bindings
-from flaskext.db import Database
+from flask_peewee.db import Database
 
 
 app = Flask(__name__)

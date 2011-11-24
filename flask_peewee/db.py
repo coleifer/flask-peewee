@@ -1,8 +1,8 @@
 import peewee
 from peewee import *
 
-from flaskext.exceptions import ImproperlyConfigured
-from flaskext.utils import load_class
+from flask_peewee.exceptions import ImproperlyConfigured
+from flask_peewee.utils import load_class
 
 
 class Database(object):

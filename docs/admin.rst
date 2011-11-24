@@ -23,8 +23,8 @@ To get started with the admin, there are just a couple steps:
     
         from flask import Flask
         
-        from flaskext.auth import Auth
-        from flaskext.db import Database
+        from flask_peewee.auth import Auth
+        from flask_peewee.db import Database
         
         app = Flask(__name__)
         db = Database(app)
@@ -38,7 +38,7 @@ To get started with the admin, there are just a couple steps:
     .. code-block:: python
     
         # continued from above...
-        from flaskext.admin import Admin
+        from flask_peewee.admin import Admin
         
         admin = Admin(app, auth)
         
@@ -100,7 +100,7 @@ admin, we'll subclass :py:class:`ModelAdmin`.
 
 .. code-block:: python
 
-    from flaskext.admin import ModelAdmin
+    from flask_peewee.admin import ModelAdmin
     
     class MessageAdmin(ModelAdmin):
         columns = ('user', 'content', 'pub_date',)

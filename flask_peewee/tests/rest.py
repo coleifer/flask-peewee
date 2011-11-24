@@ -9,10 +9,10 @@ import unittest
 
 from flask import g
 
-from flaskext.rest import RestAPI, RestResource, Authentication, UserAuthentication
-from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, Message, Note, TestModel, APIKey
-from flaskext.utils import get_next, make_password, check_password
+from flask_peewee.rest import RestAPI, RestResource, Authentication, UserAuthentication
+from flask_peewee.tests.base import FlaskPeeweeTestCase
+from flask_peewee.tests.test_app import User, Message, Note, TestModel, APIKey
+from flask_peewee.utils import get_next, make_password, check_password
 
 
 class RestApiTestCase(FlaskPeeweeTestCase):

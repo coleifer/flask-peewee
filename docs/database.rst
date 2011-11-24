@@ -30,7 +30,7 @@ be passed to the database driver when connecting:
     from flask import Flask
     from peewee import *
     
-    from flaskext.db import Database
+    from flask_peewee.db import Database
     
     DATABASE = {
         'name': 'example.db',

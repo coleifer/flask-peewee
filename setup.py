@@ -18,7 +18,7 @@ setup(
             'templates/*.html',
             'templates/*/*.html',
         ],
-        'flaskext': [
+        'flask_peewee': [
             'static/*/*.css',
             'static/*/*.js',
             'static/*/*.gif',

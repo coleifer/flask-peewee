@@ -2,10 +2,10 @@ import datetime
 
 from flask import request, session, url_for
 
-from flaskext.admin import ModelAdmin, AdminPanel
-from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, Message, Note, admin
-from flaskext.utils import get_next, make_password, check_password
+from flask_peewee.admin import ModelAdmin, AdminPanel
+from flask_peewee.tests.base import FlaskPeeweeTestCase
+from flask_peewee.tests.test_app import User, Message, Note, admin
+from flask_peewee.utils import get_next, make_password, check_password
 
 from wtfpeewee.orm import model_form
 

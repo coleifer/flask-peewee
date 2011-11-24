@@ -8,9 +8,9 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flaskext.filters import BooleanSelectField, QueryFilter
-from flaskext.serializer import Serializer
-from flaskext.utils import get_next, PaginatedQuery, slugify
+from flask_peewee.filters import BooleanSelectField, QueryFilter
+from flask_peewee.serializer import Serializer
+from flask_peewee.utils import get_next, PaginatedQuery, slugify
 from peewee import BooleanField, ForeignKeyField, TextField, Q
 from werkzeug import Headers
 from wtforms import fields, widgets

@@ -7,8 +7,8 @@ except ImportError:
 from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
 from peewee import *
 
-from flaskext.serializer import Serializer, Deserializer
-from flaskext.utils import PaginatedQuery, slugify, get_object_or_404
+from flask_peewee.serializer import Serializer, Deserializer
+from flask_peewee.utils import PaginatedQuery, slugify, get_object_or_404
 
 
 class Authentication(object):

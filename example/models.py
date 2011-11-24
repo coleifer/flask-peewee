@@ -1,7 +1,7 @@
 from hashlib import md5, sha1
 import datetime
 
-from flaskext.auth import BaseUser
+from flask_peewee.auth import BaseUser
 from peewee import *
 
 from app import db

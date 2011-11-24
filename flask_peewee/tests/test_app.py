@@ -5,11 +5,11 @@ from flask import Flask, request, redirect, url_for, render_template, flash, g, 
 from peewee import *
 
 # flask-peewee bindings
-from flaskext.admin import Admin, ModelAdmin, AdminPanel
-from flaskext.auth import Auth, BaseUser
-from flaskext.db import Database
-from flaskext.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication
-from flaskext.utils import get_object_or_404, object_list, make_password
+from flask_peewee.admin import Admin, ModelAdmin, AdminPanel
+from flask_peewee.auth import Auth, BaseUser
+from flask_peewee.db import Database
+from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication
+from flask_peewee.utils import get_object_or_404, object_list, make_password
 
 
 class TestFlask(Flask):
@@ -20,7 +20,7 @@ class TestFlask(Flask):
 
 
 app = TestFlask(__name__)
-app.config.from_object('flaskext.tests.test_config.Configuration')
+app.config.from_object('flask_peewee.tests.test_config.Configuration')
 
 db = Database(app)
 

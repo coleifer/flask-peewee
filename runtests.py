@@ -5,7 +5,7 @@ import unittest
 
 from os.path import dirname, abspath
 
-from flaskext import tests
+from flask_peewee import tests
 
 def runtests(*test_args):
     suite = unittest.TestLoader().loadTestsFromModule(tests)

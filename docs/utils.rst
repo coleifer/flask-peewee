@@ -65,7 +65,7 @@ Misc
 
     .. code-block:: python
     
-        from flaskext.utils import slugify
+        from flask_peewee.utils import slugify
         
         
         class Blog(db.Model):

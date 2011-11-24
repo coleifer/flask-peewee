@@ -2,9 +2,9 @@ import datetime
 
 from flask import request, session, url_for, get_flashed_messages
 
-from flaskext.auth import Auth, LoginForm
-from flaskext.tests.base import FlaskPeeweeTestCase
-from flaskext.tests.test_app import User, app, db, auth
+from flask_peewee.auth import Auth, LoginForm
+from flask_peewee.tests.base import FlaskPeeweeTestCase
+from flask_peewee.tests.test_app import User, app, db, auth
 
 
 class TestAuth(Auth):

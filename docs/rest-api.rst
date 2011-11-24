@@ -40,7 +40,7 @@ we will expose via the API.  Here is a truncated version of what they look like:
 
 .. code-block:: python
 
-    from flaskext.auth import BaseUser
+    from flask_peewee.auth import BaseUser
 
     class User(db.Model, BaseUser):
         username = CharField()
@@ -70,7 +70,7 @@ Here we'll create a simple api and register our models:
 
 .. code-block:: python
 
-    from flaskext.rest import RestAPI
+    from flask_peewee.rest import RestAPI
     
     from app import app # our project's Flask app
     
@@ -169,7 +169,7 @@ from serialization, subclass :py:class:`RestResource`:
 
 .. code-block:: python
 
-    from flaskext.rest import RestAPI, RestResource
+    from flask_peewee.rest import RestAPI, RestResource
     
     from app import app # our project's Flask app
     
@@ -220,7 +220,7 @@ mechanism.
 
     from auth import auth # import the Auth object used by our project
     
-    from flaskext.rest import RestAPI, RestResource, UserAuthentication
+    from flask_peewee.rest import RestAPI, RestResource, UserAuthentication
     
     # create an instance of UserAuthentication
     user_auth = UserAuthentication(auth)
@@ -307,7 +307,7 @@ content.
 
 .. code-block:: python
 
-    from flaskext.rest import RestrictOwnerResource
+    from flask_peewee.rest import RestrictOwnerResource
 
 
     class MessageResource(RestrictOwnerResource):
@@ -333,7 +333,7 @@ It is fine to modify our own message, though (message with id=1):
     
     # prints 200
 
-Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flaskext/rest.py#L284>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
+Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py#L284>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
 
 * PUT / DELETE -- verify the authenticated user is the owner of the object
 * POST -- assign the authenticated user as the owner of the new object
@@ -348,7 +348,7 @@ to administrators:
 
 .. code-block:: python
 
-    from flaskext.rest import AdminAuthentication
+    from flask_peewee.rest import AdminAuthentication
     
     # instantiate our user-based auth
     user_auth = UserAuthentication(auth)
