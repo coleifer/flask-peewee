@@ -60,7 +60,7 @@ INV_FIELD_TYPES = dict((v,k) for k in FIELD_TYPES for v in FIELD_TYPES[k])
 FIELDS_TO_LOOKUPS = {
     'foreign_key': ['eq', 'in'],
     'text': ['eq', 'icontains', 'istartswith'],
-    'numeric': ['eq', 'ne', 'lt', 'lte', 'gt', 'gte'],
+    'numeric': ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
     'boolean': ['eq'],
     'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago'],
 }
@@ -68,6 +68,8 @@ FIELDS_TO_LOOKUPS = {
 CONVERTERS = {
     (ForeignKeyField, 'eq'): lambda f: ModelSelectField(model=f.to),
     (ForeignKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.to),
+    (PrimaryKeyField, 'eq'): lambda f: ModelSelectField(model=f.model),
+    (PrimaryKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.model),
     (DateTimeField, 'today'): lambda f: fields.HiddenField(),
     (DateTimeField, 'yesterday'): lambda f: fields.HiddenField(),
     (DateTimeField, 'this_week'): lambda f: fields.HiddenField(),

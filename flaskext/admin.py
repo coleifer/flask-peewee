@@ -65,7 +65,7 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(query, self.ignore_filters)
+        return QueryFilter(query, self.exclude_lookups, self.ignore_filters)
     
     def get_urls(self):
         return (
