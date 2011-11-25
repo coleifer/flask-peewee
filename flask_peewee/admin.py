@@ -35,7 +35,8 @@ class ModelAdmin(object):
     paginate_by = 20
     columns = None
     ignore_filters = ('ordering', 'page',)
-    exclude_lookups = None
+    exclude_filter_fields = None
+    related_filters = []
     
     def __init__(self, admin, model):
         self.admin = admin
@@ -65,7 +66,7 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(query, self.exclude_lookups, self.ignore_filters)
+        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters, self.related_filters)
     
     def get_urls(self):
         return (

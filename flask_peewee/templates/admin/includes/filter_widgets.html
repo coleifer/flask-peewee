@@ -1,6 +1,8 @@
   <div id="filter-wrapper" style="display: none;">
     <div class="hidden" id="lookup-fields">
-      {% for field in query_filter.get_form() %}{{ field(class='lookup-input span4') }}{% endfor %}
+      {% for form in query_filter.get_forms() %}
+        {% for field in form %}{{ field(class='lookup-input span4') }}{% endfor %}
+      {% endfor %}
     </div>
     <form method="get" action="." class="modeladmin-filters row">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}

@@ -2,6 +2,7 @@ import datetime
 from flask import request, redirect
 
 from flask_peewee.admin import Admin, ModelAdmin, AdminPanel
+from flask_peewee.filters import QueryFilter
 
 from app import app, db
 from auth import auth
@@ -49,6 +50,8 @@ admin = Admin(app, auth)
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
+    exclude_filter_fields = ('user',)
+    related_filters = [QueryFilter(User.select(), exclude_fields=('password',))]
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)

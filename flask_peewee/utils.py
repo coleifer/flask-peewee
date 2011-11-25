@@ -57,6 +57,34 @@ def load_class(s):
     mod = sys.modules[path]
     return getattr(mod, klass)
 
+def path_to_models(model, path):
+    accum = []
+    if '__' in path:
+        next, path = path.split('__')
+    else:
+        next, path = path, ''
+    if next in model._meta.rel_fields:
+        field_name = model._meta.rel_fields[next]
+        model = model._meta.get_field_by_name(field_name).to
+        accum.append(model)
+    else:
+        raise AttributeError('%s has no related field named "%s"' % (model, next))
+    if path:
+        accum.extend(path_to_models(model, path))
+    return accum
+
+def models_to_path(models):
+    accum = []
+    last = models[0]
+    for model in models[1:]:
+        fk_field = last._meta.rel_exists(model)
+        if fk_field:
+            accum.append(fk_field.descriptor)
+        else:
+            raise AttributeError('%s has no relation to %s' % (last, model))
+        last = model
+    return '__'.join(accum)
+
 
 # borrowing these methods, slightly modified, from django.contrib.auth
 def get_hexdigest(salt, raw_password):

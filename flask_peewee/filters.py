@@ -2,6 +2,7 @@ import datetime
 import operator
 
 from flask import request
+from flask_peewee.utils import models_to_path
 from peewee import *
 from wtforms import fields, form, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
@@ -98,14 +99,14 @@ def get_fields(model):
                 fields['%s__%s' % (field_name, lookup)] = form_field
     return fields
 
-def get_filter_form(model):
-    frm = form.BaseForm(get_fields(model))
+def get_filter_form(model, prefix=''):
+    frm = form.BaseForm(get_fields(model), prefix=prefix)
     frm.process(None)
     return frm
 
-def get_lookups(model, exclude):
+def get_lookups(model, exclude, prefix, models):
     return [
-        (f, lookups_for_field(f)) for f in model._meta.get_fields() if f not in exclude
+        (f, prefix, models, lookups_for_field(f)) for f in model._meta.get_fields() if f.name not in exclude
     ]
 
 def _rd(n):
@@ -156,18 +157,43 @@ class FilterPreprocessor(object):
 
 
 class QueryFilter(object):
-    def __init__(self, query, exclude_lookups=None, ignore_filters=None):
+    def __init__(self, query, exclude_fields=None, ignore_filters=None, related=None):
         self.query = query
         self.model = self.query.model
 
-        self.exclude_lookups = exclude_lookups or ()
+        # fix any foreign key fields
+        self.exclude_fields = []
+        for field_name in exclude_fields or ():
+            if field_name in self.model._meta.fields:
+                self.exclude_fields.append(field_name)
+            else:
+                self.exclude_fields.append(self.model._meta.rel_fields[field_name])
+        
         self.ignore_filters = ignore_filters or ()
+        
+        # a list of related QueryFilter() objects
+        self.related = related or ()
     
-    def get_form(self):
-        return get_filter_form(self.model)
+    def get_form(self, prefix=''):
+        return get_filter_form(self.model, prefix=prefix)
     
-    def get_lookups(self):
-        return get_lookups(self.model, self.exclude_lookups)
+    def get_forms(self, prefix=''):
+        forms = [self.get_form(prefix)]
+        for related_filter in self.related:
+            path = models_to_path([self.model, related_filter.model])
+            forms.extend(related_filter.get_forms(prefix + path + '__'))
+        return forms
+    
+    def get_lookups(self, prefix='', models=None):
+        models = models or []
+        # a dictionary of {column: [lookups,...]} that populates the dropdown
+        # of columns to filter, and the <select> displayed upon choosing a col
+        lookups = get_lookups(self.model, self.exclude_fields, prefix, models)
+        for related_filter in self.related:
+            rel_model = related_filter.model
+            path = models_to_path([self.model, rel_model])
+            lookups.extend(related_filter.get_lookups(prefix + path + '__', models + [rel_model]))
+        return lookups
     
     def get_preprocessor(self):
         return FilterPreprocessor()
