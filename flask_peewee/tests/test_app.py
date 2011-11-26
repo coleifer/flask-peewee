@@ -8,6 +8,7 @@ from peewee import *
 from flask_peewee.admin import Admin, ModelAdmin, AdminPanel
 from flask_peewee.auth import Auth, BaseUser
 from flask_peewee.db import Database
+from flask_peewee.filters import QueryFilter
 from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication
 from flask_peewee.utils import get_object_or_404, object_list, make_password
 
@@ -66,6 +67,25 @@ class TestModel(db.Model):
         ordering = ('id',)
 
 
+class AModel(db.Model):
+    a_field = CharField()
+
+class BModel(db.Model):
+    a = ForeignKeyField(AModel)
+    b_field = CharField()
+
+class CModel(db.Model):
+    b = ForeignKeyField(BModel)
+    c_field = CharField()
+    
+class DModel(db.Model):
+    c = ForeignKeyField(CModel)
+    d_field = CharField()
+
+class BDetails(db.Model):
+    b = ForeignKeyField(BModel)
+
+
 class APIKey(db.Model):
     key = CharField()
     secret = CharField()
@@ -99,6 +119,27 @@ auth = Auth(app, db, user_model=User)
 admin = Admin(app, auth)
 
 
+a_qf = QueryFilter(AModel.select())
+bd_qf = QueryFilter(BDetails.select())
+b_qf = QueryFilter(BModel.select(), related=[a_qf, bd_qf])
+c_qf = QueryFilter(CModel.select(), related=[b_qf])
+d_qf = QueryFilter(DModel.select(), related=[c_qf])
+
+class AAdmin(ModelAdmin):
+    columns = ('a_field',)
+
+class BAdmin(ModelAdmin):
+    columns = ('a', 'b_field',)
+    related_filters = [a_qf]
+
+class CAdmin(ModelAdmin):
+    columns = ('b', 'c_field',)
+    related_filters = [b_qf]
+
+class DAdmin(ModelAdmin):
+    columns = ('c', 'd_field',)
+    related_filters = [c_qf]
+
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
 
@@ -107,6 +148,11 @@ class NoteAdmin(ModelAdmin):
 
 
 auth.register_admin(admin)
+admin.register(AModel, AAdmin)
+admin.register(BModel, BAdmin)
+admin.register(CModel, CAdmin)
+admin.register(DModel, DAdmin)
+admin.register(BDetails)
 admin.register(Message, MessageAdmin)
 admin.register(Note, NoteAdmin)
 admin.register_panel('Notes', NotePanel)

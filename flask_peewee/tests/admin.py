@@ -6,13 +6,13 @@ from flask import request, session, url_for
 
 from flask_peewee.admin import ModelAdmin, AdminPanel
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, Message, Note, admin
+from flask_peewee.tests.test_app import User, Message, Note, admin, AModel, BModel, CModel, DModel, BDetails
 from flask_peewee.utils import get_next, make_password, check_password
 
 from wtfpeewee.orm import model_form
 
 
-class AdminTestCase(FlaskPeeweeTestCase):
+class BaseAdminTestCase(FlaskPeeweeTestCase):
     def login(self, context=None):
         context = context or self.app
         context.post('/accounts/login/', data={
@@ -23,7 +23,9 @@ class AdminTestCase(FlaskPeeweeTestCase):
     def logout(self, context=None):
         context = context or self.app
         context.post('/accounts/logout/')
-    
+
+
+class AdminTestCase(BaseAdminTestCase):
     def test_admin_auth(self):
         self.create_users()
         
@@ -83,6 +85,11 @@ class AdminTestCase(FlaskPeeweeTestCase):
         # check that we have the stuff from the auth module and the index view
         self.assertContext('user', self.admin)
         self.assertContext('model_admins', [
+            admin._registry['amodel'],
+            admin._registry['bdetails'],
+            admin._registry['bmodel'],
+            admin._registry['cmodel'],
+            admin._registry['dmodel'],
             admin._registry['message'],
             admin._registry['note'],
             admin._registry['user'],
@@ -475,6 +482,120 @@ class AdminTestCase(FlaskPeeweeTestCase):
             self.assertEqual(note.message, 'testing')
 
 
+class AdminFilterTestCase(BaseAdminTestCase):
+    def setUp(self):
+        super(AdminFilterTestCase, self).setUp()
+        BDetails.drop_table(True)
+        DModel.drop_table(True)
+        CModel.drop_table(True)
+        BModel.drop_table(True)
+        AModel.drop_table(True)
+        AModel.create_table()
+        BModel.create_table()
+        CModel.create_table()
+        DModel.create_table()
+        BDetails.create_table()
+    
+    def create_models(self):
+        for i in range(1, 4):
+            a = AModel.create(a_field='a%d' % i)
+            b = BModel.create(b_field='b%d' % i, a=a)
+            c = CModel.create(c_field='c%d' % i, b=b)
+            d = DModel.create(d_field='d%d' % i, c=c)
+            if i % 2 == 0:
+                bd = BDetails.create(b=b)
+    
+    def test_filters(self):
+        users = self.create_users()
+        self.create_models()
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            resp = c.get('/admin/dmodel/?c__b__a__a_field=a1')
+            query = self.get_context('query')
+            
+            self.assertEqual([o.d_field for o in query.get_list()], ['d1'])
+            
+            resp = c.get('/admin/dmodel/?c__b__a__a_field=a3')
+            query = self.get_context('query')
+            
+            self.assertEqual([o.d_field for o in query.get_list()], ['d3'])
+            
+            resp = c.get('/admin/dmodel/?c__b__a=2')
+            query = self.get_context('query')
+            
+            self.assertEqual([o.d_field for o in query.get_list()], ['d2'])
+    
+    def assertLookups(self, lookups, expected):
+        """
+        Pass in something like (field_name, prefix, models)
+        """
+        c_lookups = [(l[0], l[1], l[2]) for l in lookups]
+        c_expected = [(e[0]._meta.fields[e[1]], e[2], e[3]) for e in expected]
+        self.assertEqual(c_lookups, c_expected)
+    
+    def test_lookups(self):
+        users = self.create_users()
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            resp = c.get('/admin/amodel/')
+            query_filter = self.get_context('query_filter')
+            lookups = query_filter.get_lookups()
+            self.assertLookups(lookups, [
+                (AModel, 'id', '', []),
+                (AModel, 'a_field', '', []),
+            ])
+            
+            resp = c.get('/admin/bmodel/')
+            query_filter = self.get_context('query_filter')
+            lookups = query_filter.get_lookups()
+            self.assertLookups(lookups, [
+                (BModel, 'id', '', []),
+                (BModel, 'a_id', '', []),
+                (BModel, 'b_field', '', []),
+                (AModel, 'id', 'a__', [AModel]),
+                (AModel, 'a_field', 'a__', [AModel]),
+            ])
+            
+            resp = c.get('/admin/cmodel/')
+            query_filter = self.get_context('query_filter')
+            lookups = query_filter.get_lookups()
+            self.assertLookups(lookups, [
+                (CModel, 'id', '', []),
+                (CModel, 'b_id', '', []),
+                (CModel, 'c_field', '', []),
+                (BModel, 'id', 'b__', [BModel]),
+                (BModel, 'a_id', 'b__', [BModel]),
+                (BModel, 'b_field', 'b__', [BModel]),
+                (AModel, 'id', 'b__a__', [BModel, AModel]),
+                (AModel, 'a_field', 'b__a__', [BModel, AModel]),
+                (BDetails, 'id', 'b__bdetails_set__', [BModel, BDetails]),
+                (BDetails, 'b_id', 'b__bdetails_set__', [BModel, BDetails]),
+            ])
+            
+            resp = c.get('/admin/dmodel/')
+            query_filter = self.get_context('query_filter')
+            lookups = query_filter.get_lookups()
+            self.assertLookups(lookups, [
+                (DModel, 'id', '', []),
+                (DModel, 'c_id', '', []),
+                (DModel, 'd_field', '', []),
+                (CModel, 'id', 'c__', [CModel]),
+                (CModel, 'b_id', 'c__', [CModel]),
+                (CModel, 'c_field', 'c__', [CModel]),
+                (BModel, 'id', 'c__b__', [CModel, BModel]),
+                (BModel, 'a_id', 'c__b__', [CModel, BModel]),
+                (BModel, 'b_field', 'c__b__', [CModel, BModel]),
+                (AModel, 'id', 'c__b__a__', [CModel, BModel, AModel]),
+                (AModel, 'a_field', 'c__b__a__', [CModel, BModel, AModel]),
+                (BDetails, 'id', 'c__b__bdetails_set__', [CModel, BModel, BDetails]),
+                (BDetails, 'b_id', 'c__b__bdetails_set__', [CModel, BModel, BDetails]),
+            ])
+
+
 class TemplateHelperTestCase(FlaskPeeweeTestCase):
     def setUp(self):
         super(TemplateHelperTestCase, self).setUp()
@@ -515,6 +636,11 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
     
     def test_get_model_admins(self):
         self.assertEqual(self.th.get_model_admins(), {'model_admins': [
+            admin._registry['amodel'],
+            admin._registry['bdetails'],
+            admin._registry['bmodel'],
+            admin._registry['cmodel'],
+            admin._registry['dmodel'],
             admin._registry['message'],
             admin._registry['note'],
             admin._registry['user'],

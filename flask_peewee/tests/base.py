@@ -1,7 +1,7 @@
 import unittest
 
 from flask_peewee.tests import test_app
-from flask_peewee.tests.test_app import User, Message, Note
+from flask_peewee.tests.test_app import User, Message, Note, AModel, BModel, CModel, DModel, BDetails
 
 
 class FlaskPeeweeTestCase(unittest.TestCase):

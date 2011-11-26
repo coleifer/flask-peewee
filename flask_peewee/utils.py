@@ -79,7 +79,10 @@ def models_to_path(models):
     for model in models[1:]:
         fk_field = last._meta.rel_exists(model)
         if fk_field:
-            accum.append(fk_field.descriptor)
+            if fk_field in last._meta.get_fields():
+                accum.append(fk_field.descriptor)
+            else:
+                accum.append(fk_field.related_name)
         else:
             raise AttributeError('%s has no relation to %s' % (last, model))
         last = model

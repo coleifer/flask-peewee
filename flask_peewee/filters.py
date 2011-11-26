@@ -78,36 +78,76 @@ CONVERTERS = {
 }
 
 def lookups_for_field(field):
+    """
+    Get a list of valid lookups for a given field type.  Lookups are expressed
+    as a 2-tuple of (<lookup suffix>, <human description>)
+    
+    >>> lookups_for_field(User.username)
+    [('eq', 'equal to'), ('icontains', 'contains'), ('istartswith', 'starts with')]
+    """
     field_class = type(field)
     return [
         (lookup, LOOKUP_TYPES[lookup]) \
             for lookup in FIELDS_TO_LOOKUPS[INV_FIELD_TYPES[field_class]]
     ]
 
+def get_lookups(model, exclude, prefix, models):
+    """
+    Retrieve a list of valid lookups for a model, taking into account any fields
+    that need to be excluded.  Packaged up as a list of tuples containing the
+    prefix used and the models in the join chain.
+    """
+    lookups = []
+    for field_obj in model._meta.get_fields():
+        if field_obj.name not in exclude:
+            lookups.append((field_obj, prefix, models, lookups_for_field(field_obj)))
+    
+    return lookups
+
 def form_field_for_lookup(field, lookup):
+    """
+    For a given field object and lookup, return the proper form field for
+    inputting a value.  Mappings are provided in the CONVERTERS dictionary.
+    """
     field_class = type(field)
     default = lambda f: fields.TextField()
     return CONVERTERS.get((field_class, lookup), default)(field)
 
-def get_fields(model):
+def get_fields(model, exclude):
+    """
+    For a given model instance, retrieve a dictionary of all field/lookups for
+    a model.  These fields are unbound and will be used to construct a filter
+    form by the get_filter_form() function.
+    
+    >>> get_fields(Message)
+    {
+        'content__eq': <UnboundField(TextField, (), {})>,
+        'content__icontains': <UnboundField(TextField, (), {})>,
+        'content__istartswith': <UnboundField(TextField, (), {})>,
+        'id__eq': <UnboundField(ModelSelectField, (), {'model': <class 'models.Message'>})>,
+        ...
+    }
+    """
     fields = {}
     for field_name, field_obj in model._meta.fields.items():
-        field_class = type(field_obj)
-        for lookup in FIELDS_TO_LOOKUPS[INV_FIELD_TYPES[field_class]]:
+        if field_name in exclude:
+            continue
+        
+        for lookup, _ in lookups_for_field(field_obj):
             form_field = form_field_for_lookup(field_obj, lookup)
             if form_field:
                 fields['%s__%s' % (field_name, lookup)] = form_field
+    
     return fields
 
-def get_filter_form(model, prefix=''):
-    frm = form.BaseForm(get_fields(model), prefix=prefix)
+def get_filter_form(model, exclude, prefix=''):
+    """
+    Create a form instance suitable for use in the admin templates, optionally
+    with a given prefix.  The prefix is used to denote related lookups.
+    """
+    frm = form.BaseForm(get_fields(model, exclude), prefix=prefix)
     frm.process(None)
     return frm
-
-def get_lookups(model, exclude, prefix, models):
-    return [
-        (f, prefix, models, lookups_for_field(f)) for f in model._meta.get_fields() if f.name not in exclude
-    ]
 
 def _rd(n):
     return datetime.date.today() + datetime.timedelta(days=n)
@@ -175,7 +215,7 @@ class QueryFilter(object):
         self.related = related or ()
     
     def get_form(self, prefix=''):
-        return get_filter_form(self.model, prefix=prefix)
+        return get_filter_form(self.model, self.exclude_fields, prefix=prefix)
     
     def get_forms(self, prefix=''):
         forms = [self.get_form(prefix)]
@@ -186,8 +226,6 @@ class QueryFilter(object):
     
     def get_lookups(self, prefix='', models=None):
         models = models or []
-        # a dictionary of {column: [lookups,...]} that populates the dropdown
-        # of columns to filter, and the <select> displayed upon choosing a col
         lookups = get_lookups(self.model, self.exclude_fields, prefix, models)
         for related_filter in self.related:
             rel_model = related_filter.model
