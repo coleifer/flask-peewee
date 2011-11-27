@@ -7,6 +7,7 @@ except ImportError:
 from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
 from peewee import *
 
+from flask_peewee.filters import QueryFilter
 from flask_peewee.serializer import Serializer, Deserializer
 from flask_peewee.utils import PaginatedQuery, slugify, get_object_or_404
 
@@ -90,7 +91,11 @@ class RestResource(object):
     paginate_by = 20
     fields = None
     exclude = None
+    
+    # filtering
     ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
+    exclude_filter_fields = None
+    related_filters = []
     
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api
@@ -113,6 +118,9 @@ class RestResource(object):
     
     def get_query(self):
         return self.model.select()
+    
+    def get_query_filter(self, query):
+        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters, self.related_filters)
     
     def get_serializer(self):
         return Serializer()
@@ -259,7 +267,12 @@ class RestResource(object):
     def object_list(self):
         query = self.get_query()
         query = self.apply_ordering(query)
-        query = self.apply_filters(query)
+        
+        # create a QueryFilter object with our current query
+        query_filter = self.get_query_filter(query)
+        
+        # process the filters from the request
+        filtered_query = query_filter.get_filtered_query()
         
         try:
             paginate_by = int(request.args.get('limit', self.paginate_by))
@@ -268,7 +281,7 @@ class RestResource(object):
         else:
             paginate_by = min(paginate_by, self.paginate_by) # restrict
         
-        pq = PaginatedQuery(query, paginate_by)
+        pq = PaginatedQuery(filtered_query, paginate_by)
         meta_data = self.get_request_metadata(pq)
         
         query_dict = self.serialize_query(pq.get_list())
