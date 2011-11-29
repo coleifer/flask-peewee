@@ -31,6 +31,10 @@ to refer there.
 The project will be a simple 'twitter-like' app where users can post short messages
 and "follow" other users.
 
+.. note:: If you're using apache with mod_wsgi and would like to use any of
+    the auth backends that use basic auth, you will need to add the following
+    directive: ``WSGIPassAuthorization On``
+
 
 Project models
 ^^^^^^^^^^^^^^
