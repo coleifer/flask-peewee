@@ -69,8 +69,8 @@ FIELDS_TO_LOOKUPS = {
 CONVERTERS = {
     (ForeignKeyField, 'eq'): lambda f: ModelSelectField(model=f.to),
     (ForeignKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.to),
-    (PrimaryKeyField, 'eq'): lambda f: ModelSelectField(model=f.model),
-    (PrimaryKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.model),
+    #(PrimaryKeyField, 'eq'): lambda f: ModelSelectField(model=f.model),
+    #(PrimaryKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.model),
     (DateTimeField, 'today'): lambda f: fields.HiddenField(),
     (DateTimeField, 'yesterday'): lambda f: fields.HiddenField(),
     (DateTimeField, 'this_week'): lambda f: fields.HiddenField(),
