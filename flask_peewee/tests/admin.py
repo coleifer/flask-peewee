@@ -2,9 +2,10 @@ from __future__ import with_statement
 
 import datetime
 
-from flask import request, session, url_for
+from flask import request, session, url_for, g
 
 from flask_peewee.admin import ModelAdmin, AdminPanel
+from flask_peewee.filters import Lookup
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import User, Message, Note, admin, AModel, BModel, CModel, DModel, BDetails
 from flask_peewee.utils import get_next, make_password, check_password
@@ -390,8 +391,7 @@ class AdminTestCase(BaseAdminTestCase):
                 self.admin,
             ])
             
-            # test a lookup using "in"
-            resp = c.get('/admin/user/?username__in=admin&username__in=normal&ordering=-username')
+            resp = c.get('/admin/user/?username__eq=admin&username__eq=normal&ordering=-username')
             self.assertEqual(resp.status_code, 200)
 
             query = self.get_context('query')
@@ -401,7 +401,7 @@ class AdminTestCase(BaseAdminTestCase):
             ])
             
             # test a lookup using partial string
-            resp = c.get('/admin/user/?username__startswith=norm&ordering=-username')
+            resp = c.get('/admin/user/?username__istartswith=norm&ordering=-username')
             self.assertEqual(resp.status_code, 200)
 
             query = self.get_context('query')
@@ -531,9 +531,10 @@ class AdminFilterTestCase(BaseAdminTestCase):
         """
         Pass in something like (field_name, prefix, models)
         """
-        c_lookups = [(l[0], l[1], l[2]) for l in lookups]
-        c_expected = [(e[0]._meta.fields[e[1]], e[2], e[3]) for e in expected]
-        self.assertEqual(c_lookups, c_expected)
+        flattened = []
+        for model_lookup in lookups:
+            flattened.extend(model_lookup.get_lookups())
+        self.assertEqual(flattened, expected)
     
     def test_lookups(self):
         users = self.create_users()
@@ -543,56 +544,56 @@ class AdminFilterTestCase(BaseAdminTestCase):
 
             resp = c.get('/admin/amodel/')
             query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_lookups()
-            self.assertLookups(lookups, [
-                (AModel, 'id', '', []),
-                (AModel, 'a_field', '', []),
+            model_lookups = query_filter.get_model_lookups()
+            self.assertLookups(model_lookups, [
+                Lookup(AModel.id),
+                Lookup(AModel.a_field),
             ])
             
             resp = c.get('/admin/bmodel/')
             query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_lookups()
+            lookups = query_filter.get_model_lookups()
             self.assertLookups(lookups, [
-                (BModel, 'id', '', []),
-                (BModel, 'a_id', '', []),
-                (BModel, 'b_field', '', []),
-                (AModel, 'id', 'a__', [AModel]),
-                (AModel, 'a_field', 'a__', [AModel]),
+                Lookup(BModel.id),
+                Lookup(BModel.a),
+                Lookup(BModel.b_field),
+                Lookup(AModel.id),
+                Lookup(AModel.a_field),
             ])
             
             resp = c.get('/admin/cmodel/')
             query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_lookups()
+            lookups = query_filter.get_model_lookups()
             self.assertLookups(lookups, [
-                (CModel, 'id', '', []),
-                (CModel, 'b_id', '', []),
-                (CModel, 'c_field', '', []),
-                (BModel, 'id', 'b__', [BModel]),
-                (BModel, 'a_id', 'b__', [BModel]),
-                (BModel, 'b_field', 'b__', [BModel]),
-                (AModel, 'id', 'b__a__', [BModel, AModel]),
-                (AModel, 'a_field', 'b__a__', [BModel, AModel]),
-                (BDetails, 'id', 'b__bdetails_set__', [BModel, BDetails]),
-                (BDetails, 'b_id', 'b__bdetails_set__', [BModel, BDetails]),
+                Lookup(CModel.id),
+                Lookup(CModel.b),
+                Lookup(CModel.c_field),
+                Lookup(BModel.id),
+                Lookup(BModel.a),
+                Lookup(BModel.b_field),
+                Lookup(AModel.id),
+                Lookup(AModel.a_field),
+                Lookup(BDetails.id),
+                Lookup(BDetails.b),
             ])
             
             resp = c.get('/admin/dmodel/')
             query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_lookups()
+            lookups = query_filter.get_model_lookups()
             self.assertLookups(lookups, [
-                (DModel, 'id', '', []),
-                (DModel, 'c_id', '', []),
-                (DModel, 'd_field', '', []),
-                (CModel, 'id', 'c__', [CModel]),
-                (CModel, 'b_id', 'c__', [CModel]),
-                (CModel, 'c_field', 'c__', [CModel]),
-                (BModel, 'id', 'c__b__', [CModel, BModel]),
-                (BModel, 'a_id', 'c__b__', [CModel, BModel]),
-                (BModel, 'b_field', 'c__b__', [CModel, BModel]),
-                (AModel, 'id', 'c__b__a__', [CModel, BModel, AModel]),
-                (AModel, 'a_field', 'c__b__a__', [CModel, BModel, AModel]),
-                (BDetails, 'id', 'c__b__bdetails_set__', [CModel, BModel, BDetails]),
-                (BDetails, 'b_id', 'c__b__bdetails_set__', [CModel, BModel, BDetails]),
+                Lookup(DModel.id),
+                Lookup(DModel.c),
+                Lookup(DModel.d_field),
+                Lookup(CModel.id),
+                Lookup(CModel.b),
+                Lookup(CModel.c_field),
+                Lookup(BModel.id),
+                Lookup(BModel.a),
+                Lookup(BModel.b_field),
+                Lookup(AModel.id),
+                Lookup(AModel.a_field),
+                Lookup(BDetails.id),
+                Lookup(BDetails.b),
             ])
 
 

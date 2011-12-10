@@ -105,6 +105,9 @@ def is_valid_lookup(model, lookup):
                 return False
     
     lookup = lookups[-1]
+    if lookup in curr._meta.rel_fields:
+        lookup = curr._meta.rel_fields[lookup]
+
     if lookup not in curr._meta.fields:
         return False
     
@@ -139,7 +142,10 @@ class Lookup(object):
     
     def __repr__(self):
         return '<Lookups for: %s.%s>' % (self.model.__name__, self.field_name)
-    
+
+    def __eq__(self, rhs):
+        return self.field == rhs.field
+
     def get_field_type(self):
         return INV_FIELD_TYPES[self.field_class]
     
@@ -285,7 +291,7 @@ class QueryFilter(object):
         for key in request.args:
             if key in self.ignore_filters:
                 continue
-            
+
             if not is_valid_lookup(self.model, key):
                 continue
             
