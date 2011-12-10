@@ -1,7 +1,7 @@
 var Admin = window.Admin || {};
 
 (function(A, $) {
-  var ModelAdminFilter = function(options) {
+  var ModelAdminFilter = function() {
     this.wrapper = '#filter-wrapper';
     this.add_selector = 'a.field-filter';
     this.lookups_wrapper = '#lookup-fields';
@@ -53,7 +53,7 @@ var Admin = window.Admin || {};
       return clone;
     }
   }
-
+  
   ModelAdminFilter.prototype.add_filter = function(elem) {
     var field_label = elem.text(),
         field_name = elem.attr('id').replace(/^filter\-/, ''),
