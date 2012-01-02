@@ -174,13 +174,13 @@ class RestResource(object):
     def get_urls(self):
         return (
             ('/', self.require_method(self.api_list, ['GET', 'POST'])),
-            ('/<pk>/', self.require_method(self.api_detail, ['GET', 'PUT', 'DELETE'])),
+            ('/<pk>/', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
         )
     
     def check_get(self, obj=None):
         return True
     
-    def check_post(self):
+    def check_post(self, obj=None):
         return True
     
     def check_put(self, obj):
@@ -212,7 +212,7 @@ class RestResource(object):
         
         if request.method == 'GET':
             return self.object_detail(obj)
-        elif request.method == 'PUT':
+        elif request.method in ('PUT', 'POST'):
             return self.edit(obj)
         elif request.method == 'DELETE':
             return self.delete(obj)
