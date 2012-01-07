@@ -198,3 +198,81 @@ And the template:
 
 A panel can provide as many urls and views as you like.  These views will all be
 protected by the same authentication as other parts of the admin area.
+
+
+Handling File Uploads
+---------------------
+
+Flask and wtforms both provide support for handling file uploads (on the server
+and generating form fields).  Peewee, however, does not have a "file field" --
+generally I store a path to a file on disk and thus use a ``CharField`` for
+the storage.
+
+Here's a very simple example of a "photo" model and a ``ModelAdmin`` that enables
+file uploads.
+
+.. code-block:: models.py
+
+    # models.py
+    import datetime
+    import os
+    
+    from flask import Markup
+    from peewee import *
+    from werkzeug import secure_filename
+    
+    from app import app, db
+    
+    
+    class Photo(db.Model):
+        image = CharField()
+    
+        def __unicode__(self):
+            return self.image
+    
+        def save_image(self, file_obj):
+            self.image = secure_filename(file_obj.filename)
+            full_path = os.path.join(app.config['MEDIA_ROOT'], self.image)
+            file_obj.save(full_path)
+            self.save()
+    
+        def url(self):
+            return os.path.join(app.config['MEDIA_URL'], self.image)
+    
+        def thumb(self):
+            return Markup('<img src="%s" style="height: 80px;" />' % self.url())
+
+.. code-block:: python
+
+    # admin.py
+    from flask import request
+    from flask_peewee.admin import Admin, ModelAdmin
+    from wtforms.fields import FileField, HiddenField
+    from wtforms.form import Form
+
+    from app import app, db
+    from auth import auth
+    from models import Photo
+
+
+    admin = Admin(app, auth)
+
+
+    class PhotoAdmin(ModelAdmin):
+        columns = ['image', 'thumb']
+
+        def get_form(self):
+            class PhotoForm(Form):
+                image = HiddenField()
+                image_file = FileField(u'Image file')
+
+            return PhotoForm
+
+        def save_model(self, instance, form, adding=False):
+            instance = super(PhotoAdmin, self).save_model(instance, form, adding)
+            if 'image_file' in request.files:
+                file = request.files['image_file']
+                instance.save_image(file)
+            return instance
+
+    admin.register(Photo, PhotoAdmin)
