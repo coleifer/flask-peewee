@@ -20,12 +20,22 @@ from wtfpeewee.orm import model_form, ModelConverter
 current_dir = os.path.dirname(__file__)
 
 
-def convert_boolean(model, field, **kwargs):
-    return field.name, BooleanSelectField()
-
-converter = ModelConverter({
-    BooleanField: convert_boolean,
-})
+class CustomModelConverter(ModelConverter):
+    def __init__(self, model_admin, additional=None):
+        super(CustomModelConverter, self).__init__(additional)
+        self.model_admin = model_admin
+        self.converters[BooleanField] = self.handle_boolean
+    
+    def handle_boolean(self, model, field, **kwargs):
+        return field.name, BooleanSelectField(**kwargs)
+    
+    def handle_foreign_key(self, model, field, **kwargs):
+        if field.descriptor in self.model_admin.raw_id_fields:
+            # use a different widget here
+            form_field = ModelSelectField(model=field.to, **kwargs)
+        else:
+            form_field = ModelSelectField(model=field.to, **kwargs)
+        return field.descriptor, form_field
 
 
 class ModelAdmin(object):
@@ -37,6 +47,7 @@ class ModelAdmin(object):
     ignore_filters = ('ordering', 'page',)
     exclude_filter_fields = None
     related_filters = []
+    raw_id_fields = None
     
     def __init__(self, admin, model):
         self.admin = admin
@@ -51,7 +62,7 @@ class ModelAdmin(object):
         )
     
     def get_form(self):
-        return model_form(self.model, converter=converter)
+        return model_form(self.model, converter=CustomModelConverter(self))
     
     def get_add_form(self):
         return self.get_form()
@@ -66,7 +77,12 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters, self.related_filters)
+        return QueryFilter(query,
+            self.exclude_filter_fields,
+            self.ignore_filters,
+            self.raw_id_fields,
+            self.related_filters,
+        )
     
     def get_urls(self):
         return (

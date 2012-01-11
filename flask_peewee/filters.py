@@ -69,8 +69,6 @@ FIELDS_TO_LOOKUPS = {
 CONVERTERS = {
     (ForeignKeyField, 'eq'): lambda f: ModelSelectField(model=f.to),
     (ForeignKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.to),
-    #(PrimaryKeyField, 'eq'): lambda f: ModelSelectField(model=f.model),
-    #(PrimaryKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.model),
     (DateTimeField, 'today'): lambda f: fields.HiddenField(),
     (DateTimeField, 'yesterday'): lambda f: fields.HiddenField(),
     (DateTimeField, 'this_week'): lambda f: fields.HiddenField(),
@@ -171,10 +169,11 @@ class Lookup(object):
         ])
 
 class ModelLookup(object):
-    def __init__(self, model, exclude, path=None):
+    def __init__(self, model, exclude, path, raw_id_fields):
         self.model = model
         self.exclude = exclude
         self.path = path
+        self.raw_id_fields = raw_id_fields
     
     def get_lookups(self):
         return [
@@ -247,7 +246,7 @@ class FilterPreprocessor(object):
 
 
 class QueryFilter(object):
-    def __init__(self, query, exclude_fields=None, ignore_filters=None, related=None):
+    def __init__(self, query, exclude_fields=None, ignore_filters=None, raw_id_fields=None, related=None):
         self.query = query
         self.model = self.query.model
 
@@ -260,12 +259,13 @@ class QueryFilter(object):
                 self.exclude_fields.append(self.model._meta.rel_fields[field_name])
         
         self.ignore_filters = ignore_filters or ()
+        self.raw_id_fields = raw_id_fields or ()
         
         # a list of related QueryFilter() objects
         self.related = related or ()
     
     def get_model_lookups(self, path=None):
-        model_lookups = [ModelLookup(self.model, self.exclude_fields, path)]
+        model_lookups = [ModelLookup(self.model, self.exclude_fields, path, self.raw_id_fields)]
         path = path or []
         path.append(self.model)
         for related_filter in self.related:
