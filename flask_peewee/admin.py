@@ -14,7 +14,7 @@ from flask_peewee.utils import get_next, PaginatedQuery, slugify
 from peewee import BooleanField, ForeignKeyField, TextField, Q
 from werkzeug import Headers
 from wtforms import fields, widgets
-from wtfpeewee.orm import model_form, ModelConverter
+from wtfpeewee.orm import model_form, ModelConverter, ModelSelectField
 
 
 current_dir = os.path.dirname(__file__)
@@ -30,7 +30,7 @@ class CustomModelConverter(ModelConverter):
         return field.name, BooleanSelectField(**kwargs)
     
     def handle_foreign_key(self, model, field, **kwargs):
-        if field.descriptor in self.model_admin.raw_id_fields:
+        if field.descriptor in (self.model_admin.raw_id_fields or ()):
             # use a different widget here
             form_field = ModelSelectField(model=field.to, **kwargs)
         else:
