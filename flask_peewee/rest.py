@@ -247,23 +247,6 @@ class RestResource(object):
             'next': next,
         }
     
-    def apply_filters(self, query):
-        filters = []
-        for key in request.args:
-            if key in self.ignore_filters:
-                continue
-            
-            values = request.args.getlist(key)
-            if len(values) == 1:
-                filters.append((key, values[0]))
-            else:
-                filters.append(('%s__in' % key, values))
-        
-        if filters:
-            query = query.filter(**dict(filters))
-        
-        return query
-    
     def object_list(self):
         query = self.get_query()
         query = self.apply_ordering(query)
