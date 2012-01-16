@@ -30,6 +30,9 @@ class CustomModelConverter(ModelConverter):
         return field.name, BooleanSelectField(**kwargs)
     
     def handle_foreign_key(self, model, field, **kwargs):
+        if field.null:
+            kwargs['allow_blank'] = True
+        
         if field.descriptor in (self.model_admin.raw_id_fields or ()):
             # use a different widget here
             form_field = ModelSelectField(model=field.to, **kwargs)
