@@ -175,6 +175,7 @@ class RestResource(object):
         return (
             ('/', self.require_method(self.api_list, ['GET', 'POST'])),
             ('/<pk>/', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
+            ('/<pk>/delete/', self.require_method(self.post_delete, ['POST', 'DELETE'])),
         )
     
     def check_get(self, obj=None):
@@ -202,20 +203,25 @@ class RestResource(object):
         elif request.method == 'POST':
             return self.create()
     
-    def api_detail(self, pk):
+    def api_detail(self, pk, method=None):
         obj = get_object_or_404(self.get_query(), **{
             self.model._meta.pk_name: pk
         })
+
+        method = method or request.method
         
-        if not getattr(self, 'check_%s' % request.method.lower())(obj):
+        if not getattr(self, 'check_%s' % method.lower())(obj):
             return self.response_forbidden()
         
-        if request.method == 'GET':
+        if method == 'GET':
             return self.object_detail(obj)
-        elif request.method in ('PUT', 'POST'):
+        elif method in ('PUT', 'POST'):
             return self.edit(obj)
-        elif request.method == 'DELETE':
+        elif method == 'DELETE':
             return self.delete(obj)
+
+    def post_delete(self, pk):
+        return self.api_detail(pk, 'DELETE')
     
     def apply_ordering(self, query):
         ordering = request.args.get('ordering') or ''
