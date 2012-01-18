@@ -28,7 +28,8 @@ class BaseUser(object):
 class Auth(object):
     default_next_url = 'homepage'
     
-    def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth'):
+    def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
+                 clear_session=False):
         self.app = app
         self.db = db
         
@@ -36,6 +37,8 @@ class Auth(object):
         
         self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
+        
+        self.clear_session = clear_session
         
         self.setup()
     
@@ -131,7 +134,10 @@ class Auth(object):
         flash('You are logged in as %s' % user.username, 'success')
     
     def logout_user(self, user):
-        session.pop('logged_in', None)
+        if self.clear_session:
+            session.clear()
+        else:
+            session.pop('logged_in', None)
         g.user = None
         flash('You are now logged out', 'success')
     
