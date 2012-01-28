@@ -26,10 +26,8 @@ class BaseUser(object):
 
 
 class Auth(object):
-    default_next_url = 'homepage'
-    
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
-                 clear_session=False):
+                 clear_session=False, default_next_url='/'):
         self.app = app
         self.db = db
         
@@ -39,6 +37,7 @@ class Auth(object):
         self.url_prefix = prefix
         
         self.clear_session = clear_session
+        self.default_next_url = default_next_url
         
         self.setup()
     
@@ -166,7 +165,7 @@ class Auth(object):
                     self.login_user(authenticated_user)
                     return redirect(
                         request.args.get('next') or \
-                        url_for(self.default_next_url)
+                        self.default_next_url
                     )
                 else:
                     flash('Incorrect username or password')
@@ -179,7 +178,7 @@ class Auth(object):
         self.logout_user(self.get_logged_in_user())
         return redirect(
             request.args.get('next') or \
-            url_for(self.default_next_url)
+            self.default_next_url
         )
     
     def configure_routes(self):
