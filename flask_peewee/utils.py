@@ -5,7 +5,7 @@ import sys
 from hashlib import sha1
 
 from flask import abort, request, render_template
-from peewee import Model, DoesNotExist, SelectQuery
+from peewee import Model, DoesNotExist, SelectQuery, ForeignKeyField
 
 
 def get_object_or_404(query_or_model, **query):
@@ -56,6 +56,118 @@ def load_class(s):
     __import__(path)
     mod = sys.modules[path]
     return getattr(mod, klass)
+
+# need model conversion...ability to convert a model to/from:
+# 1. flattened list of string lookups
+# 2. nested dictionary of lookups
+
+def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, seen=None, fields=None, exclude=None):
+    """
+    Returns a list of 2-tuples: [
+        ('field_a', field_a_obj),
+        ('field_b', field_b_obj),
+        ('rel__rel_field_a', rel_field_a_obj),
+        # ...
+    ]
+    """
+    if isinstance(model, Model):
+        model_class = type(model)
+    else:
+        model_class = model
+    
+    seen = seen or set()
+    seen.add(model_class)
+    
+    lookups = []
+    models = [model]
+    
+    accum = accum or []
+    
+    for field in model._meta.get_fields():
+        if isinstance(field, ForeignKeyField):
+            rel_model = field.to
+            if rel_model not in seen:
+                seen.add(rel_model)
+                
+                if isinstance(model, Model):
+                    try:
+                        rel_obj = getattr(model, field.name)
+                    except rel_model.DoesNotExist:
+                        rel_obj = None
+                else:
+                    rel_obj = rel_model
+                
+                if rel_obj and (not fields or rel_model in fields):
+                    rel_lookups, rel_models = get_string_lookups_for_model(
+                        rel_obj,
+                        include_foreign_keys,
+                        accum + [field.name],
+                        seen,
+                        fields,
+                        exclude,
+                    )
+                    lookups.extend(rel_lookups)
+                    models.extend(rel_models)
+        
+        if include_foreign_keys or not isinstance(field, ForeignKeyField):
+            if (not fields or field.name in fields.get(model_class, ())) and \
+               (not exclude or (exclude and field.name not in exclude.get(model_class, ()))):
+                lookups.append(
+                    ('__'.join(accum + [field.name]), getattr(model, field.name))
+                )
+    
+    return lookups, models
+
+def get_dictionary_lookups_for_model(model, include_foreign_keys=False, fields=None, exclude=None):
+    lookups, models = get_string_lookups_for_model(
+        model,
+        include_foreign_keys,
+        fields=fields,
+        exclude=exclude,
+    )
+    return convert_string_lookups_to_dict(lookups), models
+
+def get_models_from_string_lookups(model, lookups):
+    """
+    Returns a fully-populated model instance from a list of 2-tuples of
+    lookup/value: [
+        ('field_a', 'value a'),
+        ('field_b', 'value_b'),
+        ('rel__rel_field_a', 'rel_value_a'),
+        # ...
+    ]
+    """
+    field_dict = convert_string_lookups_to_dict(lookups)
+    return get_models_from_dictionary(model, field_dict)
+
+def convert_string_lookups_to_dict(lookups):
+    field_dict = {}
+    split_lookups = [(l.split('__'), v) for l, v in lookups]
+    for (lookups, value) in sorted(split_lookups):
+        curr = field_dict
+        for piece in lookups[:-1]:
+            if not isinstance(curr.get(piece, None), dict):
+                curr[piece] = {}
+            
+            curr = curr[piece]
+        curr[lookups[-1]] = value
+    return field_dict
+
+def get_models_from_dictionary(model, field_dict):
+    if isinstance(model, Model):
+        model_instance = model
+    else:
+        model_instance = model()
+    models = [model_instance]
+    for field_name, value in field_dict.items():
+        field_obj = model._meta.fields[field_name]
+        if isinstance(value, dict):
+            rel_inst, rel_models = get_models_from_dictionary(field_obj.to, value)
+            models.extend(rel_models)
+            setattr(model_instance, field_name, rel_inst)
+        else:
+            setattr(model_instance, field_name, field_obj.python_value(value))
+    return model_instance, models
 
 def path_to_models(model, path):
     accum = []

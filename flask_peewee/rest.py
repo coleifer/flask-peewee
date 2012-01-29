@@ -148,7 +148,7 @@ class RestResource(object):
         ]
     
     def deserialize_object(self, data, instance):
-        return self.get_deserializer().deserialize_object(data, instance)
+        return self.get_deserializer().deserialize_object(instance, data)
     
     def response_forbidden(self):
         return Response('Forbidden', 403)

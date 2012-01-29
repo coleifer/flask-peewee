@@ -235,7 +235,8 @@ class ModelAdmin(object):
         related = self.collect_related_fields(self.model, {}, [])
         
         if request.method == 'POST':
-            export = Export(filtered_query, related, request.form.getlist('fields'))
+            raw_fields = request.form.getlist('fields')
+            export = Export(filtered_query, related, raw_fields)
             return export.json_response()
         
         return render_template('admin/models/export.html',
@@ -471,7 +472,7 @@ class Export(object):
                 column = lookup
             
             select.setdefault(model, [])
-            select[model].append((column, lookup))
+            select[model].append(column)
 
         clone.query = select
         return clone
@@ -485,7 +486,7 @@ class Export(object):
             yield '[\n'
             for obj in prepared_query:
                 i -= 1
-                yield json.dumps(serializer.serialize_object(obj, self.fields))
+                yield json.dumps(serializer.serialize_object(obj, prepared_query.query))
                 if i > 0:
                     yield ',\n'
             yield '\n]'
