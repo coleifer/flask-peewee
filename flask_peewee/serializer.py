@@ -30,8 +30,21 @@ class Serializer(object):
         if exclude:
             field_list = [f for f in field_list if f not in exclude]
         
-        for field_name in field_list:
-            data[field_name] = self.convert_value(getattr(obj, field_name))
+        for lookup in field_list:
+            if '__' in lookup:
+                curr = data
+                curr_obj = obj
+                pieces = lookup.split('__')
+                for sub_lookup in pieces[:-1]:
+                    if not isinstance(curr.get(sub_lookup, None), dict):
+                        curr[sub_lookup] = {}
+                    
+                    curr = curr[sub_lookup]
+                    curr_obj = getattr(curr_obj, sub_lookup)
+                
+                curr[pieces[-1]] = self.convert_value(getattr(curr_obj, pieces[-1]))
+            else:
+                data[lookup] = self.convert_value(getattr(obj, lookup))
         
         return data
 

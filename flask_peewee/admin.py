@@ -439,13 +439,13 @@ class Export(object):
         self.query = query
         self.related = related
         self.fields = fields
+        
+        self.alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
     
     def prepare_query(self):
         clone = self.query.clone()
         
-        alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
         select = {}
-        field_dict = {}
         
         def ensure_join(query, m, p):
             if m not in query._joined_models:
@@ -453,7 +453,7 @@ class Export(object):
                     next_model = query.model
                 else:
                     next, _ = p.rsplit('__', 1)
-                    next_model = alias_to_model[next]
+                    next_model = self.alias_to_model[next]
                     query = ensure_join(query, next_model, next)
                 
                 return query.switch(next_model).join(m)
@@ -464,14 +464,11 @@ class Export(object):
             # lookup may be something like "content" or "user__user_name"
             if '__' in lookup:
                 path, column = lookup.rsplit('__', 1)
-                model = alias_to_model[path]
+                model = self.alias_to_model[path]
                 clone = ensure_join(clone, model, path)
             else:
                 model = self.query.model
                 column = lookup
-            
-            field_dict.setdefault(model, [])
-            field_dict[model].append(column)
             
             select.setdefault(model, [])
             select[model].append((column, lookup))
