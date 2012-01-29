@@ -55,7 +55,7 @@ class RestApiTestCase(FlaskPeeweeTestCase):
     
     def assertAPINote(self, json_data, note):
         self.assertEqual(json_data, {
-            'user_id': note.user.id,
+            'user': note.user.id,
             'message': note.message,
             'created_date': self.conv_date(note.created_date),
             'id': note.id,
@@ -67,7 +67,7 @@ class RestApiTestCase(FlaskPeeweeTestCase):
     
     def assertAPIMessage(self, json_data, message):
         self.assertEqual(json_data, {
-            'user_id': message.user.id,
+            'user': message.user.id,
             'content': message.content,
             'pub_date': self.conv_date(message.pub_date),
             'id': message.id,

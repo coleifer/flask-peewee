@@ -80,7 +80,7 @@ def models_to_path(models):
         fk_field = last._meta.rel_exists(model)
         if fk_field:
             if fk_field in last._meta.get_fields():
-                accum.append(fk_field.descriptor)
+                accum.append(fk_field.name)
             else:
                 accum.append(fk_field.related_name)
         else:

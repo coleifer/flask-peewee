@@ -33,12 +33,12 @@ class CustomModelConverter(ModelConverter):
         if field.null:
             kwargs['allow_blank'] = True
         
-        if field.descriptor in (self.model_admin.raw_id_fields or ()):
+        if field.name in (self.model_admin.raw_id_fields or ()):
             # use a different widget here
             form_field = ModelSelectField(model=field.to, **kwargs)
         else:
             form_field = ModelSelectField(model=field.to, **kwargs)
-        return field.descriptor, form_field
+        return field.name, form_field
 
 
 class ModelAdmin(object):
@@ -213,7 +213,7 @@ class ModelAdmin(object):
         path_str = '__'.join(path)
         for field in model._meta.get_fields():
             if isinstance(field, ForeignKeyField):
-                self.collect_related_fields(field.to, accum, path + [field.descriptor])
+                self.collect_related_fields(field.to, accum, path + [field.name])
             elif model != self.model:
                 accum.setdefault((model, path_str), [])
                 accum[(model, path_str)].append(field)
@@ -445,6 +445,7 @@ class Export(object):
         
         alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
         select = {}
+        field_dict = {}
         
         def ensure_join(query, m, p):
             if m not in query._joined_models:
@@ -459,18 +460,21 @@ class Export(object):
             else:
                 return query
         
-        for field in self.fields:
-            # field may be something like "content" or "user__user_name"
-            if '__' in field:
-                path, column = field.rsplit('__', 1)
+        for lookup in self.fields:
+            # lookup may be something like "content" or "user__user_name"
+            if '__' in lookup:
+                path, column = lookup.rsplit('__', 1)
                 model = alias_to_model[path]
                 clone = ensure_join(clone, model, path)
             else:
                 model = self.query.model
-                column = field
+                column = lookup
+            
+            field_dict.setdefault(model, [])
+            field_dict[model].append(column)
             
             select.setdefault(model, [])
-            select[model].append((column, field))
+            select[model].append((column, lookup))
 
         clone.query = select
         return clone

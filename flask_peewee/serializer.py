@@ -1,3 +1,5 @@
+from peewee import Model
+
 import datetime
 import sys
 
@@ -14,6 +16,8 @@ class Serializer(object):
             return value.strftime(self.date_format)
         elif isinstance(value, datetime.time):
             return value.strftime(self.time_format)
+        elif isinstance(value, Model):
+            return value.get_pk()
         else:
             return value
     

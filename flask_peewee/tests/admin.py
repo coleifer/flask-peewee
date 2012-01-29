@@ -411,7 +411,7 @@ class AdminTestCase(BaseAdminTestCase):
             ])
             
             # test a lookup spanning a relation
-            resp = c.get('/admin/note/?user_id__eq=%d' % self.normal.id)
+            resp = c.get('/admin/note/?user__eq=%d' % self.normal.id)
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('model_admin', admin._registry['note'])
@@ -420,7 +420,7 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(list(query.get_list()), notes[self.normal])
             
             # test a multi-value lookup spanning a relation
-            resp = c.get('/admin/note/?user_id__in=%d&user_id__in=%d' % (self.normal.id, self.admin.id))
+            resp = c.get('/admin/note/?user__in=%d&user__in=%d' % (self.normal.id, self.admin.id))
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('model_admin', admin._registry['note'])
