@@ -32,7 +32,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'Flask', 'werkzeug', 'jinja2', 'peewee', 'wtforms', 'wtf-peewee',
+        'Flask', 'werkzeug', 'jinja2', 'peewee>=0.8.1', 'wtforms', 'wtf-peewee',
     ],
     classifiers=[
         'Environment :: Web Environment',
