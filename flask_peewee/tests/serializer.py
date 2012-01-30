@@ -24,13 +24,13 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'email': '',
         })
         
-        serialized = self.s.serialize_object(self.admin, fields=('id', 'username',))
+        serialized = self.s.serialize_object(self.admin, fields={User: ['id', 'username']})
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',
         })
         
-        serialized = self.s.serialize_object(self.admin, exclude=('password', 'join_date',))
+        serialized = self.s.serialize_object(self.admin, exclude={User: ['password', 'join_date']})
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',
@@ -42,14 +42,14 @@ class SerializerTestCase(FlaskPeeweeTestCase):
     def test_deserializer(self):
         users = self.create_users()
         
-        deserialized = self.d.deserialize_object({
+        deserialized, models = self.d.deserialize_object(User(), {
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
             'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
             'active': True,
             'admin': True,
-        }, User())
+        })
         
         for attr in ['id', 'username', 'password', 'active', 'admin']:
             self.assertEqual(
@@ -64,11 +64,11 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             
         admin_pk = self.admin.id
         
-        deserialized = self.d.deserialize_object({
+        deserialized, models = self.d.deserialize_object(self.admin, {
             'username': 'edited',
             'active': False,
             'admin': False,
-        }, self.admin)
+        })
         
         self.assertEqual(deserialized.username, 'edited')
         self.assertEqual(deserialized.admin, False)
@@ -85,5 +85,5 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         self.create_users()
         
         s = self.s.serialize_object(self.admin)
-        d = self.d.deserialize_object(s, User())
+        d, model_list = self.d.deserialize_object(User(), s)
         self.assertEqual(d, self.admin)

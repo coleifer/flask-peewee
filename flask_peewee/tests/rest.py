@@ -455,7 +455,7 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
     def test_auth_edit(self):
         self.create_messages()
         
-        message_data = {'message': 'edited'}
+        message_data = {'content': 'edited'}
         serialized = json.dumps(message_data)
         
         url = '/api/message/%s/' % self.normal_message.id
@@ -475,6 +475,9 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
         # authorized, user in database, is owner
         resp = self.app.put(url, data=serialized, headers=self.auth_headers('normal', 'normal'))
         self.assertEqual(resp.status_code, 200)
+        
+        obj = Message.get(id=self.normal_message.id)
+        self.assertEqual(obj.content, 'edited')
     
     def test_edit(self):
         self.create_messages()

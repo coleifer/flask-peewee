@@ -57,11 +57,7 @@ def load_class(s):
     mod = sys.modules[path]
     return getattr(mod, klass)
 
-# need model conversion...ability to convert a model to/from:
-# 1. flattened list of string lookups
-# 2. nested dictionary of lookups
-
-def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, fields=None, exclude=None):
+def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None, exclude=None, accum=None):
     """
     Returns a list of 2-tuples: [
         ('field_a', field_a_obj),
@@ -96,9 +92,9 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, 
                 rel_lookups, rel_models = get_string_lookups_for_model(
                     rel_obj,
                     include_foreign_keys,
-                    accum + [field.name],
                     fields,
                     exclude,
+                    accum + [field.name],
                 )
                 lookups.extend(rel_lookups)
                 models.extend(rel_models)

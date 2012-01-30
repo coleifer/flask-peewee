@@ -121,6 +121,10 @@ class RestResource(object):
                 self._resources[field_name] = resource_obj
                 self._fields.update(resource_obj._fields)
                 self._exclude.update(resource_obj._exclude)
+            
+            self._include_foreign_keys = False
+        else:
+            self._include_foreign_keys = True
     
     def authorize(self):
         return self.authentication.authorize()
@@ -156,13 +160,13 @@ class RestResource(object):
     def serialize_object(self, obj):
         s = self.get_serializer()
         return self.prepare_data(
-            obj, s.serialize_object(obj, self._fields, self._exclude)
+            obj, s.serialize_object(obj, self._fields, self._exclude, self._include_foreign_keys)
         )
     
     def serialize_query(self, query):
         s = self.get_serializer()
         return [
-            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude)) \
+            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude, self._include_foreign_keys)) \
                 for obj in query
         ]
     
@@ -310,8 +314,10 @@ class RestResource(object):
         except ValueError:
             return self.response_bad_request()
         
-        instance = self.deserialize_object(data, self.model())
+        instance, models = self.deserialize_object(data, self.model())
         instance = self.save_object(instance, data)
+        
+        # TODO: save additional models
         
         return self.response(self.serialize_object(instance))
     
@@ -321,8 +327,10 @@ class RestResource(object):
         except ValueError:
             return self.response_bad_request()
         
-        obj = self.deserialize_object(data, obj)
+        obj, models = self.deserialize_object(data, obj)
         obj = self.save_object(obj, data)
+        
+        # TODO: save additional models
         
         return self.response(self.serialize_object(obj))
     

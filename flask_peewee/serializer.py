@@ -30,8 +30,8 @@ class Serializer(object):
                 data[key] = self.convert_value(value)
         return data
     
-    def serialize_object(self, obj, fields=None, exclude=None):
-        data, models = get_dictionary_lookups_for_model(obj, fields=fields, exclude=exclude)
+    def serialize_object(self, obj, fields=None, exclude=None, include_foreign_keys=False):
+        data, models = get_dictionary_lookups_for_model(obj, include_foreign_keys, fields, exclude)
         return self.clean_data(data)
 
 
