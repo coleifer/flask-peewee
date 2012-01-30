@@ -89,19 +89,38 @@ class AdminAuthentication(UserAuthentication):
 
 class RestResource(object):
     paginate_by = 20
+    
+    # dictionary of model -> field names to restrict what is serialized
     fields = None
     exclude = None
+    
+    # mapping of field name to resource class
+    include_resources = None
     
     # filtering
     ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
     exclude_filter_fields = None
-    related_filters = []
     
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api
         self.model = model
         self.authentication = authentication
         self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
+        
+        self._fields = {self.model: self.fields or self.model._meta.get_field_names()}
+        if self.exclude:
+            self._exclude = {self.model: self.exclude}
+        else:
+            self._exclude = {}
+        
+        self._resources = {}
+        if self.include_resources:
+            for field_name, resource in self.include_resources.items():
+                field_obj = self.model._meta.fields[field_name]
+                resource_obj = resource(self.api, field_obj.to, self.authentication, self.allowed_methods)
+                self._resources[field_name] = resource_obj
+                self._fields.update(resource_obj._fields)
+                self._exclude.update(resource_obj._exclude)
     
     def authorize(self):
         return self.authentication.authorize()
@@ -120,7 +139,7 @@ class RestResource(object):
         return self.model.select()
     
     def get_query_filter(self, query):
-        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters, self.related_filters)
+        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters)
     
     def get_serializer(self):
         return Serializer()
@@ -137,13 +156,13 @@ class RestResource(object):
     def serialize_object(self, obj):
         s = self.get_serializer()
         return self.prepare_data(
-            obj, s.serialize_object(obj, self.fields, self.exclude)
+            obj, s.serialize_object(obj, self._fields, self._exclude)
         )
     
     def serialize_query(self, query):
         s = self.get_serializer()
         return [
-            self.prepare_data(obj, s.serialize_object(obj, self.fields, self.exclude)) \
+            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude)) \
                 for obj in query
         ]
     
@@ -262,7 +281,7 @@ class RestResource(object):
         
         # process the filters from the request
         filtered_query = query_filter.get_filtered_query()
-        
+
         try:
             paginate_by = int(request.args.get('limit', self.paginate_by))
         except ValueError:
@@ -352,6 +371,9 @@ class RestAPI(object):
     
     def unregister(self, model):
         del(self._registry[model])
+    
+    def is_registered(self, model):
+        return self._registry.get(model)
     
     def response_auth_failed(self):
         return Response('Authentication failed', 401, {

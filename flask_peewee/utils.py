@@ -61,7 +61,7 @@ def load_class(s):
 # 1. flattened list of string lookups
 # 2. nested dictionary of lookups
 
-def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, seen=None, fields=None, exclude=None):
+def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, fields=None, exclude=None):
     """
     Returns a list of 2-tuples: [
         ('field_a', field_a_obj),
@@ -75,9 +75,6 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, 
     else:
         model_class = model
     
-    seen = seen or set()
-    seen.add(model_class)
-    
     lookups = []
     models = [model]
     
@@ -86,28 +83,25 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, accum=None, 
     for field in model._meta.get_fields():
         if isinstance(field, ForeignKeyField):
             rel_model = field.to
-            if rel_model not in seen:
-                seen.add(rel_model)
-                
-                if isinstance(model, Model):
-                    try:
-                        rel_obj = getattr(model, field.name)
-                    except rel_model.DoesNotExist:
-                        rel_obj = None
-                else:
-                    rel_obj = rel_model
-                
-                if rel_obj and (not fields or rel_model in fields):
-                    rel_lookups, rel_models = get_string_lookups_for_model(
-                        rel_obj,
-                        include_foreign_keys,
-                        accum + [field.name],
-                        seen,
-                        fields,
-                        exclude,
-                    )
-                    lookups.extend(rel_lookups)
-                    models.extend(rel_models)
+
+            if isinstance(model, Model):
+                try:
+                    rel_obj = getattr(model, field.name)
+                except rel_model.DoesNotExist:
+                    rel_obj = None
+            else:
+                rel_obj = rel_model
+            
+            if rel_obj and (not fields or rel_model in fields):
+                rel_lookups, rel_models = get_string_lookups_for_model(
+                    rel_obj,
+                    include_foreign_keys,
+                    accum + [field.name],
+                    fields,
+                    exclude,
+                )
+                lookups.extend(rel_lookups)
+                models.extend(rel_models)
         
         if include_foreign_keys or not isinstance(field, ForeignKeyField):
             if (not fields or field.name in fields.get(model_class, ())) and \

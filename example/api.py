@@ -18,10 +18,15 @@ class UserResource(RestResource):
 
 class MessageResource(RestrictOwnerResource):
     owner_field = 'user'
+    include_resources = {'user': UserResource}
 
 
 class RelationshipResource(RestrictOwnerResource):
     owner_field = 'from_user'
+    include_resources = {
+        'from_user': UserResource,
+        'to_user': UserResource,
+    }
 
 
 # register our models so they are exposed via /api/<model>/
