@@ -1,7 +1,7 @@
   <div id="filter-wrapper" style="display: none;">
     <div class="hidden" id="lookup-fields">
       {% for model_lookup in query_filter.get_model_lookups() %}
-        {% for field in model_lookup.html_form() %}{{ field(class="span4") }}{% endfor %}
+        {% for field in model_lookup.html_form() %}{{ field(class="span4 lookup-input") }}{% endfor %}
       {% endfor %}
     </div>
     <form method="get" action="." class="modeladmin-filters row">
