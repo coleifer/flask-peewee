@@ -65,6 +65,16 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
         ('rel__rel_field_a', rel_field_a_obj),
         # ...
     ]
+    
+    fields & exclude parameters: {
+        Model: [f1, f2],
+        RelModel: [rf1, ...],
+    }
+    
+    this fails though when there are multiple foreign keys to the same model
+    
+    perhaps better:
+    [f1, f2, {f3: [rf1, rf2]}]
     """
     if isinstance(model, Model):
         model_class = type(model)

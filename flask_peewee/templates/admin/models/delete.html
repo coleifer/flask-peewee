@@ -11,18 +11,35 @@
 
 {% block content %}
   <form action="." class="form-horizontal" method="post">
+    {% for object in query %}<input type="hidden" name="id" value="{{ object.get_pk() }}" />{% endfor %}
     <fieldset>
-      <legend>Select {{ model_admin.get_display_name() }}s to delete</legend>
-      <div class="control-group">
-        <label class="control-label">Selected models</label>
-        <div class="controls">
-          {% for object in query %}
-            <label class="checkbox">
-              <input type="checkbox" name="id" value="{{ object.get_pk() }}" checked="checked"> <span>{{ object }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </div>
+      <legend>Confirm delete</legend>
+      <ul>
+        {% for object in query %}
+          <li>
+            {% if get_admin_url(object) %}
+              <a href="{{ get_admin_url(object) }}">{{ object }}</a>
+            {% else %}
+              <span>{{ object }}</span>
+            {% endif %}
+            {% if collected and object.get_pk() in collected %}
+              <ul>
+                {% for depth, model, fk_field, collected_objects in collected[object.get_pk()] %}
+                  {% for sub_object in collected_objects %}
+                    <li><span>{{ get_model_name(model) }}:</span>
+                      {% if get_admin_url(sub_object) %}
+                        <a href="{{ get_admin_url(sub_object) }}">{{ sub_object }}</a>
+                      {% else %}
+                        <span>{{ sub_object }}</span>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
       
       <div class="form-actions">
         <button class="btn btn-danger" type="submit">Confirm Delete</button>

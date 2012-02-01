@@ -86,14 +86,14 @@ class AdminTestCase(BaseAdminTestCase):
         # check that we have the stuff from the auth module and the index view
         self.assertContext('user', self.admin)
         self.assertContext('model_admins', [
-            admin._registry['amodel'],
-            admin._registry['bdetails'],
-            admin._registry['bmodel'],
-            admin._registry['cmodel'],
-            admin._registry['dmodel'],
-            admin._registry['message'],
-            admin._registry['note'],
-            admin._registry['user'],
+            admin._registry[AModel],
+            admin._registry[BDetails],
+            admin._registry[BModel],
+            admin._registry[CModel],
+            admin._registry[DModel],
+            admin._registry[Message],
+            admin._registry[Note],
+            admin._registry[User],
         ])
         self.assertContext('panels', [
             admin._panels['Notes'],
@@ -112,7 +112,7 @@ class AdminTestCase(BaseAdminTestCase):
             
             # ensure the user, model_admin and form are correct in the context
             self.assertContext('user', self.admin)
-            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('model_admin', admin._registry[User])
             
             self.assertTrue('form' in self.flask_app._template_context)
             frm = self.flask_app._template_context['form']
@@ -189,7 +189,7 @@ class AdminTestCase(BaseAdminTestCase):
             
             # check the user, model_admin and form are correct in the context
             self.assertContext('user', self.admin)
-            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('model_admin', admin._registry[User])
             
             self.assertTrue('form' in self.flask_app._template_context)
             frm = self.flask_app._template_context['form']
@@ -292,7 +292,7 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('user', self.admin)
-            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('model_admin', admin._registry[User])
             
             query = self.get_context('query')
             self.assertEqual(list(query), [])
@@ -330,6 +330,71 @@ class AdminTestCase(BaseAdminTestCase):
             
             self.assertEqual(User.select().count(), 0)
     
+    def test_model_admin_recursive_delete(self):
+        self.create_users()
+        
+        m1 = Message.create(user=self.normal, content='test1')
+        m2 = Message.create(user=self.normal, content='test2')
+        m3 = Message.create(user=self.admin, content='test3')
+        
+        n1 = Note.create(user=self.normal, message='test1')
+        n2 = Note.create(user=self.normal, message='test2')
+        n3 = Note.create(user=self.admin, message='test3')
+        
+        
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            
+            # send it a single id
+            resp = c.get('/admin/user/delete/?id=%d' % (self.normal.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            query = self.get_context('query')
+            self.assertEqual(list(query), [self.normal])
+            
+            collected = self.get_context('collected')
+            self.assertEqual(len(collected), 1)
+            u_k = collected[self.normal.id]
+            self.assertEqual(len(u_k), 2)
+
+            self.assertEqual(u_k, [
+                (1, Message, 'user', [m1, m2]),
+                (1, Note, 'user', [n1, n2]),
+            ])
+            
+            # post to it, get a redirect on success
+            resp = c.post('/admin/user/delete/', data={'id': self.normal.id})
+            self.assertEqual(resp.status_code, 302)
+            
+            self.assertEqual(User.select().count(), 2)
+            self.assertEqual(Message.select().count(), 1)
+            self.assertEqual(Note.select().count(), 1)
+            
+            resp = c.get('/admin/user/delete/?id=%d&id=%d' % (self.admin.id, self.inactive.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            collected = self.get_context('collected')
+
+            self.assertEqual(len(collected), 2)
+            u_k = collected[self.admin.id]
+            self.assertEqual(len(u_k), 2)
+
+            self.assertEqual(u_k, [
+                (1, Message, 'user', [m3]),
+                (1, Note, 'user', [n3]),
+            ])
+            
+            u_k = collected[self.inactive.id]
+            self.assertEqual(len(u_k), 0)
+            
+            # post to it, get a redirect on success
+            resp = c.post('/admin/user/delete/', data={'id': [self.admin.id, self.inactive.id]})
+            self.assertEqual(resp.status_code, 302)
+            
+            self.assertEqual(User.select().count(), 0)
+            self.assertEqual(Message.select().count(), 0)
+            self.assertEqual(Note.select().count(), 0)
+    
     def test_model_admin_index(self):
         self.create_users()
         
@@ -340,7 +405,7 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('user', self.admin)
-            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('model_admin', admin._registry[User])
             self.assertContext('ordering', 'username')
             
             query_filter = self.get_context('query_filter')
@@ -373,7 +438,7 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(resp.status_code, 200)
             
             self.assertContext('user', self.admin)
-            self.assertContext('model_admin', admin._registry['user'])
+            self.assertContext('model_admin', admin._registry[User])
             self.assertContext('ordering', '')
 
             query = self.get_context('query')
@@ -414,7 +479,7 @@ class AdminTestCase(BaseAdminTestCase):
             resp = c.get('/admin/note/?user__eq=%d' % self.normal.id)
             self.assertEqual(resp.status_code, 200)
             
-            self.assertContext('model_admin', admin._registry['note'])
+            self.assertContext('model_admin', admin._registry[Note])
             
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), notes[self.normal])
@@ -423,7 +488,7 @@ class AdminTestCase(BaseAdminTestCase):
             resp = c.get('/admin/note/?user__in=%d&user__in=%d' % (self.normal.id, self.admin.id))
             self.assertEqual(resp.status_code, 200)
             
-            self.assertContext('model_admin', admin._registry['note'])
+            self.assertContext('model_admin', admin._registry[Note])
             
             query = self.get_context('query')
             expected_notes = notes[self.admin] + notes[self.normal]
@@ -637,12 +702,12 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
     
     def test_get_model_admins(self):
         self.assertEqual(self.th.get_model_admins(), {'model_admins': [
-            admin._registry['amodel'],
-            admin._registry['bdetails'],
-            admin._registry['bmodel'],
-            admin._registry['cmodel'],
-            admin._registry['dmodel'],
-            admin._registry['message'],
-            admin._registry['note'],
-            admin._registry['user'],
+            admin._registry[AModel],
+            admin._registry[BDetails],
+            admin._registry[BModel],
+            admin._registry[CModel],
+            admin._registry[DModel],
+            admin._registry[Message],
+            admin._registry[Note],
+            admin._registry[User],
         ]})

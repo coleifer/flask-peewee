@@ -47,10 +47,14 @@ class ModelAdmin(object):
     """
     paginate_by = 20
     columns = None
-    ignore_filters = ('ordering', 'page',)
+
     exclude_filter_fields = None
-    related_filters = []
+    ignore_filters = ('ordering', 'page',)
     raw_id_fields = None
+    related_filters = []
+    
+    delete_collect_objects = True
+    delete_recursive = True
     
     def __init__(self, admin, model):
         self.admin = admin
@@ -192,22 +196,48 @@ class ModelAdmin(object):
         
         return render_template('admin/models/edit.html', model_admin=self, instance=instance, form=form)
     
+    def collect_objects(self, obj):
+        select_queries, nullable_queries = obj.collect_queries()
+        objects = []
+        
+        for query, fk_field, depth in select_queries:
+            model = query.model
+            query.query = ['*']
+            collected = [obj for obj in query.execute().iterator()]
+            if collected:
+                objects.append((depth, model, fk_field, collected))
+        
+        return sorted(objects, key=lambda i: (i[0], i[1].__name__))
+    
     def delete(self):
         if request.method == 'GET':
             id_list = request.args.getlist('id')
-            query = self.model.select().where(**{
-                '%s__in' % self.model._meta.pk_name: id_list
-            })
-        elif request.method == 'POST':
+        else:
             id_list = request.form.getlist('id')
-            query = self.model.delete().where(**{
-                '%s__in' % self.model._meta.pk_name: id_list
-            })
-            results = query.execute()
-            flash('Successfully deleted %s %ss' % (results, self.get_display_name()), 'success')
+        
+        query = self.model.select().where(**{
+            '%s__in' % self.model._meta.pk_name: id_list
+        })
+        
+        if request.method == 'GET':
+            collected = {}
+            if self.delete_collect_objects:
+                for obj in query:
+                    collected[obj.get_pk()] = self.collect_objects(obj)
+        
+        elif request.method == 'POST':
+            count = query.count()
+            for obj in query:
+                obj.delete_instance(recursive=self.delete_recursive)
+            
+            flash('Successfully deleted %s %ss' % (count, self.get_display_name()), 'success')
             return redirect(url_for(self.get_url_name('index')))
         
-        return render_template('admin/models/delete.html', model_admin=self, query=query)
+        return render_template('admin/models/delete.html', **dict(
+            model_admin=self,
+            query=query,
+            collected=collected,
+        ))
     
     def collect_related_fields(self, model, accum, path):
         path_str = '__'.join(path)
@@ -314,6 +344,17 @@ class AdminTemplateHelper(object):
     def get_model_admins(self):
         return {'model_admins': self.admin.get_model_admins()}
     
+    def get_admin_url(self, obj):
+        model_admin = self.admin.get_admin_for(type(obj))
+        if model_admin:
+            return url_for(model_admin.get_url_name('edit'), pk=obj.get_pk())
+    
+    def get_model_name(self, model_class):
+        model_admin = self.admin.get_admin_for(model_class)
+        if model_admin:
+            return model_admin.get_display_name()
+        return model_class.__name__
+    
     def prepare_environment(self):
         self.app.template_context_processors[None].append(self.get_model_admins)
         
@@ -322,6 +363,8 @@ class AdminTemplateHelper(object):
         self.app.jinja_env.globals['get_verbose_name'] = self.get_verbose_name
         self.app.jinja_env.filters['fix_underscores'] = self.fix_underscores
         self.app.jinja_env.globals['update_querystring'] = self.update_querystring
+        self.app.jinja_env.globals['get_admin_url'] = self.get_admin_url
+        self.app.jinja_env.globals['get_model_name'] = self.get_model_name
 
 
 class Admin(object):
@@ -330,6 +373,7 @@ class Admin(object):
         self.app = app
         self.auth = auth
         
+        self._admin_models = {}
         self._registry = {}
         self._panels = {}
         
@@ -366,7 +410,7 @@ class Admin(object):
         model_admin = admin_class(self, model)
         admin_name = model_admin.get_admin_name()
         
-        self._registry[admin_name] = model_admin
+        self._registry[model] = model_admin
     
     def unregister(self, model):
         del(self._registry[model])
@@ -377,6 +421,9 @@ class Admin(object):
     
     def unregister_panel(self, title):
         del(self._panels[title])
+    
+    def get_admin_for(self, model):
+        return self._registry.get(model)
     
     def get_model_admins(self):
         return sorted(self._registry.values(), key=lambda o: o.get_admin_name())
