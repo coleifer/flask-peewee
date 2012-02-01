@@ -341,9 +341,40 @@ class AdminTestCase(BaseAdminTestCase):
         n2 = Note.create(user=self.normal, message='test2')
         n3 = Note.create(user=self.admin, message='test3')
         
+        a1 = AModel.create(a_field='a1')
+        a2 = AModel.create(a_field='a2')
+        b1 = BModel.create(b_field='b1', a=a1)
+        b2 = BModel.create(b_field='b2', a=a2)
+        bd1= BDetails.create(b=b1)
+        bd2= BDetails.create(b=b2)
+        c1 = CModel.create(c_field='c1', b=b1)
+        c2 = CModel.create(c_field='c2', b=b2)
+        d1 = DModel.create(d_field='d1', c=c1)
+        d2 = DModel.create(d_field='d2', c=c2)
         
         with self.flask_app.test_client() as c:
             self.login(c)
+            
+            resp = c.get('/admin/amodel/delete/?id=%d' % (a1.id))
+            self.assertEqual(resp.status_code, 200)
+            
+            collected = self.get_context('collected')
+            self.assertEqual(collected, {
+                a1.id: [
+                    (1, BModel, 'a', [b1]),
+                    (2, BDetails, 'a', [bd1]),
+                    (2, CModel, 'a', [c1]),
+                    (3, DModel, 'a', [d1]),
+                ]
+            })
+            
+            resp = c.post('/admin/amodel/delete/', data={'id': a1.id})
+            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(AModel.select().count(), 1)
+            self.assertEqual(BModel.select().count(), 1)
+            self.assertEqual(BDetails.select().count(), 1)
+            self.assertEqual(CModel.select().count(), 1)
+            self.assertEqual(DModel.select().count(), 1)
             
             # send it a single id
             resp = c.get('/admin/user/delete/?id=%d' % (self.normal.id))
