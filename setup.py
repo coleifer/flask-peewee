@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='flask-peewee',
-    version='0.4.1',
+    version='0.4.2',
     url='http://github.com/coleifer/flask-peewee/',
     license='BSD',
     author='Charles Leifer',
@@ -32,7 +32,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'Flask', 'werkzeug', 'jinja2', 'peewee>=0.8.1', 'wtforms', 'wtf-peewee',
+        'Flask', 'werkzeug', 'jinja2', 'peewee>=0.9.0', 'wtforms', 'wtf-peewee',
     ],
     classifiers=[
         'Environment :: Web Environment',
