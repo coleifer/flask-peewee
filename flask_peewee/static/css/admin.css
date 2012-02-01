@@ -27,13 +27,13 @@ form textarea { height: 150px; }
 
 div.sidebar li.active { font-weight: bold; }
 
-table.zebra-striped td.links .inline { margin: 0; }
-table.zebra-striped td.links .inline li { display: inline-block; }
-table.zebra-striped td.links .inline li a {
+table.table-striped td.links .inline { margin: 0; }
+table.table-striped td.links .inline li { display: inline-block; }
+table.table-striped td.links .inline li a {
   border-right: 1px solid #DDDDDD;
   padding-right: 5px;
 }
-table.zebra-striped td.links .inline li:last-child a {
+table.table-striped td.links .inline li:last-child a {
   border-right: medium none;
 }
 

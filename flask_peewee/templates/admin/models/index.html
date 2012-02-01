@@ -1,12 +1,10 @@
 {% extends "admin/models/base_filters.html" %}
 
-{% from 'macros/filters.html' import admin_filter %}
-
 {% block tab_index_class %}active{% endblock %}
 
 {% block extra_tabs %}
-    <li class="dropdown" data-dropdown="dropdown" style="float:right">
-      <a class="dropdown-toggle" href="#">With selected...</a>
+    <li class="dropdown" style="float:right">
+      <a class="dropdown-toggle" data-toggle="dropdown" href="#">With selected... <span class="caret" /></a>
       <ul class="dropdown-menu">
         <li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>
         <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
@@ -18,8 +16,8 @@
 {% block content %}
   {% include "admin/includes/filter_widgets.html" %}
   
-  <form method="post" action="." id="model-list"><input type="hidden" name="action" value="" />
-  <table class="zebra-striped">
+  <form action="." class="form-horizontal" id="model-list" method="post"><input type="hidden" name="action" value="" />
+  <table class="table table-bordered table-striped">
     <thead>
       <tr>
         <th class="check first shrink"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>

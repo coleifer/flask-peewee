@@ -4,14 +4,14 @@
 
 {% block content %}
   {% if panels %}
-    <div class="row">
+    <div class="row-fluid">
     {% for panel in panels %}
       {{ panel.render()|safe() }}
     {% endfor %}
     </div>
   {% endif %}
 
-  <table class="zebra-striped">
+  <table class="table table-bordered table-striped">
     <thead>
       <tr>
         <th class="shrink model-name">Model name</th>

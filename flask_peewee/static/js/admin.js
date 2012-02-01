@@ -22,10 +22,10 @@ var Admin = window.Admin || {};
   ModelAdminFilter.prototype.add_row = function(field_label, field_name, filter_select) {
     var self = this,
         row = [
-          , '<div class="clearfix row">'
-          , '<span class="span2"><a class="btn small" href="#">'
+          , '<div class="clearfix control-group">'
+          , '<a class="btn span2" href="#">'
           , field_label
-          , '</a></span> </div>'
+          , '</a> </div>'
         ].join('\n'),
         row_elem = $(row).append(filter_select);
     
@@ -86,5 +86,5 @@ var Admin = window.Admin || {};
 })(Admin, jQuery);
 
 jQuery(function() {
-  jQuery(".alert-message").alert()
+  jQuery(".alert").alert()
 });

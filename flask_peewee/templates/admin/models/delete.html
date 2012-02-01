@@ -10,24 +10,22 @@
 {% endblock %}
 
 {% block content %}
-  <form method="post" action=".">
+  <form action="." class="form-horizontal" method="post">
     <fieldset>
       <legend>Select {{ model_admin.get_display_name() }}s to delete</legend>
-      <div class="clearfix">
-        <label>Selected models</label>
-        <div class="input">
-          <ul class="inputs-list">
+      <div class="control-group">
+        <label class="control-label">Selected models</label>
+        <div class="controls">
           {% for object in query %}
-            <li>
-              <label><input type="checkbox" name="id" value="{{ object.get_pk() }}" checked="checked"> <span>{{ object }}</span></label>
-            </li>
+            <label class="checkbox">
+              <input type="checkbox" name="id" value="{{ object.get_pk() }}" checked="checked"> <span>{{ object }}</span>
+            </label>
           {% endfor %}
-          </ul>
         </div>
       </div>
       
-      <div class="actions">
-        <button class="btn danger" type="submit">Confirm Delete</button>
+      <div class="form-actions">
+        <button class="btn btn-danger" type="submit">Confirm Delete</button>
         <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
       </div>
     </fieldset>

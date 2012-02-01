@@ -14,70 +14,72 @@
   <meta name="viewport" content="width=device-width; initial-scale=1.0">
 
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
  
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script>!window.jQuery && document.write('<script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"><\/script>')</script>
-  <script src="{{ url_for('admin.static', filename='js/bootstrap-alerts.js') }}"></script>
+  <script src="{{ url_for('admin.static', filename='js/bootstrap-alert.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/bootstrap-dropdown.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
   {% block extra_script %}{% endblock %}
 </head>
 
 <body class="{% block body_class %}admin{% endblock %}">
-  <div class="topbar">
-    <div class="fill">
+  <div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
       <div class="container-fluid">
         <h3><a class="brand" href="{{ url_for('admin.index') }}">Site Admin <small>flask-peewee</small></a></h3>
-
-        <ul class="nav secondary-nav">
+        <ul class="nav">
           <li class="active"><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
           <li><a href="/">View site</a></li>
-          <li>
-            <form action="{{ url_for('auth.logout') }}" method="get">
-              <button class="btn danger">Logout</button>
-            </form>
-          </li>
         </ul>
+        
+        <form action="{{ url_for('auth.logout') }}" class="navbar-form pull-right" method="get">
+          <button class="btn danger">Logout</button>
+        </form>
       </div>
     </div>
   </div>
 
   <div class="container-fluid">
-    <div class="sidebar">
-      <div class="well">
-      <h3>Navigation</h3>
-      {% block sidebar %}
-        <ul id="nav" class="navigation">
-          {% for iter_admin in model_admins %}
-            <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></li>
-          {% endfor %}
-        </ul>
-      {% endblock %}
-      </div>
-    </div><!-- /sidebar -->
-
-    <div class="content">
-      <div class="page-header">
-        <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
-      </div>
-      <ul class="breadcrumb">
-        <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
-        {% block breadcrumbs %}{% endblock %}
-      </ul>
-      {% for category, message in get_flashed_messages(with_categories=true) %}
-        <div class="alert-message {{ category }}">
-          <a class="close" href="#">×</a>
-          <p>{{ message }}</p>
+    <div class="row-fluid">
+      <div class="span3">
+        <div class="well sidebar-nav">
+          <h3>Navigation</h3>
+          {% block sidebar %}
+            <ul id="nav" class="nav nav-list">
+              {% for iter_admin in model_admins %}
+                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></li>
+              {% endfor %}
+            </ul>
+          {% endblock %}
         </div>
-      {% endfor %}
-      {% block pre_content %}{% endblock %}
-      {% block content %}{% endblock %}
-    </div><!-- /content -->
+      </div><!-- /sidebar -->
 
-    <footer>
-      <p>{% block footer %}Site administration{% endblock %}</p>
-    </footer>
+      <div class="span9">
+        <div class="content">
+          <div class="page-header">
+            <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
+          </div>
+          <ul class="breadcrumb">
+            <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+            {% block breadcrumbs %}{% endblock %}
+          </ul>
+          {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="alert alert-{{ category }}">
+              <a class="close" href="#">×</a>
+              <p>{{ message }}</p>
+            </div>
+          {% endfor %}
+          {% block pre_content %}{% endblock %}
+          {% block content %}{% endblock %}
+        </div><!-- /content -->
+      </div><!-- /row -->
+      <hr />
+      <footer>
+        <p>{% block footer %}Site administration{% endblock %}</p>
+      </footer>
   </div> <!-- /container-fluid -->
 </body>
 </html>

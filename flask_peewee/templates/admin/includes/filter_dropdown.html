@@ -1,10 +1,10 @@
-    <li class="dropdown" data-dropdown="dropdown" style="float:right">
-      <a class="dropdown-toggle" href="#">Add filter...</a>
+    <li class="dropdown" style="float:right">
+      <a class="dropdown-toggle" data-toggle="dropdown" href="#">Add filter... <span class="caret" /></a>
       <ul class="dropdown-menu" id="filters">
         {% for model_lookup in query_filter.get_model_lookups() %}
           {% for lookup in model_lookup.get_lookups() %}
           <li><a class="field-filter" id="filter-{{ model_lookup.get_prefix() }}{{ lookup.field_name }}" href="#">{{ lookup.verbose_name }}</a>
-            <select class="lookup-select span3 hidden">
+            <select class="lookup-select span4 hidden">
               <option value="">---------------</option>
               {% for operation, description in lookup.get_lookups() %}
                 <option value="{{ operation }}">{{ description }}</option>
