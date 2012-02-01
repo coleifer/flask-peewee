@@ -67,8 +67,8 @@
             {% block breadcrumbs %}{% endblock %}
           </ul>
           {% for category, message in get_flashed_messages(with_categories=true) %}
-            <div class="alert alert-{{ category }}">
-              <a class="close" href="#">×</a>
+            <div class="alert alert-block alert-{{ category }}">
+              <a class="close" data-dismiss="alert" href="#">×</a>
               <p>{{ message }}</p>
             </div>
           {% endfor %}

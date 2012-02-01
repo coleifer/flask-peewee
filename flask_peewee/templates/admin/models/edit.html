@@ -11,8 +11,8 @@
 
 {% block content %}
   {% if form.errors %}
-    <div class="alert alert-block error">
-      <a class="close" href="#">×</a>
+    <div class="alert alert-block alert-error">
+      <a class="close" data-dismiss="alert" href="#">×</a>
       <p>There were errors with your form submission</p>
     </div>
   {% endif %}
