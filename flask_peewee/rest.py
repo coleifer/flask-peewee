@@ -276,6 +276,25 @@ class RestResource(object):
             'next': next,
         }
     
+    def paginated_object_list(self, filtered_query):
+        try:
+            paginate_by = int(request.args.get('limit', self.paginate_by))
+        except ValueError:
+            paginate_by = self.paginate_by
+        else:
+            if self.paginate_by:
+                paginate_by = min(paginate_by, self.paginate_by) # restrict
+
+        pq = PaginatedQuery(filtered_query, paginate_by)
+        meta_data = self.get_request_metadata(pq)
+
+        query_dict = self.serialize_query(pq.get_list())
+
+        return self.response({
+            'meta': meta_data,
+            'objects': query_dict,
+        })
+
     def object_list(self):
         query = self.get_query()
         query = self.apply_ordering(query)
@@ -286,22 +305,10 @@ class RestResource(object):
         # process the filters from the request
         filtered_query = query_filter.get_filtered_query()
 
-        try:
-            paginate_by = int(request.args.get('limit', self.paginate_by))
-        except ValueError:
-            paginate_by = self.paginate_by
-        else:
-            paginate_by = min(paginate_by, self.paginate_by) # restrict
+        if self.paginate_by or 'limit' in request.args:
+            return self.paginated_object_list(filtered_query)
         
-        pq = PaginatedQuery(filtered_query, paginate_by)
-        meta_data = self.get_request_metadata(pq)
-        
-        query_dict = self.serialize_query(pq.get_list())
-        
-        return self.response({
-            'meta': meta_data,
-            'objects': query_dict,
-        })
+        return self.response(self.serialize_query(filtered_query))
     
     def object_detail(self, obj):
         return self.response(self.serialize_object(obj))
