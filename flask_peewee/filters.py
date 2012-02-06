@@ -46,6 +46,9 @@ LOOKUP_TYPES = {
     'this_week': 'this week',
     'lte_days_ago': 'less than ... days ago',
     'gte_days_ago': 'greater than ... days ago',
+    'year_eq': 'year is',
+    'year_lt': 'year is less than...',
+    'year_gt': 'year is greater than...',
 }
 
 FIELD_TYPES = {
@@ -63,7 +66,7 @@ FIELDS_TO_LOOKUPS = {
     'text': ['eq', 'icontains', 'istartswith'],
     'numeric': ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
     'boolean': ['eq'],
-    'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago'],
+    'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago', 'year_eq', 'year_lt', 'year_gt'],
 }
 
 CONVERTERS = {
@@ -200,6 +203,15 @@ class ModelLookup(object):
 def _rd(n):
     return datetime.date.today() + datetime.timedelta(days=n)
 
+def yr_l(n):
+    return datetime.datetime(year=n, month=1, day=1)
+
+def yr_h(n):
+    return datetime.datetime.combine(
+        datetime.date(year=n, month=12, day=31),
+        datetime.time.max,
+    )
+
 
 class FilterPreprocessor(object):
     def process_lookup(self, raw_lookup, values=None):
@@ -242,6 +254,22 @@ class FilterPreprocessor(object):
     def process_gte_days_ago(self, field_part, values):
         return [{
             '%s__lte' % field_part: _rd(-1 * int(value)),
+        } for value in values]
+
+    def process_year_eq(self, field_part, values):
+        return [{
+            '%s__gte' % field_part: yr_l(int(value)),
+            '%s__lte' % field_part: yr_h(int(value)),
+        } for value in values]
+
+    def process_year_lt(self, field_part, values):
+        return [{
+            '%s__lt' % field_part: yr_l(int(value)),
+        } for value in values]
+
+    def process_year_gt(self, field_part, values):
+        return [{
+            '%s__gte' % field_part: yr_l(int(value)),
         } for value in values]
 
 
