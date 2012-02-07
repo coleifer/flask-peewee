@@ -4,6 +4,7 @@ import operator
 from flask import request
 from flask_peewee.utils import models_to_path
 from peewee import *
+from peewee import DoubleField
 from wtforms import fields, form, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
 
@@ -54,7 +55,7 @@ LOOKUP_TYPES = {
 FIELD_TYPES = {
     'foreign_key': [ForeignKeyField],
     'text': [CharField, TextField],
-    'numeric': [PrimaryKeyField, IntegerField, FloatField, DecimalField],
+    'numeric': [PrimaryKeyField, IntegerField, FloatField, DecimalField, DoubleField],
     'boolean': [BooleanField],
     'datetime': [DateTimeField],
 }
