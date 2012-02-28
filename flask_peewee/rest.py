@@ -98,7 +98,6 @@ class RestResource(object):
     include_resources = None
     
     # filtering
-    ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
     exclude_filter_fields = None
     
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
@@ -143,7 +142,7 @@ class RestResource(object):
         return self.model.select()
     
     def get_query_filter(self, query):
-        return QueryFilter(query, self.exclude_filter_fields, self.ignore_filters)
+        return QueryFilter(query, self.exclude_filter_fields)
     
     def get_serializer(self):
         return Serializer()

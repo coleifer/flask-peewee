@@ -46,20 +46,30 @@ class ModelAdmin(object):
     ModelAdmin provides create/edit/delete functionality for a peewee Model.
     """
     paginate_by = 20
+    
+    # columns displayed on the list page
     columns = None
 
-    exclude_filter_fields = None
-    ignore_filters = ('ordering', 'page',)
-    raw_id_fields = None
-    related_filters = []
+    # fields to either explicitly use or *not* use in the add/edit form, additionally
+    # these will not be exposed for filtering
+    fields = None
+    exclude = None
     
-    delete_collect_objects = True
+    # foreign key fields to expose as a raw id lookup to avoid massive select boxes
+    raw_id_fields = None
+    
+    # way of specifying related modeladmin instances for filtering purposes --
+    # the 'fields' and 'exclude' bits are extracted from these included modeladmins
+    include_modeladmins = None
+    
+    # recursively delete dependent objects
     delete_recursive = True
     
     def __init__(self, admin, model):
         self.admin = admin
         self.model = model
         self.pk_name = self.model._meta.pk_name
+        self.include_modeladmins = self.include_modeladmins or {}
     
     def get_url_name(self, name):
         return '%s.%s_%s' % (
@@ -86,7 +96,6 @@ class ModelAdmin(object):
     def get_query_filter(self, query):
         return QueryFilter(query,
             self.exclude_filter_fields,
-            self.ignore_filters,
             self.raw_id_fields,
             self.related_filters,
         )
@@ -221,7 +230,7 @@ class ModelAdmin(object):
         
         if request.method == 'GET':
             collected = {}
-            if self.delete_collect_objects:
+            if self.delete_recursive:
                 for obj in query:
                     collected[obj.get_pk()] = self.collect_objects(obj)
         

@@ -275,7 +275,7 @@ class FilterPreprocessor(object):
 
 
 class QueryFilter(object):
-    def __init__(self, query, exclude_fields=None, ignore_filters=None, raw_id_fields=None, related=None):
+    def __init__(self, query, exclude_fields=None, raw_id_fields=None, related=None):
         self.query = query
         self.model = self.query.model
 
@@ -287,7 +287,6 @@ class QueryFilter(object):
             else:
                 self.exclude_fields.append(self.model._meta.rel_fields[field_name])
         
-        self.ignore_filters = ignore_filters or ()
         self.raw_id_fields = raw_id_fields or ()
         
         # a list of related QueryFilter() objects
@@ -318,9 +317,6 @@ class QueryFilter(object):
         # reconstruct filter widgets on frontend), and a place to munge filters
         # that have special meaning, i.e. "today"
         for key in request.args:
-            if key in self.ignore_filters:
-                continue
-
             if not is_valid_lookup(self.model, key):
                 continue
             
