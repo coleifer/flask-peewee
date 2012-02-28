@@ -27,6 +27,7 @@ class RelationshipResource(RestrictOwnerResource):
         'from_user': UserResource,
         'to_user': UserResource,
     }
+    paginate_by = None
 
 
 # register our models so they are exposed via /api/<model>/
