@@ -44,7 +44,7 @@ class FieldValueMap(object):
         # wat
         lookup_obj.lookup_name = lookup_name
         lookup_obj.css_class = 'span5 input-small lookup-input'
-        lookup_obj.element_id = '%s__%s' % (field.name, lookup)
+        lookup_obj.name = '%s__%s' % (field.name, lookup)
         return lookup_obj
     
     def handle_default(self, field, lookup):
@@ -152,14 +152,15 @@ class ModelAdmin(object):
     def get_lookups(self):
         field_value_map = FieldValueMap(self)
         
-        lookups = []
+        lookups = {}
         
         for field in self.model._meta.get_fields():
             if self.exclude_filters and field.name in self.exclude_filters:
                 continue
             
             for lookup, lookup_name in lookups_for_field(field):
-                lookups.append(field_value_map.convert(field, lookup, lookup_name))
+                lookups.setdefault(field, [])
+                lookups[field].append(field_value_map.convert(field, lookup, lookup_name))
         
         return lookups
     
