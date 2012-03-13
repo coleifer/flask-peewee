@@ -50,6 +50,7 @@ admin = Admin(app, auth)
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
+    foreign_key_lookups = {'user': 'username'}
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)

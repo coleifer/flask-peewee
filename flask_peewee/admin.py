@@ -338,7 +338,7 @@ class ModelAdmin(object):
             rel_field = self.foreign_key_lookups[field]
             
             query = rel_model.select().where(**{
-                '%s__icontains': rel_field,
+                '%s__icontains'% rel_field: request.args.get('query'),
             }).order_by(rel_field)
             
             pq = PaginatedQuery(query, self.paginate_by)
