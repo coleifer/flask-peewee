@@ -1,7 +1,7 @@
   <div class="well" id="filter-wrapper" style="display: none;">
     <div class="hidden" id="lookup-fields">
       {% for model_lookup in query_filter.get_model_lookups() %}
-        {% for field in model_lookup.html_form() %}{{ field(class="span5 input-small lookup-input") }}{% endfor %}
+        {% for field in model_lookup.html_form() %}<span class="wrapper">{{ field(class="span5 input-small lookup-input") }}</span>{% endfor %}
       {% endfor %}
     </div>
     <form action="." class="form-inline modeladmin-filters" method="get">

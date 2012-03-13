@@ -47,7 +47,7 @@ var Admin = window.Admin || {};
   ModelAdminFilter.prototype.display_lookup = function(row, field_name, lookup) {
     var desired_elem = this.lookups_elem.find('#' + field_name + '__' + lookup);
     if (desired_elem) {
-      var clone = desired_elem.clone();
+      var clone = desired_elem.parents('span.wrapper').clone();
       row.find('.lookup-input').remove();
       row.append(clone);
       return clone;
@@ -72,7 +72,8 @@ var Admin = window.Admin || {};
       var row = this.add_filter(elem);
       row.find('select').val(lookup);
       
-      var input_elem = this.display_lookup(row, field, lookup);
+      var input_row = this.display_lookup(row, field, lookup)
+        , input_elem = input_row.find('.lookup-input');
       input_elem.val(value);
     }
   }

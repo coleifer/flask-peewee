@@ -30,6 +30,15 @@ class BooleanSelectField(fields.SelectFieldBase):
                 raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
 
 
+class AjaxModelSelectField(fields.HiddenField):
+    def __init__(self, model, search, *args, **kwargs):
+        super(AjaxModelSelectField, self).__init__(*args, **kwargs)
+
+class AjaxModelSelectMultipleField(fields.HiddenField):
+    def __init__(self, model, search, *args, **kwargs):
+        super(AjaxModelSelectMultipleField, self).__init__(*args, **kwargs)
+
+
 LOOKUP_TYPES = {
     'eq': 'equal to',
     'lt': 'less than',
@@ -70,9 +79,19 @@ FIELDS_TO_LOOKUPS = {
     'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago', 'year_eq', 'year_lt', 'year_gt'],
 }
 
+def handle_fk_single(lookup):
+    if lookup.related_lookup:
+        return AjaxModelSelectField(model=lookup.field.to, search=lookup.related_lookup)
+    return ModelSelectField(model=lookup.field.to)
+
+def handle_fk_multiple(lookup):
+    if lookup.related_lookup:
+        return AjaxModelSelectMultipleField(model=lookup.field.to, search=lookup.related_lookup)
+    return ModelSelectMultipleField(model=lookup.field.to)
+
 CONVERTERS = {
-    (ForeignKeyField, 'eq'): lambda l: AjaxModelSelectField(model=l.field.to, search=l.related_lookup),
-    (ForeignKeyField, 'in'): lambda l: AjaxModelSelectMultipleField(model=l.field.to, search=l.related_lookup),
+    (ForeignKeyField, 'eq'): handle_fk_single,
+    (ForeignKeyField, 'in'): handle_fk_multiple,
     (DateTimeField, 'today'): lambda l: fields.HiddenField(),
     (DateTimeField, 'yesterday'): lambda l: fields.HiddenField(),
     (DateTimeField, 'this_week'): lambda l: fields.HiddenField(),
