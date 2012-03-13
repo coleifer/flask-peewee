@@ -152,6 +152,7 @@ class ModelAdmin(object):
         field_value_map = FieldValueMap(self)
         
         lookups = {}
+        lookup_to_type = {}
         
         for field in self.model._meta.get_fields():
             if self.exclude_filters and field.name in self.exclude_filters:
@@ -159,9 +160,12 @@ class ModelAdmin(object):
             
             for lookup, lookup_name in lookups_for_field(field):
                 lookups.setdefault(field, [])
-                lookups[field].append(field_value_map.convert(field, lookup, lookup_name))
+                lookup_obj = field_value_map.convert(field, lookup, lookup_name)
+                lookups[field].append(lookup_obj)
+                
+                lookup_to_type[lookup_obj.name] = lookup_obj.field_type
         
-        return lookups
+        return lookups, lookup_to_type
     
     def save_model(self, instance, form, adding=False):
         form.populate_obj(instance)
@@ -197,12 +201,15 @@ class ModelAdmin(object):
             else:
                 return redirect(url_for(self.get_url_name('export'), id__in=id_list))
         
+        lookups, lookup_to_type = self.get_lookups()
+        
         return render_template('admin/models/index.html',
             model_admin=self,
             query=pq,
             ordering=ordering,
             query_filter=query_filter,
-            lookups=self.get_lookups(),
+            lookups=lookups,
+            lookup_to_type=lookup_to_type,
         )
     
     def dispatch_save_redirect(self, instance):
@@ -321,13 +328,16 @@ class ModelAdmin(object):
             export = Export(filtered_query, related, raw_fields)
             return export.json_response()
         
+        lookups, lookup_to_type = self.get_lookups()
+        
         return render_template('admin/models/export.html',
             model_admin=self,
             model=filtered_query.model,
             query=filtered_query,
             query_filter=query_filter,
             related_fields=related,
-            lookups=self.get_lookups(),
+            lookups=lookups,
+            lookup_to_type=lookup_to_type,
         )
     
     def ajax_list(self):

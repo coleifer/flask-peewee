@@ -26,7 +26,7 @@ var Admin = window.Admin || {};
         , target = elem.siblings('ul.result-list')
         , modal = elem.parents('.modal');
       
-      self.ajax_list(elem.data('ajax-url'), elem.val(), target, cb, self.get_cb(modal));
+      self.ajax_list(elem.data('ajax-url'), elem.val(), target, self.get_cb(modal));
     });
     
     /* bind next/prev buttons */
@@ -86,7 +86,23 @@ var Admin = window.Admin || {};
   }
   
   ModelAdminFilter.prototype.multi_click = function(sender, repr, data) {
-    // ---> define callback for multi <----
+    var add_btn = sender.find('a.fk-lookup')
+      , new_btn = $('<a class="btn fk-multi">'+repr+'</a>')
+      , hidden_elem = sender.find('input.dummy').clone();
+    
+    /* assign the name */
+    hidden_elem.attr('name', hidden_elem.attr('id'));
+    hidden_elem.val(data);
+    
+    new_btn.click(function(e) {
+      var elem = $(this);
+      elem.next('input').remove();
+      elem.remove();
+    });
+    
+    /* add to dom */
+    add_btn.before(new_btn);
+    add_btn.before(hidden_elem);
   }
   
   ModelAdminFilter.prototype.get_cb = function(modal_elem) {

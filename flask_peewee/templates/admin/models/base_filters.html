@@ -7,8 +7,43 @@
       var admin_filter = new Admin.ModelAdminFilter();
       admin_filter.init();
       {% for lookup, value in query_filter.raw_lookups %}
-      admin_filter.add_filter_request('{{ lookup }}', {{ value|tojson|safe }});
+        {% if lookup_to_type[lookup] not in ('foreign_key', 'foreign_key_multi') %}
+          admin_filter.add_filter_request('{{ lookup }}', {{ value|tojson|safe }});
+        {% endif %}
       {% endfor %}
+      
+      {#
+      {% for field, lookup_list in lookups.items() %}
+        {% for lookup in lookup_list %}
+          <span class="wrapper">
+            {% if lookup.field_type == 'text' %}
+              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="text" />
+            {% elif lookup.field_type == 'hidden' %}
+              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
+            {% elif lookup.field_type == 'select' %}
+              <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}">
+                {% for value, label in lookup.data %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            {% elif lookup.field_type == 'select_multiple' %}
+              <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" multiple="multiple">
+                {% for value, label in lookup.data %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            {% elif lookup.field_type == 'foreign_key' %}
+              <a class="btn fk-lookup small" href="#">Select...</a>
+              <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
+            {% elif lookup.field_type == 'foreign_key_multiple' %}
+              <input class="dummy" id="{{ lookup.name }}" type="hidden" value="" />
+              <a class="btn fk-lookup small" href="#">Add...</a>
+            {% endif %}
+          </span>
+        {% endfor %}
+      {% endfor %}
+      #}
+      
     });
   </script>
 {% endblock %}
