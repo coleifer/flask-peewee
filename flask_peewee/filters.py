@@ -234,3 +234,15 @@ class QueryFilter(object):
             return self.query.filter(*nodes)
         
         return self.query
+
+
+FIELD_TYPES = ('text', 'select', 'select_multiple', 'hidden', 'foreign_key', 'foreign_key_multiple')
+
+class Lookup(object):
+    def __init__(self, field, lookup, field_type, data=None):
+        self.field = field
+        self.lookup = lookup
+        self.field_type = field_type
+        self.data = data
+        
+        self.lookup_name = None

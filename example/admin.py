@@ -53,6 +53,7 @@ class MessageAdmin(ModelAdmin):
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
+    exclude = ('created_date',)
 
 
 auth.register_admin(admin)

@@ -9,15 +9,67 @@ except ImportError:
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
 from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelConverter
-from flask_peewee.filters import QueryFilter
+from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup, FIELD_TYPES
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, slugify
+from peewee import BooleanField, DateTimeField, ForeignKeyField
 from werkzeug import Headers
 from wtforms import fields, widgets
+from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
 from wtfpeewee.orm import model_form
 
 
 current_dir = os.path.dirname(__file__)
+
+
+class FieldValueMap(object):
+    def __init__(self, model_admin):
+        self.model_admin = model_admin
+
+    def get_conversions(self):
+        return {
+            (BooleanField, 'eq'): self.handle_boolean,
+            (DateTimeField, 'today'): self.handle_dummy,
+            (DateTimeField, 'yesterday'): self.handle_dummy,
+            (DateTimeField, 'this_week'): self.handle_dummy,
+            (ForeignKeyField, 'eq'): self.handle_foreign_key,
+            (ForeignKeyField, 'in'): self.handle_foreign_key_multi,
+        }
+    
+    def convert(self, field, lookup, lookup_name):
+        conversions = self.get_conversions()
+        key = (type(field), lookup)
+        lookup_obj = conversions.get(key, self.handle_default)(field, lookup)
+        
+        # wat
+        lookup_obj.lookup_name = lookup_name
+        lookup_obj.css_class = 'span5 input-small lookup-input'
+        lookup_obj.element_id = '%s__%s' % (field.name, lookup)
+        return lookup_obj
+    
+    def handle_default(self, field, lookup):
+        return Lookup(field, lookup, 'text')
+    
+    def handle_dummy(self, field, lookup):
+        return Lookup(field, lookup, 'hidden')
+    
+    def handle_boolean(self, field, lookup):
+        return Lookup(field, lookup, 'select', [('1', 'True'), ('', 'False')])
+    
+    def fk_to_list(self, field):
+        return [(obj.get_pk(), unicode(obj)) for obj in field.to.select()]
+    
+    def handle_foreign_key(self, field, lookup):
+        _fkl = self.model_admin.foreign_key_lookups or {}
+        if field.name not in _fkl:
+            return Lookup(field, lookup, 'select', self.fk_to_list(field))
+        return Lookup(field, lookup, 'foreign_key', field.to)
+    
+    def handle_foreign_key_multi(self, field, lookup):
+        _fkl = self.model_admin.foreign_key_lookups or {}
+        if field.name not in _fkl:
+            return Lookup(field, lookup, 'select_multiple', self.fk_to_list(field))
+        return Lookup(field, lookup, 'foreign_key_multiple', field.to)
 
 
 class ModelAdmin(object):
@@ -34,7 +86,7 @@ class ModelAdmin(object):
     exclude_filters = None
     ignore_filters = ('ordering', 'page',)
     
-    # form parameters
+    # form parameters, lists of fields
     exclude = None
     fields = None
     
@@ -97,6 +149,20 @@ class ModelAdmin(object):
     def get_admin_name(self):
         return slugify(self.model.__name__)
     
+    def get_lookups(self):
+        field_value_map = FieldValueMap(self)
+        
+        lookups = []
+        
+        for field in self.model._meta.get_fields():
+            if self.exclude_filters and field.name in self.exclude_filters:
+                continue
+            
+            for lookup, lookup_name in lookups_for_field(field):
+                lookups.append(field_value_map.convert(field, lookup, lookup_name))
+        
+        return lookups
+    
     def save_model(self, instance, form, adding=False):
         form.populate_obj(instance)
         instance.save()
@@ -136,6 +202,7 @@ class ModelAdmin(object):
             query=pq,
             ordering=ordering,
             query_filter=query_filter,
+            lookups=self.get_lookups(),
         )
     
     def dispatch_save_redirect(self, instance):
@@ -260,10 +327,31 @@ class ModelAdmin(object):
             query=filtered_query,
             query_filter=query_filter,
             related_fields=related,
+            lookups=self.get_lookups(),
         )
     
     def ajax_list(self):
-        import ipdb; ipdb.set_trace()
+        field = request.args.get('field')
+        if field in self.model._meta.fields:
+            rel_model = self.model._meta.fields[field].to
+            rel_field = self.foreign_key_lookups[field]
+            
+            query = rel_model.select().where(**{
+                '%s__icontains': rel_field,
+            }).order_by(rel_field)
+            
+            pq = PaginatedQuery(query, self.paginate_by)
+            current_page = pq.get_page()
+            data = [
+                {'id': obj.get_pk(), 'repr': unicode(obj)} \
+                    for obj in pq.get_list()
+            ]
+        else:
+            current_page = -1
+            data = []
+        
+        json_data = json.dumps({'page': current_page, 'object_list': data})
+        return Response(json_data, mimetype='application/json')
 
 
 class AdminPanel(object):

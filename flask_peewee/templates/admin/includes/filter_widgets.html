@@ -1,10 +1,32 @@
   <div class="well" id="filter-wrapper" style="display: none;">
     <div class="hidden" id="lookup-fields">
-      {#
-      {% for model_lookup in query_filter.get_model_lookups() %}
-        {% for field in model_lookup.html_form() %}<span class="wrapper">{{ field(class="span5 input-small lookup-input") }}</span>{% endfor %}
+      {% for lookup in lookups %}
+        <span class="wrapper">
+          {% if lookup.field_type == 'text' %}
+            <input class="{{ lookup.css_class }}" id="{{ lookup.element_id }}" type="text" />
+          {% elif lookup.field_type == 'hidden' %}
+            <input class="{{ lookup.css_class }}" id="{{ lookup.element_id }}" type="hidden" />
+          {% elif lookup.field_type == 'select' %}
+            <select class="{{ lookup.css_class }}" id="{{ lookup.element_id }}">
+              {% for value, label in lookup.data %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          {% elif lookup.field_type == 'select_multiple' %}
+            <select class="{{ lookup.css_class }}" id="{{ lookup.element_id }}" multiple="multiple">
+              {% for value, label in lookup.data %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          {% elif lookup.field_type == 'foreign_key' %}
+            <a class="btn small" href="#">Select {{ get_model_name(lookup.data) }}...</a>
+            <input id="{{ lookup.element_id }}" type="hidden" />
+          {% elif lookup.field_type == 'foreign_key_multiple' %}
+            <a class="btn small" href="#">Add {{ get_model_name(lookup.data) }}...</a>
+            <input id="{{ lookup.element_id }}" type="hidden" />
+          {% endif %}
+        </span>
       {% endfor %}
-      #}
     </div>
     <form action="." class="form-inline modeladmin-filters" method="get">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
