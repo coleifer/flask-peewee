@@ -39,11 +39,13 @@
             <h3>Select a {{ lookup.field.verbose_name }}</h3>
           </div>
           <div class="modal-body">
-            <input class="fk-lookup-input" data-ajax-url="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ lookup.field.name }}&query=" type="text" />
+            <input class="fk-lookup-input" data-ajax-url="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ lookup.field.name }}" type="text" />
             <ul class="result-list">
             </ul>
           </div>
           <div class="modal-footer">
+            <a class="btn disabled next" href="#">Next</a>
+            <a class="btn disabled previous" href="#">Previous</a>
           </div>
         </div>
         {% endif %}

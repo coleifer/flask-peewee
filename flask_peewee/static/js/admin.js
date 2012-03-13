@@ -14,27 +14,66 @@ var Admin = window.Admin || {};
     this.filter_list = $(this.wrapper + ' form div.filter-list');
     this.lookups_elem = $(this.lookups_wrapper);
     
+    /* bind the "add filter" click behavior */
     $(this.add_selector).click(function(e) {
       e.preventDefault();
       self.add_filter($(this));
     });
     
+    /* bind keyboard handler for input */
     $(this.autocomplete_selector).keyup(function(e) {
       var elem = $(this)
         , target = elem.siblings('ul.result-list');
-      self.ajax_list(elem.data('ajax-url') + elem.val(), target);
+      self.ajax_list(elem.data('ajax-url'), elem.val(), target);
+    });
+    
+    /* bind next/prev buttons */
+    $('.modal a.next, .modal a.previous').click(function(e) {
+      var elem = $(this)
+        , modal = elem.parents('.modal')
+        , input_elem = modal.find(self.autocomplete_selector)
+        , target = input_elem.siblings('ul.result-list')
+        , page = elem.data('page');
+      
+      if (!elem.hasClass('disabled')) {
+        self.ajax_list(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target);
+      }
     });
   }
   
-  ModelAdminFilter.prototype.ajax_list = function(url, target) {
-    $.get(url, function(data) {
+  ModelAdminFilter.prototype.ajax_list = function(url, query, target) {
+    var modal = target.parents('.modal')
+      , next_btn = modal.find('a.next')
+      , prev_btn = modal.find('a.previous')
+      , self = this;
+    
+    $.get(url+'&query='+query, function(data) {
       target.empty();
       for (var i=0, l=data.object_list.length; i < l; i++) {
         var o = data.object_list[i];
         target.append('<li><a data-object-id="'+o.id+'" href="#">'+o.repr+'</a></li>');
       }
+      
+      if (data.prev_page) {
+        prev_btn.removeClass('disabled');
+        prev_btn.data('page', data.prev_page);
+      } else {
+        prev_btn.addClass('disabled');
+      }
+      if (data.next_page) {
+        next_btn.removeClass('disabled');
+        next_btn.data('page', data.next_page);
+      } else {
+        next_btn.addClass('disabled');
+      }
+
       target.find('a').click(function(e) {
-        var data = $(this).data('object-id');
+        var data = $(this).data('object-id')
+          , repr = $(this).text()
+          , sender = modal.data('sender');
+        
+        sender.find('a.fk-lookup').text(repr);
+        sender.find('input[type=hidden]').val(data);
         target.parents('.modal').modal('hide');
       });
     });
@@ -79,7 +118,8 @@ var Admin = window.Admin || {};
           , modal_input = modal.find('.fk-lookup-input')
           , target = modal.find('ul.result-list');
         
-        self.ajax_list(modal_input.data('ajax-url'), target);
+        self.ajax_list(modal_input.data('ajax-url'), '', target);
+        modal.data('sender', clone);
         modal.modal('show');
       });
       

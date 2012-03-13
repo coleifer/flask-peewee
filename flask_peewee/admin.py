@@ -333,25 +333,32 @@ class ModelAdmin(object):
     
     def ajax_list(self):
         field = request.args.get('field')
+        prev_page = 0
+        next_page = 0
         if field in self.model._meta.fields:
             rel_model = self.model._meta.fields[field].to
             rel_field = self.foreign_key_lookups[field]
             
             query = rel_model.select().where(**{
-                '%s__icontains'% rel_field: request.args.get('query'),
+                '%s__icontains'% rel_field: request.args.get('query', ''),
             }).order_by(rel_field)
             
-            pq = PaginatedQuery(query, self.paginate_by)
+            pq = PaginatedQuery(query, 10)
             current_page = pq.get_page()
+            if current_page > 1:
+                prev_page = current_page - 1
+            if current_page < pq.get_pages():
+                next_page = current_page + 1
+            
+            print prev_page, next_page
             data = [
                 {'id': obj.get_pk(), 'repr': unicode(obj)} \
                     for obj in pq.get_list()
             ]
         else:
-            current_page = -1
             data = []
         
-        json_data = json.dumps({'page': current_page, 'object_list': data})
+        json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
 
 
