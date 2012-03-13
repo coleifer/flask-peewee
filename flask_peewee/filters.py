@@ -71,12 +71,12 @@ FIELDS_TO_LOOKUPS = {
 }
 
 CONVERTERS = {
-    (ForeignKeyField, 'eq'): lambda f: ModelSelectField(model=f.to),
-    (ForeignKeyField, 'in'): lambda f: ModelSelectMultipleField(model=f.to),
-    (DateTimeField, 'today'): lambda f: fields.HiddenField(),
-    (DateTimeField, 'yesterday'): lambda f: fields.HiddenField(),
-    (DateTimeField, 'this_week'): lambda f: fields.HiddenField(),
-    (BooleanField, 'eq'): lambda f: BooleanSelectField(),
+    (ForeignKeyField, 'eq'): lambda l: AjaxModelSelectField(model=l.field.to, search=l.related_lookup),
+    (ForeignKeyField, 'in'): lambda l: AjaxModelSelectMultipleField(model=l.field.to, search=l.related_lookup),
+    (DateTimeField, 'today'): lambda l: fields.HiddenField(),
+    (DateTimeField, 'yesterday'): lambda l: fields.HiddenField(),
+    (DateTimeField, 'this_week'): lambda l: fields.HiddenField(),
+    (BooleanField, 'eq'): lambda l: BooleanSelectField(),
 }
 
 
@@ -134,8 +134,9 @@ def lookups_for_field(field):
     ]
 
 class Lookup(object):
-    def __init__(self, field):
+    def __init__(self, field, related_lookup=None):
         self.field = field
+        self.related_lookup = related_lookup
         
         self.field_class = type(self.field)
         self.field_name = self.field.name
@@ -168,21 +169,22 @@ class Lookup(object):
         return dict([
             (
                 '%s__%s' % (self.field_name, lookup[0]),
-                CONVERTERS.get((self.field_class, lookup[0]), default)(self.field)
+                CONVERTERS.get((self.field_class, lookup[0]), default)(self)
             ) for lookup in self.get_lookups()
         ])
 
 class ModelLookup(object):
-    def __init__(self, model, exclude, path, raw_id_fields):
+    def __init__(self, model, exclude, foreign_key_lookups, path):
         self.model = model
         self.exclude = exclude
+        self.foreign_key_lookups = foreign_key_lookups
         self.path = path
-        self.raw_id_fields = raw_id_fields
     
     def get_lookups(self):
         return [
-            Lookup(f) for f in self.model._meta.get_fields() \
-                if f.name not in self.exclude
+            Lookup(f, self.foreign_key_lookups.get(f.name)) \
+                for f in self.model._meta.get_fields() \
+                    if f.name not in self.exclude
         ]
     
     def get_prefix(self):
@@ -275,7 +277,7 @@ class FilterPreprocessor(object):
 
 
 class QueryFilter(object):
-    def __init__(self, query, exclude_fields=None, ignore_filters=None, raw_id_fields=None, related=None):
+    def __init__(self, query, exclude_fields=None, ignore_filters=None, foreign_key_lookups=None, related=None):
         self.query = query
         self.model = self.query.model
 
@@ -288,13 +290,13 @@ class QueryFilter(object):
                 self.exclude_fields.append(self.model._meta.rel_fields[field_name])
         
         self.ignore_filters = ignore_filters or ()
-        self.raw_id_fields = raw_id_fields or ()
+        self.foreign_key_lookups = foreign_key_lookups or {}
         
         # a list of related QueryFilter() objects
         self.related = related or ()
     
     def get_model_lookups(self, path=None):
-        model_lookups = [ModelLookup(self.model, self.exclude_fields, path, self.raw_id_fields)]
+        model_lookups = [ModelLookup(self.model, self.exclude_fields, self.foreign_key_lookups, path)]
         path = path or []
         path.append(self.model)
         for related_filter in self.related:

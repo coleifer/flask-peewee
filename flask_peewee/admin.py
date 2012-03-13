@@ -8,7 +8,7 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.filters import BooleanSelectField, QueryFilter
+from flask_peewee.filters import BooleanSelectField, AjaxModelSelectField, QueryFilter
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, slugify
 from peewee import BooleanField, ForeignKeyField, TextField, Q
@@ -33,9 +33,10 @@ class CustomModelConverter(ModelConverter):
         if field.null:
             kwargs['allow_blank'] = True
         
-        if field.name in (self.model_admin.raw_id_fields or ()):
+        if field.name in (self.model_admin.foreign_key_lookups or ()):
             # use a different widget here
-            form_field = ModelSelectField(model=field.to, **kwargs)
+            search = self.model_admin.foreign_key_lookups[field.name]
+            form_field = AjaxModelSelectField(model=field.to, search=search, **kwargs)
         else:
             form_field = ModelSelectField(model=field.to, **kwargs)
         return field.name, form_field
@@ -46,13 +47,23 @@ class ModelAdmin(object):
     ModelAdmin provides create/edit/delete functionality for a peewee Model.
     """
     paginate_by = 20
+    
+    # columns to display in the list index - can be field names or callables on
+    # a model instance, though in the latter case they will not be sortable
     columns = None
 
-    exclude_filter_fields = None
+    # filter parameters
     ignore_filters = ('ordering', 'page',)
-    raw_id_fields = None
     related_filters = []
     
+    # form parameters
+    exclude = None
+    fields = None
+    
+    # foreign_key_field --> related field to search on, e.g. {'user': 'username'}
+    foreign_key_lookups = None
+    
+    # delete behavior
     delete_collect_objects = True
     delete_recursive = True
     
@@ -69,7 +80,7 @@ class ModelAdmin(object):
         )
     
     def get_form(self):
-        return model_form(self.model, converter=CustomModelConverter(self))
+        return model_form(self.model, only=self.fields, exclude=self.exclude, converter=CustomModelConverter(self))
     
     def get_add_form(self):
         return self.get_form()
@@ -84,10 +95,11 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(query,
-            self.exclude_filter_fields,
+        return QueryFilter(
+            query,
+            self.exclude,
             self.ignore_filters,
-            self.raw_id_fields,
+            self.foreign_key_lookups,
             self.related_filters,
         )
     
@@ -98,6 +110,7 @@ class ModelAdmin(object):
             ('/delete/', self.delete),
             ('/export/', self.export),
             ('/<pk>/', self.edit),
+            ('/_ajax/', self.ajax_list),
         )
     
     def get_columns(self):
@@ -276,6 +289,9 @@ class ModelAdmin(object):
             query_filter=query_filter,
             related_fields=related,
         )
+    
+    def ajax_list(self):
+        import ipdb; ipdb.set_trace()
 
 
 class AdminPanel(object):
