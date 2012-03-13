@@ -4,39 +4,6 @@ import operator
 from flask import request
 from flask_peewee.utils import models_to_path
 from peewee import *
-from peewee import DoubleField
-from wtforms import fields, form, widgets
-from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
-
-
-class BooleanSelectField(fields.SelectFieldBase):
-    widget = widgets.Select()
-
-    def iter_choices(self):
-        yield ('1', 'True', self.data)
-        yield ('', 'False', not self.data)
-
-    def process_data(self, value):
-        try:
-            self.data = bool(value)
-        except (ValueError, TypeError):
-            self.data = None
-
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                self.data = bool(valuelist[0])
-            except ValueError:
-                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
-
-
-class AjaxModelSelectField(fields.HiddenField):
-    def __init__(self, model, search, *args, **kwargs):
-        super(AjaxModelSelectField, self).__init__(*args, **kwargs)
-
-class AjaxModelSelectMultipleField(fields.HiddenField):
-    def __init__(self, model, search, *args, **kwargs):
-        super(AjaxModelSelectMultipleField, self).__init__(*args, **kwargs)
 
 
 LOOKUP_TYPES = {
@@ -77,25 +44,6 @@ FIELDS_TO_LOOKUPS = {
     'numeric': ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
     'boolean': ['eq'],
     'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago', 'year_eq', 'year_lt', 'year_gt'],
-}
-
-def handle_fk_single(lookup):
-    if lookup.related_lookup:
-        return AjaxModelSelectField(model=lookup.field.to, search=lookup.related_lookup)
-    return ModelSelectField(model=lookup.field.to)
-
-def handle_fk_multiple(lookup):
-    if lookup.related_lookup:
-        return AjaxModelSelectMultipleField(model=lookup.field.to, search=lookup.related_lookup)
-    return ModelSelectMultipleField(model=lookup.field.to)
-
-CONVERTERS = {
-    (ForeignKeyField, 'eq'): handle_fk_single,
-    (ForeignKeyField, 'in'): handle_fk_multiple,
-    (DateTimeField, 'today'): lambda l: fields.HiddenField(),
-    (DateTimeField, 'yesterday'): lambda l: fields.HiddenField(),
-    (DateTimeField, 'this_week'): lambda l: fields.HiddenField(),
-    (BooleanField, 'eq'): lambda l: BooleanSelectField(),
 }
 
 
@@ -151,76 +99,6 @@ def lookups_for_field(field):
         (lookup, LOOKUP_TYPES[lookup]) \
             for lookup in FIELDS_TO_LOOKUPS[INV_FIELD_TYPES[field_class]]
     ]
-
-class Lookup(object):
-    def __init__(self, field, related_lookup=None):
-        self.field = field
-        self.related_lookup = related_lookup
-        
-        self.field_class = type(self.field)
-        self.field_name = self.field.name
-        self.verbose_name = self.field.verbose_name
-        self.model = field.model
-    
-    def __repr__(self):
-        return '<Lookups for: %s.%s>' % (self.model.__name__, self.field_name)
-
-    def __eq__(self, rhs):
-        return self.field == rhs.field
-
-    def get_field_type(self):
-        return INV_FIELD_TYPES[self.field_class]
-    
-    def get_lookups(self):
-        return lookups_for_field(self.field)
-    
-    def to_context(self):
-        return dict(
-            name=self.field_name,
-            verbose_name=self.verbose_name,
-            field_type=self.get_field_type(),
-            lookups=self.get_lookups(),
-            prefix=prefix,
-        )
-    
-    def html_fields(self):
-        default = lambda f: fields.TextField()
-        return dict([
-            (
-                '%s__%s' % (self.field_name, lookup[0]),
-                CONVERTERS.get((self.field_class, lookup[0]), default)(self)
-            ) for lookup in self.get_lookups()
-        ])
-
-class ModelLookup(object):
-    def __init__(self, model, exclude, foreign_key_lookups, path):
-        self.model = model
-        self.exclude = exclude
-        self.foreign_key_lookups = foreign_key_lookups
-        self.path = path
-    
-    def get_lookups(self):
-        return [
-            Lookup(f, self.foreign_key_lookups.get(f.name)) \
-                for f in self.model._meta.get_fields() \
-                    if f.name not in self.exclude
-        ]
-    
-    def get_prefix(self):
-        if not self.path:
-            return ''
-        return models_to_path(self.path) + '__'
-    
-    def get_html_fields(self):
-        fields = {}
-        for lookup in self.get_lookups():
-            fields.update(lookup.html_fields())
-        return fields
-    
-    def html_form(self):
-        frm = form.BaseForm(self.get_html_fields(), prefix=self.get_prefix())
-        frm.process(None)
-        return frm
 
 def _rd(n):
     return datetime.date.today() + datetime.timedelta(days=n)
@@ -296,33 +174,12 @@ class FilterPreprocessor(object):
 
 
 class QueryFilter(object):
-    def __init__(self, query, exclude_fields=None, ignore_filters=None, foreign_key_lookups=None, related=None):
+    def __init__(self, query, exclude=None, ignore_filters=None):
         self.query = query
         self.model = self.query.model
 
-        # fix any foreign key fields
-        self.exclude_fields = []
-        for field_name in exclude_fields or ():
-            if field_name in self.model._meta.fields:
-                self.exclude_fields.append(field_name)
-            else:
-                self.exclude_fields.append(self.model._meta.rel_fields[field_name])
-        
+        self.exclude = exclude or ()
         self.ignore_filters = ignore_filters or ()
-        self.foreign_key_lookups = foreign_key_lookups or {}
-        
-        # a list of related QueryFilter() objects
-        self.related = related or ()
-    
-    def get_model_lookups(self, path=None):
-        model_lookups = [ModelLookup(self.model, self.exclude_fields, self.foreign_key_lookups, path)]
-        path = path or []
-        path.append(self.model)
-        for related_filter in self.related:
-            model_lookups.extend(
-                related_filter.get_model_lookups(list(path))
-            )
-        return model_lookups
     
     def get_preprocessor(self):
         return FilterPreprocessor()
@@ -365,8 +222,9 @@ class QueryFilter(object):
                 else:
                     column = field_part
             
-            lookups_by_column.setdefault(column, [])
-            lookups_by_column[column].append(Q(**filter_dict))
+            if column not in self.exclude:
+                lookups_by_column.setdefault(column, [])
+                lookups_by_column[column].append(Q(**filter_dict))
         
         return [reduce(operator.or_, lookups) for lookups in lookups_by_column.values()]
     

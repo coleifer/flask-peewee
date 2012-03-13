@@ -8,38 +8,16 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.filters import BooleanSelectField, AjaxModelSelectField, QueryFilter
+from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelConverter
+from flask_peewee.filters import QueryFilter
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField, ForeignKeyField, TextField, Q
 from werkzeug import Headers
 from wtforms import fields, widgets
-from wtfpeewee.orm import model_form, ModelConverter, ModelSelectField
+from wtfpeewee.orm import model_form
 
 
 current_dir = os.path.dirname(__file__)
-
-
-class CustomModelConverter(ModelConverter):
-    def __init__(self, model_admin, additional=None):
-        super(CustomModelConverter, self).__init__(additional)
-        self.model_admin = model_admin
-        self.converters[BooleanField] = self.handle_boolean
-    
-    def handle_boolean(self, model, field, **kwargs):
-        return field.name, BooleanSelectField(**kwargs)
-    
-    def handle_foreign_key(self, model, field, **kwargs):
-        if field.null:
-            kwargs['allow_blank'] = True
-        
-        if field.name in (self.model_admin.foreign_key_lookups or ()):
-            # use a different widget here
-            search = self.model_admin.foreign_key_lookups[field.name]
-            form_field = AjaxModelSelectField(model=field.to, search=search, **kwargs)
-        else:
-            form_field = ModelSelectField(model=field.to, **kwargs)
-        return field.name, form_field
 
 
 class ModelAdmin(object):
@@ -52,9 +30,9 @@ class ModelAdmin(object):
     # a model instance, though in the latter case they will not be sortable
     columns = None
 
-    # filter parameters
+    # filter parameters -- what is available for filtering via the request
+    exclude_filters = None
     ignore_filters = ('ordering', 'page',)
-    related_filters = []
     
     # form parameters
     exclude = None
@@ -71,7 +49,7 @@ class ModelAdmin(object):
         self.admin = admin
         self.model = model
         self.pk_name = self.model._meta.pk_name
-    
+
     def get_url_name(self, name):
         return '%s.%s_%s' % (
             self.admin.blueprint.name,
@@ -95,13 +73,7 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(
-            query,
-            self.exclude,
-            self.ignore_filters,
-            self.foreign_key_lookups,
-            self.related_filters,
-        )
+        return QueryFilter(query, self.ignore_filters)
     
     def get_urls(self):
         return (
