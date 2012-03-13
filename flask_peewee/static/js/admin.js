@@ -23,8 +23,10 @@ var Admin = window.Admin || {};
     /* bind keyboard handler for input */
     $(this.autocomplete_selector).keyup(function(e) {
       var elem = $(this)
-        , target = elem.siblings('ul.result-list');
-      self.ajax_list(elem.data('ajax-url'), elem.val(), target);
+        , target = elem.siblings('ul.result-list')
+        , modal = elem.parents('.modal');
+      
+      self.ajax_list(elem.data('ajax-url'), elem.val(), target, cb, self.get_cb(modal));
     });
     
     /* bind next/prev buttons */
@@ -36,12 +38,12 @@ var Admin = window.Admin || {};
         , page = elem.data('page');
       
       if (!elem.hasClass('disabled')) {
-        self.ajax_list(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target);
+        self.ajax_list(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target, self.get_cb(modal));
       }
     });
   }
   
-  ModelAdminFilter.prototype.ajax_list = function(url, query, target) {
+  ModelAdminFilter.prototype.ajax_list = function(url, query, target, click_cb) {
     var modal = target.parents('.modal')
       , next_btn = modal.find('a.next')
       , prev_btn = modal.find('a.previous')
@@ -72,11 +74,27 @@ var Admin = window.Admin || {};
           , repr = $(this).text()
           , sender = modal.data('sender');
         
-        sender.find('a.fk-lookup').text(repr);
-        sender.find('input[type=hidden]').val(data);
+        click_cb(sender, repr, data);
         target.parents('.modal').modal('hide');
       });
     });
+  }
+  
+  ModelAdminFilter.prototype.single_click = function(sender, repr, data) {
+    sender.find('a.fk-lookup').text(repr);
+    sender.find('input[type=hidden]').val(data);
+  }
+  
+  ModelAdminFilter.prototype.multi_click = function(sender, repr, data) {
+    // ---> define callback for multi <----
+  }
+  
+  ModelAdminFilter.prototype.get_cb = function(modal_elem) {
+    if (modal_elem.hasClass('modal-multi')) {
+      return this.multi_click;
+    } else {
+      return this.single_click;
+    }
   }
   
   ModelAdminFilter.prototype.add_row = function(field_label, field_name, filter_select) {
@@ -118,7 +136,7 @@ var Admin = window.Admin || {};
           , modal_input = modal.find('.fk-lookup-input')
           , target = modal.find('ul.result-list');
         
-        self.ajax_list(modal_input.data('ajax-url'), '', target);
+        self.ajax_list(modal_input.data('ajax-url'), '', target, self.get_cb(modal));
         modal.data('sender', clone);
         modal.modal('show');
       });

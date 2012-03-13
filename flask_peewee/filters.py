@@ -245,4 +245,16 @@ class Lookup(object):
         self.field_type = field_type
         self.data = data
         
+        self.name = '%s__%s' % (self.field.name, self.lookup)
         self.lookup_name = None
+    
+    def get_repr(self, default=''):
+        if self.name in request.args:
+            return self.get_by_pk(request.args.get(self.name))
+        return default
+    
+    def get_by_pk(self, pk):
+        if not isinstance(self.field, ForeignKeyField):
+            raise TypeError('field %s is not a foreign key field' % self.field.name)
+        model_class = self.data
+        return model_class.get(**{model_class._meta.pk_name: pk})

@@ -4,27 +4,30 @@
         {% for lookup in lookup_list %}
           <span class="wrapper">
             {% if lookup.field_type == 'text' %}
-              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="text" />
+              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="text" value="{{ request.args.get(lookup.name, '') }}" />
             {% elif lookup.field_type == 'hidden' %}
-              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
+              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" value="{{ request.args.get(lookup.name, '') }}" />
             {% elif lookup.field_type == 'select' %}
               <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}">
                 {% for value, label in lookup.data %}
-                  <option value="{{ value }}">{{ label }}</option>
+                  <option {% if value|string() in request.args.getlist(lookup.name) %}selected="selected" {% endif %}value="{{ value }}">{{ label }}</option>
                 {% endfor %}
               </select>
             {% elif lookup.field_type == 'select_multiple' %}
               <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" multiple="multiple">
                 {% for value, label in lookup.data %}
-                  <option value="{{ value }}">{{ label }}</option>
+                  <option {% if value|string() in request.args.getlist(lookup.name) %}selected="selected" {% endif %}value="{{ value }}">{{ label }}</option>
                 {% endfor %}
               </select>
             {% elif lookup.field_type == 'foreign_key' %}
-              <a class="btn fk-lookup small" href="#">Select {{ get_model_name(lookup.data) }}...</a>
-              <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
+              <a class="btn fk-lookup small" href="#">{{ lookup.get_repr('Select...') }}</a>
+              <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" value="{{ request.args.get(lookup.name, '') }}" />
             {% elif lookup.field_type == 'foreign_key_multiple' %}
-              <a class="btn fk-lookup-multi small" href="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ lookup.field.name }}&query=">Add {{ get_model_name(lookup.data) }}...</a>
-              <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
+              {% for value in request.args.getlist(lookup.name) %}
+                <a class="btn fk-multi small" href="#">{{ lookup.get_by_pk(value) }}</a>
+                <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" value="{{ value }}" />
+              {% endfor %}
+              <a class="btn fk-lookup-multi small" href="#">Add...</a>
             {% endif %}
           </span>
         {% endfor %}
@@ -32,8 +35,8 @@
     </div>
     {% for field, lookup_list in lookups.items() %}
       {% for lookup in lookup_list %}
-        {% if lookup.field_type == 'foreign_key' %}
-        <div class="modal hide" id="modal-{{ lookup.field.name }}-{{ lookup.lookup }}">
+        {% if lookup.field_type in ('foreign_key', 'foreign_key_multiple') %}
+        <div class="modal {% if lookup.field_type == 'foreign_key_multiple' %}modal-multi {% endif %}hide" id="modal-{{ lookup.field.name }}-{{ lookup.lookup }}">
           <div class="modal-header">
             <a class="close" data-dismiss="modal">x</a>
             <h3>Select a {{ lookup.field.verbose_name }}</h3>
