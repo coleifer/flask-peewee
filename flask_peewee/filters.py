@@ -248,9 +248,22 @@ class Lookup(object):
         self.name = '%s__%s' % (self.field.name, self.lookup)
         self.lookup_name = None
     
+    def get_request(self):
+        if self.lookup == 'in':
+            return request.args.getlist(self.name)
+        else:
+            return request.args.get(self.name)
+    
     def get_repr(self, default=''):
         if self.name in request.args:
-            return self.get_by_pk(request.args.get(self.name))
+            if self.lookup == 'in':
+                pk_list = request.args.getlist(self.name)
+            else:
+                pk_list = [request.args.get(self.name)]
+            return dict([
+                (pk, unicode(self.get_by_pk(pk))) \
+                    for pk in pk_list
+            ])
         return default
     
     def get_by_pk(self, pk):

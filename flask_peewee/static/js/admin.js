@@ -91,7 +91,7 @@ var Admin = window.Admin || {};
       , hidden_elem = sender.find('input.dummy').clone();
     
     /* assign the name */
-    hidden_elem.attr('name', hidden_elem.attr('id'));
+    hidden_elem.attr('name', hidden_elem.attr('id')).removeClass('dummy');
     hidden_elem.val(data);
     
     new_btn.click(function(e) {
@@ -169,19 +169,27 @@ var Admin = window.Admin || {};
     return this.add_row(field_label, field_name, filter_select);
   }
   
-  ModelAdminFilter.prototype.add_filter_request = function(filter, value) {
+  ModelAdminFilter.prototype.add_filter_request = function(filter, value, lookup_type, extra) {
     var pieces = filter.split('__'),
         lookup = pieces.pop(),
         field = pieces.join('__'),
         elem = $('a#filter-' + field);
-    
+
     if (elem) {
       var row = this.add_filter(elem);
       row.find('select').val(lookup);
       
       var input_row = this.display_lookup(row, field, lookup)
         , input_elem = input_row.find('.lookup-input');
-      input_elem.val(value);
+    
+      if (lookup_type == 'foreign_key' || lookup_type == 'foreign_key_multiple') {
+        cb = lookup_type == 'foreign_key' ? this.single_click : this.multi_click;
+        $.each(extra, function(pk, repr) {
+          cb(input_row, repr, pk);
+        });
+      } else {
+        input_elem.val(value);
+      }
     }
   }
   
