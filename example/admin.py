@@ -50,7 +50,6 @@ admin = Admin(app, auth)
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
-    exclude_filter_fields = ('user',)
     related_filters = [QueryFilter(User.select(), exclude_fields=('password',))]
 
 class NoteAdmin(ModelAdmin):
