@@ -150,15 +150,15 @@ Filters
 
 1. Select a user by clicking the "Select..." button
 
-.. image:: fp-admin-filter.jpg
+.. image:: fp-admin-filter.png
 
 2. A modal window with a paginated list and typeahead search appers:
 
-.. image:: fp-admin-modal.jpg
+.. image:: fp-admin-modal.png
 
 3. The button now indicates the selected user, clicking again will reload the dialog:
 
-.. image:: fp-admin-btn.jpg
+.. image:: fp-admin-btn.png
 
 
 Admin ModelForms
@@ -167,7 +167,7 @@ Admin ModelForms
 The interface is the same as with the filters, except the foreign key field is
 replaced by a simple button:
 
-.. image:: fp-admin-btn-form.jpg
+.. image:: fp-admin-btn-form.png
 
 
 Creating admin panels
