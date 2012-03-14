@@ -124,6 +124,52 @@ the :py:meth:`~ModelAdmin.get_query` method:
 
 Now a user will only be able to see and edit their own messages.
 
+Nicer display for Foreign Key fields
+------------------------------------
+
+If you have a model that foreign keys to another, by default the related model
+instances are displayed in a <select> input.
+
+This can be problematic if you have a large list of models to search (causes slow 
+load time, hurts the database).  To mitigate this pain, foreign key lookups can
+be done using a paginated widget that supports type-ahead searching.
+
+Setting this up is very easy:
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        columns = ('user', 'content', 'pub_date',)
+        foreign_key_lookups = {'user': 'username'}
+
+When flask-peewee sees the ``foreign_key_lookups`` it will use the special modal
+window to select instances.  This applies to both filters and model forms:
+
+Filters
+^^^^^^^
+
+1. Select a user by clicking the "Select..." button
+
+.. image:: fp-admin-filter.jpg
+
+2. A modal window with a paginated list and typeahead search appers:
+
+.. image:: fp-admin-modal.jpg
+
+3. The button now indicates the selected user, clicking again will reload the dialog:
+
+.. image:: fp-admin-btn.jpg
+
+
+Admin ModelForms
+^^^^^^^^^^^^^^^^
+
+The interface is the same as with the filters, except the foreign key field is
+replaced by a simple button:
+
+.. image:: fp-admin-btn-form.jpg
+
+
 Creating admin panels
 ---------------------
 
