@@ -50,10 +50,11 @@ admin = Admin(app, auth)
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
-    related_filters = [QueryFilter(User.select(), exclude_fields=('password',))]
+    foreign_key_lookups = {'user': 'username'}
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
+    exclude = ('created_date',)
 
 
 auth.register_admin(admin)

@@ -1,4 +1,4 @@
-{% extends "admin/models/base.html" %}
+{% extends "admin/models/base_forms.html" %}
 
 {% block breadcrumbs %}
  {{ super() }}
@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+  {% include "admin/includes/form_raw_id.html" %}
   {% if form.errors %}
     <div class="alert alert-block alert-error">
       <a class="close" data-dismiss="alert" href="#">×</a>

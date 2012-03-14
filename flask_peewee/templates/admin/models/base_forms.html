@@ -1,0 +1,15 @@
+{% extends "admin/models/base.html" %}
+
+{% block extra_script %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(function() {
+      {% if model_admin.foreign_key_lookups %}
+        {% for field_name, search in model_admin.foreign_key_lookups.items() %}
+          var raw_id = new Admin.ModelAdminRawIDField('{{ field_name }}');
+          raw_id.init({% if instance %}'{{ form.data[field_name]|string }}'{% endif %});
+        {% endfor %}
+      {% endif %}
+    });
+  </script>
+{% endblock %}

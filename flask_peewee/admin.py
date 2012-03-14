@@ -8,37 +8,67 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.filters import BooleanSelectField, QueryFilter
+from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelConverter
+from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup, FIELD_TYPES
 from flask_peewee.serializer import Serializer
-from flask_peewee.utils import get_next, PaginatedQuery, slugify
-from peewee import BooleanField, ForeignKeyField, TextField, Q
+from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
+from peewee import BooleanField, DateTimeField, ForeignKeyField
 from werkzeug import Headers
 from wtforms import fields, widgets
-from wtfpeewee.orm import model_form, ModelConverter, ModelSelectField
+from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
+from wtfpeewee.orm import model_form
 
 
 current_dir = os.path.dirname(__file__)
 
 
-class CustomModelConverter(ModelConverter):
-    def __init__(self, model_admin, additional=None):
-        super(CustomModelConverter, self).__init__(additional)
+class FieldValueMap(object):
+    def __init__(self, model_admin):
         self.model_admin = model_admin
-        self.converters[BooleanField] = self.handle_boolean
+
+    def get_conversions(self):
+        return {
+            (BooleanField, 'eq'): self.handle_boolean,
+            (DateTimeField, 'today'): self.handle_dummy,
+            (DateTimeField, 'yesterday'): self.handle_dummy,
+            (DateTimeField, 'this_week'): self.handle_dummy,
+            (ForeignKeyField, 'eq'): self.handle_foreign_key,
+            (ForeignKeyField, 'in'): self.handle_foreign_key_multi,
+        }
     
-    def handle_boolean(self, model, field, **kwargs):
-        return field.name, BooleanSelectField(**kwargs)
-    
-    def handle_foreign_key(self, model, field, **kwargs):
-        if field.null:
-            kwargs['allow_blank'] = True
+    def convert(self, field, lookup, lookup_name, prefix):
+        conversions = self.get_conversions()
+        key = (type(field), lookup)
+        lookup_obj = conversions.get(key, self.handle_default)(field, lookup, prefix)
         
-        if field.name in (self.model_admin.raw_id_fields or ()):
-            # use a different widget here
-            form_field = ModelSelectField(model=field.to, **kwargs)
-        else:
-            form_field = ModelSelectField(model=field.to, **kwargs)
-        return field.name, form_field
+        # wat
+        lookup_obj.lookup_name = lookup_name
+        lookup_obj.css_class = 'span2 input-small lookup-input'
+        return lookup_obj
+    
+    def handle_default(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'text', prefix=prefix)
+    
+    def handle_dummy(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'hidden', prefix=prefix)
+    
+    def handle_boolean(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'select', [('1', 'True'), ('', 'False')], prefix=prefix)
+    
+    def fk_to_list(self, field):
+        return [(obj.get_pk(), unicode(obj)) for obj in field.to.select()]
+    
+    def handle_foreign_key(self, field, lookup, prefix):
+        _fkl = self.model_admin.foreign_key_lookups or {}
+        if field.name not in _fkl:
+            return Lookup(field, lookup, 'select', self.fk_to_list(field), prefix=prefix)
+        return Lookup(field, lookup, 'foreign_key', field.to, prefix=prefix)
+    
+    def handle_foreign_key_multi(self, field, lookup, prefix):
+        _fkl = self.model_admin.foreign_key_lookups or {}
+        if field.name not in _fkl:
+            return Lookup(field, lookup, 'select_multiple', self.fk_to_list(field), prefix=prefix)
+        return Lookup(field, lookup, 'foreign_key_multiple', field.to, prefix=prefix)
 
 
 class ModelAdmin(object):
@@ -46,13 +76,24 @@ class ModelAdmin(object):
     ModelAdmin provides create/edit/delete functionality for a peewee Model.
     """
     paginate_by = 20
+    filter_paginate_by = 15
+    
+    # columns to display in the list index - can be field names or callables on
+    # a model instance, though in the latter case they will not be sortable
     columns = None
 
-    exclude_filter_fields = None
+    # filter parameters -- what is available for filtering via the request
+    exclude_filters = None
     ignore_filters = ('ordering', 'page',)
-    raw_id_fields = None
-    related_filters = []
     
+    # form parameters, lists of fields
+    exclude = None
+    fields = None
+    
+    # foreign_key_field --> related field to search on, e.g. {'user': 'username'}
+    foreign_key_lookups = None
+    
+    # delete behavior
     delete_collect_objects = True
     delete_recursive = True
     
@@ -60,7 +101,7 @@ class ModelAdmin(object):
         self.admin = admin
         self.model = model
         self.pk_name = self.model._meta.pk_name
-    
+
     def get_url_name(self, name):
         return '%s.%s_%s' % (
             self.admin.blueprint.name,
@@ -69,7 +110,7 @@ class ModelAdmin(object):
         )
     
     def get_form(self):
-        return model_form(self.model, converter=CustomModelConverter(self))
+        return model_form(self.model, only=self.fields, exclude=self.exclude, converter=CustomModelConverter(self))
     
     def get_add_form(self):
         return self.get_form()
@@ -84,12 +125,7 @@ class ModelAdmin(object):
         return self.get_query().get(**{self.pk_name: pk})
     
     def get_query_filter(self, query):
-        return QueryFilter(query,
-            self.exclude_filter_fields,
-            self.ignore_filters,
-            self.raw_id_fields,
-            self.related_filters,
-        )
+        return QueryFilter(query, self.ignore_filters)
     
     def get_urls(self):
         return (
@@ -98,6 +134,7 @@ class ModelAdmin(object):
             ('/delete/', self.delete),
             ('/export/', self.export),
             ('/<pk>/', self.edit),
+            ('/_ajax/', self.ajax_list),
         )
     
     def get_columns(self):
@@ -111,6 +148,35 @@ class ModelAdmin(object):
     
     def get_admin_name(self):
         return slugify(self.model.__name__)
+    
+    def get_lookups(self, prefix=''):
+        field_value_map = FieldValueMap(self)
+        
+        lookups = {}
+        active_lookups = []
+        
+        for field in self.model._meta.get_fields():
+            if self.exclude_filters and field.name in self.exclude_filters:
+                continue
+            
+            for lookup, lookup_name in lookups_for_field(field):
+                key = (prefix, field)
+                lookups.setdefault(key, [])
+                lookup_obj = field_value_map.convert(field, lookup, lookup_name, prefix)
+                lookups[key].append(lookup_obj)
+                
+                if lookup_obj.name in request.args:
+                    active_lookups.append(lookup_obj)
+            
+            if isinstance(field, ForeignKeyField):
+                rel_prefix = '%s%s__' % (prefix, field.name)
+                rel_model = field.to
+                if rel_model in self.admin:
+                    rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix)
+                    lookups.update(rel_lookups)
+                    active_lookups.extend(rel_active)
+        
+        return lookups, active_lookups
     
     def save_model(self, instance, form, adding=False):
         form.populate_obj(instance)
@@ -146,11 +212,15 @@ class ModelAdmin(object):
             else:
                 return redirect(url_for(self.get_url_name('export'), id__in=id_list))
         
+        lookups, active_lookups = self.get_lookups()
+        
         return render_template('admin/models/index.html',
             model_admin=self,
             query=pq,
             ordering=ordering,
             query_filter=query_filter,
+            lookups=lookups,
+            active_lookups=active_lookups,
         )
     
     def dispatch_save_redirect(self, instance):
@@ -269,13 +339,49 @@ class ModelAdmin(object):
             export = Export(filtered_query, related, raw_fields)
             return export.json_response()
         
+        lookups, active_lookups = self.get_lookups()
+        
         return render_template('admin/models/export.html',
             model_admin=self,
             model=filtered_query.model,
             query=filtered_query,
             query_filter=query_filter,
             related_fields=related,
+            lookups=lookups,
+            active_lookups=active_lookups,
         )
+    
+    def ajax_list(self):
+        field = request.args.get('field')
+        prev_page = 0
+        next_page = 0
+        
+        try:
+            models = path_to_models(self.model, field)
+        except AttributeError:
+            data = []
+        else:
+            rel_model = models.pop()
+            rel_field = self.foreign_key_lookups[field]
+            
+            query = rel_model.select().where(**{
+                '%s__icontains'% rel_field: request.args.get('query', ''),
+            }).order_by(rel_field)
+            
+            pq = PaginatedQuery(query, self.filter_paginate_by)
+            current_page = pq.get_page()
+            if current_page > 1:
+                prev_page = current_page - 1
+            if current_page < pq.get_pages():
+                next_page = current_page + 1
+            
+            data = [
+                {'id': obj.get_pk(), 'repr': unicode(obj)} \
+                    for obj in pq.get_list()
+            ]
+        
+        json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
+        return Response(json_data, mimetype='application/json')
 
 
 class AdminPanel(object):
@@ -405,6 +511,12 @@ class Admin(object):
         return (
             ('/', self.auth_required(self.index)),
         )
+    
+    def __contains__(self, item):
+        return item in self._registry
+    
+    def __getitem__(self, item):
+        return self._registry[item]
     
     def register(self, model, admin_class=ModelAdmin):
         model_admin = admin_class(self, model)
