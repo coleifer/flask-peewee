@@ -24,7 +24,7 @@
               <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
             {% elif lookup.field_type == 'foreign_key_multiple' %}
               <input class="dummy" id="{{ lookup.name }}" type="hidden" value="" />
-              <a class="btn fk-lookup small" href="#">Add...</a>
+              <a class="btn btn-primary fk-lookup small" href="#">Add...</a>
             {% endif %}
           </span>
         {% endfor %}
@@ -44,8 +44,8 @@
             </ul>
           </div>
           <div class="modal-footer">
-            <a class="btn disabled next" href="#">Next</a>
             <a class="btn disabled previous" href="#">Previous</a>
+            <a class="btn disabled next" href="#">Next</a>
           </div>
         </div>
         {% endif %}

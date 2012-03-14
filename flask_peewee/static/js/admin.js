@@ -87,7 +87,7 @@ var Admin = window.Admin || {};
   
   ModelAdminFilter.prototype.multi_click = function(sender, repr, data) {
     var add_btn = sender.find('a.fk-lookup')
-      , new_btn = $('<a class="btn fk-multi">'+repr+'</a>')
+      , new_btn = $('<a class="btn fk-multi" title="click to remove">'+repr+'</a>')
       , hidden_elem = sender.find('input.dummy').clone();
     
     /* assign the name */
@@ -117,7 +117,7 @@ var Admin = window.Admin || {};
     var self = this,
         row = [
           , '<div class="clearfix control-group">'
-          , '<a class="btn btn-close span2" href="#">'
+          , '<a class="btn btn-close btn-danger" href="#" title="click to remove">'
           , field_label
           , '</a> </div>'
         ].join('\n'),

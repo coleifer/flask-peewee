@@ -43,7 +43,7 @@ class FieldValueMap(object):
         
         # wat
         lookup_obj.lookup_name = lookup_name
-        lookup_obj.css_class = 'span5 input-small lookup-input'
+        lookup_obj.css_class = 'span2 input-small lookup-input'
         return lookup_obj
     
     def handle_default(self, field, lookup):

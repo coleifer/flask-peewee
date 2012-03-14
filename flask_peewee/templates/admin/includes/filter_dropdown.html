@@ -4,7 +4,7 @@
         {# for model_lookup in query_filter.get_model_lookups() #}
           {% for field in model_admin.model._meta.get_fields() %}
           <li><a class="field-filter" id="filter-{{ field.name }}" href="#">{{ field.name }}</a>
-            <select class="lookup-select span4 hidden">
+            <select class="lookup-select span3 hidden">
               <option value="">---------------</option>
               {% for lookup in lookups[field] %}
                 <option value="{{ lookup.lookup }}">{{ lookup.lookup_name }}</option>
