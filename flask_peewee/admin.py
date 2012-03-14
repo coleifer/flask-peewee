@@ -49,6 +49,7 @@ class ModelAdmin(object):
     columns = None
 
     exclude_filter_fields = None
+    exclude_form_fields = None
     ignore_filters = ('ordering', 'page',)
     raw_id_fields = None
     related_filters = []
@@ -69,7 +70,7 @@ class ModelAdmin(object):
         )
     
     def get_form(self):
-        return model_form(self.model, converter=CustomModelConverter(self))
+        return model_form(self.model, exclude=self.exclude_form_fields, converter=CustomModelConverter(self))
     
     def get_add_form(self):
         return self.get_form()
