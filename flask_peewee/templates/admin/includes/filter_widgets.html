@@ -1,6 +1,6 @@
   <div class="well" id="filter-wrapper" style="display: none;">
     <div class="hidden" id="lookup-fields">
-      {% for field, lookup_list in lookups.items() %}
+      {% for (prefix, field), lookup_list in lookups.items() %}
         {% for lookup in lookup_list %}
           <span class="wrapper">
             {% if lookup.field_type == 'text' %}
@@ -30,7 +30,7 @@
         {% endfor %}
       {% endfor %}
     </div>
-    {% for field, lookup_list in lookups.items() %}
+    {% for (prefix, field), lookup_list in lookups.items() %}
       {% for lookup in lookup_list %}
         {% if lookup.field_type in ('foreign_key', 'foreign_key_multiple') %}
         <div class="modal {% if lookup.field_type == 'foreign_key_multiple' %}modal-multi {% endif %}hide" id="modal-{{ lookup.field.name }}-{{ lookup.lookup }}">

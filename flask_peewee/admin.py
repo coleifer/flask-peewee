@@ -11,7 +11,7 @@ from flask import Blueprint, render_template, abort, request, url_for, redirect,
 from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelConverter
 from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup, FIELD_TYPES
 from flask_peewee.serializer import Serializer
-from flask_peewee.utils import get_next, PaginatedQuery, slugify
+from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
 from peewee import BooleanField, DateTimeField, ForeignKeyField
 from werkzeug import Headers
 from wtforms import fields, widgets
@@ -36,39 +36,39 @@ class FieldValueMap(object):
             (ForeignKeyField, 'in'): self.handle_foreign_key_multi,
         }
     
-    def convert(self, field, lookup, lookup_name):
+    def convert(self, field, lookup, lookup_name, prefix):
         conversions = self.get_conversions()
         key = (type(field), lookup)
-        lookup_obj = conversions.get(key, self.handle_default)(field, lookup)
+        lookup_obj = conversions.get(key, self.handle_default)(field, lookup, prefix)
         
         # wat
         lookup_obj.lookup_name = lookup_name
         lookup_obj.css_class = 'span2 input-small lookup-input'
         return lookup_obj
     
-    def handle_default(self, field, lookup):
-        return Lookup(field, lookup, 'text')
+    def handle_default(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'text', prefix=prefix)
     
-    def handle_dummy(self, field, lookup):
-        return Lookup(field, lookup, 'hidden')
+    def handle_dummy(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'hidden', prefix=prefix)
     
-    def handle_boolean(self, field, lookup):
-        return Lookup(field, lookup, 'select', [('1', 'True'), ('', 'False')])
+    def handle_boolean(self, field, lookup, prefix):
+        return Lookup(field, lookup, 'select', [('1', 'True'), ('', 'False')], prefix=prefix)
     
     def fk_to_list(self, field):
         return [(obj.get_pk(), unicode(obj)) for obj in field.to.select()]
     
-    def handle_foreign_key(self, field, lookup):
+    def handle_foreign_key(self, field, lookup, prefix):
         _fkl = self.model_admin.foreign_key_lookups or {}
         if field.name not in _fkl:
-            return Lookup(field, lookup, 'select', self.fk_to_list(field))
-        return Lookup(field, lookup, 'foreign_key', field.to)
+            return Lookup(field, lookup, 'select', self.fk_to_list(field), prefix=prefix)
+        return Lookup(field, lookup, 'foreign_key', field.to, prefix=prefix)
     
-    def handle_foreign_key_multi(self, field, lookup):
+    def handle_foreign_key_multi(self, field, lookup, prefix):
         _fkl = self.model_admin.foreign_key_lookups or {}
         if field.name not in _fkl:
-            return Lookup(field, lookup, 'select_multiple', self.fk_to_list(field))
-        return Lookup(field, lookup, 'foreign_key_multiple', field.to)
+            return Lookup(field, lookup, 'select_multiple', self.fk_to_list(field), prefix=prefix)
+        return Lookup(field, lookup, 'foreign_key_multiple', field.to, prefix=prefix)
 
 
 class ModelAdmin(object):
@@ -76,6 +76,7 @@ class ModelAdmin(object):
     ModelAdmin provides create/edit/delete functionality for a peewee Model.
     """
     paginate_by = 20
+    filter_paginate_by = 15
     
     # columns to display in the list index - can be field names or callables on
     # a model instance, though in the latter case they will not be sortable
@@ -148,7 +149,7 @@ class ModelAdmin(object):
     def get_admin_name(self):
         return slugify(self.model.__name__)
     
-    def get_lookups(self):
+    def get_lookups(self, prefix=''):
         field_value_map = FieldValueMap(self)
         
         lookups = {}
@@ -159,12 +160,21 @@ class ModelAdmin(object):
                 continue
             
             for lookup, lookup_name in lookups_for_field(field):
-                lookups.setdefault(field, [])
-                lookup_obj = field_value_map.convert(field, lookup, lookup_name)
-                lookups[field].append(lookup_obj)
+                key = (prefix, field)
+                lookups.setdefault(key, [])
+                lookup_obj = field_value_map.convert(field, lookup, lookup_name, prefix)
+                lookups[key].append(lookup_obj)
                 
                 if lookup_obj.name in request.args:
                     active_lookups.append(lookup_obj)
+            
+            if isinstance(field, ForeignKeyField):
+                rel_prefix = '%s%s__' % (prefix, field.name)
+                rel_model = field.to
+                if rel_model in self.admin:
+                    rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix)
+                    lookups.update(rel_lookups)
+                    active_lookups.extend(rel_active)
         
         return lookups, active_lookups
     
@@ -345,28 +355,30 @@ class ModelAdmin(object):
         field = request.args.get('field')
         prev_page = 0
         next_page = 0
-        if field in self.model._meta.fields:
-            rel_model = self.model._meta.fields[field].to
+        
+        try:
+            models = path_to_models(self.model, field)
+        except AttributeError:
+            data = []
+        else:
+            rel_model = models.pop()
             rel_field = self.foreign_key_lookups[field]
             
             query = rel_model.select().where(**{
                 '%s__icontains'% rel_field: request.args.get('query', ''),
             }).order_by(rel_field)
             
-            pq = PaginatedQuery(query, 10)
+            pq = PaginatedQuery(query, self.filter_paginate_by)
             current_page = pq.get_page()
             if current_page > 1:
                 prev_page = current_page - 1
             if current_page < pq.get_pages():
                 next_page = current_page + 1
             
-            print prev_page, next_page
             data = [
                 {'id': obj.get_pk(), 'repr': unicode(obj)} \
                     for obj in pq.get_list()
             ]
-        else:
-            data = []
         
         json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
@@ -499,6 +511,12 @@ class Admin(object):
         return (
             ('/', self.auth_required(self.index)),
         )
+    
+    def __contains__(self, item):
+        return item in self._registry
+    
+    def __getitem__(self, item):
+        return self._registry[item]
     
     def register(self, model, admin_class=ModelAdmin):
         model_admin = admin_class(self, model)

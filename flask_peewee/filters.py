@@ -239,13 +239,14 @@ class QueryFilter(object):
 FIELD_TYPES = ('text', 'select', 'select_multiple', 'hidden', 'foreign_key', 'foreign_key_multiple')
 
 class Lookup(object):
-    def __init__(self, field, lookup, field_type, data=None):
+    def __init__(self, field, lookup, field_type, data=None, prefix=''):
         self.field = field
         self.lookup = lookup
         self.field_type = field_type
         self.data = data
+        self.prefix = prefix
         
-        self.name = '%s__%s' % (self.field.name, self.lookup)
+        self.name = '%s%s__%s' % (self.prefix, self.field.name, self.lookup)
         self.lookup_name = None
     
     def get_request(self):
