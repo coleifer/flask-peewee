@@ -1,24 +1,14 @@
 var Admin = window.Admin || {};
 
 (function(A, $) {
-  var ModelAdminFilter = function() {
-    this.wrapper = '#filter-wrapper';
-    this.add_selector = 'a.field-filter';
-    this.lookups_wrapper = '#lookup-fields';
+
+  /* paginated list of models displayed in a modal window */
+  function ModelAdminAjaxList() {
     this.autocomplete_selector = '.fk-lookup-input';
-  };
+  }
   
-  ModelAdminFilter.prototype.init = function() {
+  ModelAdminAjaxList.prototype.init = function(click_cb_factory) {
     var self = this;
-    
-    this.filter_list = $(this.wrapper + ' form div.filter-list');
-    this.lookups_elem = $(this.lookups_wrapper);
-    
-    /* bind the "add filter" click behavior */
-    $(this.add_selector).click(function(e) {
-      e.preventDefault();
-      self.add_filter($(this));
-    });
     
     /* bind keyboard handler for input */
     $(this.autocomplete_selector).keyup(function(e) {
@@ -26,7 +16,7 @@ var Admin = window.Admin || {};
         , target = elem.siblings('ul.result-list')
         , modal = elem.parents('.modal');
       
-      self.ajax_list(elem.data('ajax-url'), elem.val(), target, self.get_cb(modal));
+      self.show(elem.data('ajax-url'), elem.val(), target, click_cb_factory(modal));
     });
     
     /* bind next/prev buttons */
@@ -38,12 +28,12 @@ var Admin = window.Admin || {};
         , page = elem.data('page');
       
       if (!elem.hasClass('disabled')) {
-        self.ajax_list(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target, self.get_cb(modal));
+        self.show(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target, click_cb_factory(modal));
       }
     });
   }
   
-  ModelAdminFilter.prototype.ajax_list = function(url, query, target, click_cb) {
+  ModelAdminAjaxList.prototype.show = function(url, query, target, click_cb) {
     var modal = target.parents('.modal')
       , next_btn = modal.find('a.next')
       , prev_btn = modal.find('a.previous')
@@ -78,6 +68,63 @@ var Admin = window.Admin || {};
         target.parents('.modal').modal('hide');
       });
     });
+  }
+
+  var ModelAdminRawIDField = function(field_name) {
+    this.field_name = field_name;
+    this.selector = 'input#'+this.field_name;
+  }
+  
+  ModelAdminRawIDField.prototype.init = function(repr) {
+    var self = this
+      , repr = repr || 'Select...'
+      , hidden_elem = $(this.selector)
+      , new_elem = $('<a class="btn btn-primary" href="#">'+repr+'</a>');
+    
+    /* bind the ajax list */
+    this.ajax_list = new ModelAdminAjaxList();
+    this.ajax_list.init(function(modal) {return self.on_click});
+    
+    new_elem.click(function(e) {
+      e.preventDefault();
+      var modal = $('#modal-' + self.field_name)
+        , modal_input = modal.find('.fk-lookup-input')
+        , target = modal.find('ul.result-list');
+      
+      self.ajax_list.show(modal_input.data('ajax-url'), '', target, self.on_click);
+      modal.data('sender', $(this));
+      modal.modal('show');
+    });
+    hidden_elem.after(new_elem);
+  }
+  
+  ModelAdminRawIDField.prototype.on_click = function(sender, repr, data) {
+    sender.text(repr);
+    sender.parent().find('input[type="hidden"]').val(data);
+  }
+
+  /* filter class */
+  var ModelAdminFilter = function() {
+    this.wrapper = '#filter-wrapper';
+    this.add_selector = 'a.field-filter';
+    this.lookups_wrapper = '#lookup-fields';
+  }
+  
+  ModelAdminFilter.prototype.init = function() {
+    var self = this;
+    
+    this.filter_list = $(this.wrapper + ' form div.filter-list');
+    this.lookups_elem = $(this.lookups_wrapper);
+    
+    /* bind the "add filter" click behavior */
+    $(this.add_selector).click(function(e) {
+      e.preventDefault();
+      self.add_filter($(this));
+    });
+    
+    /* bind the ajax list */
+    this.ajax_list = new ModelAdminAjaxList();
+    this.ajax_list.init(function(modal) {return self.get_cb(modal)});
   }
   
   ModelAdminFilter.prototype.single_click = function(sender, repr, data) {
@@ -152,7 +199,7 @@ var Admin = window.Admin || {};
           , modal_input = modal.find('.fk-lookup-input')
           , target = modal.find('ul.result-list');
         
-        self.ajax_list(modal_input.data('ajax-url'), '', target, self.get_cb(modal));
+        self.ajax_list.show(modal_input.data('ajax-url'), '', target, self.get_cb(modal));
         modal.data('sender', clone);
         modal.modal('show');
       });
@@ -161,6 +208,7 @@ var Admin = window.Admin || {};
     }
   }
   
+  /* add a filter of a given type */
   ModelAdminFilter.prototype.add_filter = function(elem) {
     var field_label = elem.text(),
         field_name = elem.attr('id').replace(/^filter\-/, ''),
@@ -169,6 +217,7 @@ var Admin = window.Admin || {};
     return this.add_row(field_label, field_name, filter_select);
   }
   
+  /* pull request data and simulate adding a filter */
   ModelAdminFilter.prototype.add_filter_request = function(filter, value, lookup_type, extra) {
     var pieces = filter.split('__'),
         lookup = pieces.pop(),
@@ -193,12 +242,15 @@ var Admin = window.Admin || {};
     }
   }
   
+  /* export */
+  A.ModelAdminRawIDField = ModelAdminRawIDField;
   A.ModelAdminFilter = ModelAdminFilter;
   
+  /* bind a simple listener */
   A.index_submit = function(action) {
     $('form#model-list input[name=action]').val(action);
     $('form#model-list').submit();
-  };
+  }
 })(Admin, jQuery);
 
 jQuery(function() {

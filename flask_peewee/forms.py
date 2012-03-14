@@ -1,6 +1,7 @@
 from peewee import BooleanField, ForeignKeyField
 from wtforms import fields, form, widgets
-from wtfpeewee.orm import ModelConverter, ModelSelectField
+from wtfpeewee.fields import ModelSelectField, ModelHiddenField
+from wtfpeewee.orm import ModelConverter
 
 
 class BooleanSelectField(fields.SelectFieldBase):
@@ -38,9 +39,7 @@ class CustomModelConverter(ModelConverter):
             kwargs['allow_blank'] = True
         
         if field.name in (self.model_admin.foreign_key_lookups or ()):
-            # use a different widget here
-            search = self.model_admin.foreign_key_lookups[field.name]
-            form_field = ModelSelectField(model=field.to, **kwargs)
+            form_field = ModelHiddenField(model=field.to, **kwargs)
         else:
             form_field = ModelSelectField(model=field.to, **kwargs)
         return field.name, form_field
