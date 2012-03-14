@@ -3,7 +3,7 @@
       <ul class="dropdown-menu" id="filters">
         {# for model_lookup in query_filter.get_model_lookups() #}
           {% for prefix, field in lookups.keys()|sort %}
-          <li><a class="field-filter" id="filter-{{ prefix }}{{ field.name }}" href="#">{{ field.name }}</a>
+          <li><a class="field-filter" id="filter-{{ prefix }}{{ field.name }}" href="#">{% if prefix %}{{ ' / '.join(prefix.split('__')) }} {% endif %}{{ field.name }}</a>
             <select class="lookup-select span3 hidden">
               <option value="">---------------</option>
               {% for lookup in lookups[(prefix, field)] %}
