@@ -22,23 +22,23 @@ def object_list(template_name, qr, var_name='object_list', **kwargs):
 
 class PaginatedQuery(object):
     page_var = 'page'
-    
+
     def __init__(self, query_or_model, paginate_by):
         self.paginate_by = paginate_by
-        
+
         if isinstance(query_or_model, SelectQuery):
             self.query = query_or_model
             self.model = self.query.model
         else:
             self.model = query_or_model
             self.query = self.model.select()
-    
+
     def get_page(self):
         return int(request.args.get(self.page_var) or 1)
-    
+
     def get_pages(self):
         return math.ceil(float(self.query.count()) / self.paginate_by)
-    
+
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
 
@@ -65,14 +65,14 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
         ('rel__rel_field_a', rel_field_a_obj),
         # ...
     ]
-    
+
     fields & exclude parameters: {
         Model: [f1, f2],
         RelModel: [rf1, ...],
     }
-    
+
     this fails though when there are multiple foreign keys to the same model
-    
+
     perhaps better:
     [f1, f2, {f3: [rf1, rf2]}]
     """
@@ -80,12 +80,12 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
         model_class = type(model)
     else:
         model_class = model
-    
+
     lookups = []
     models = [model]
-    
+
     accum = accum or []
-    
+
     for field in model._meta.get_fields():
         if isinstance(field, ForeignKeyField):
             rel_model = field.to
@@ -97,7 +97,7 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
                     rel_obj = None
             else:
                 rel_obj = rel_model
-            
+
             if rel_obj and (not fields or rel_model in fields):
                 rel_lookups, rel_models = get_string_lookups_for_model(
                     rel_obj,
@@ -108,14 +108,14 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
                 )
                 lookups.extend(rel_lookups)
                 models.extend(rel_models)
-        
+
         if include_foreign_keys or not isinstance(field, ForeignKeyField):
             if (not fields or field.name in fields.get(model_class, ())) and \
                (not exclude or (exclude and field.name not in exclude.get(model_class, ()))):
                 lookups.append(
                     ('__'.join(accum + [field.name]), getattr(model, field.name))
                 )
-    
+
     return lookups, models
 
 def get_dictionary_lookups_for_model(model, include_foreign_keys=False, fields=None, exclude=None):
@@ -148,7 +148,7 @@ def convert_string_lookups_to_dict(lookups):
         for piece in lookups[:-1]:
             if not isinstance(curr.get(piece, None), dict):
                 curr[piece] = {}
-            
+
             curr = curr[piece]
         curr[lookups[-1]] = value
     return field_dict
