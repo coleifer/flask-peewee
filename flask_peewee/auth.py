@@ -30,20 +30,20 @@ class Auth(object):
                  clear_session=False, default_next_url='/'):
         self.app = app
         self.db = db
-        
+
         self.User = user_model or self.get_user_model()
-        
+
         self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
-        
+
         self.clear_session = clear_session
         self.default_next_url = default_next_url
-        
+
         self.setup()
-    
+
     def get_context_user(self):
         return {'user': self.get_logged_in_user()}
-    
+
     def get_user_model(self):
         class User(self.db.Model, BaseUser):
             username = CharField()
@@ -51,37 +51,37 @@ class Auth(object):
             email = CharField()
             active = BooleanField()
             admin = BooleanField()
-            
+
             def __unicode__(self):
                 return self.username
-        
+
         return User
-    
+
     def get_model_admin(self, model_admin=None):
         if model_admin is None:
             from flask_peewee.admin import ModelAdmin
             model_admin = ModelAdmin
-        
+
         class UserAdmin(model_admin):
             columns = ['username', 'email', 'active', 'admin']
-            
+
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
-                
+
                 user = super(UserAdmin, self).save_model(instance, form, adding)
-                
+
                 if orig_password != form.password.data:
                     user.set_password(form.password.data)
                     user.save()
-                
+
                 return user
-                
-        
+
+
         return UserAdmin
-    
+
     def register_admin(self, admin_site, model_admin=None):
         admin_site.register(self.User, self.get_model_admin(model_admin))
-    
+
     def get_blueprint(self, blueprint_name):
         return Blueprint(
             blueprint_name,
@@ -89,28 +89,28 @@ class Auth(object):
             static_folder=os.path.join(current_dir, 'static'),
             template_folder=os.path.join(current_dir, 'templates'),
         )
-    
+
     def get_urls(self):
         return (
             ('/logout/', self.logout),
             ('/login/', self.login),
         )
-    
+
     def get_login_form(self):
         return LoginForm
-    
+
     def login_required(self, func):
         @functools.wraps(func)
         def inner(*args, **kwargs):
             user = self.get_logged_in_user()
-            
+
             if not user:
                 login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
                 return redirect(login_url)
-            
+
             return func(*args, **kwargs)
         return inner
-    
+
     def authenticate(self, username, password):
         active = self.User.select().where(active=True)
         try:
@@ -122,16 +122,16 @@ class Auth(object):
         else:
             if not user.check_password(password):
                 return False
-        
+
         return user
-    
+
     def login_user(self, user):
         session['logged_in'] = True
         session['user_pk'] = user.get_pk()
         session.permanent = True
         g.user = user
         flash('You are logged in as %s' % user.username, 'success')
-    
+
     def logout_user(self, user):
         if self.clear_session:
             session.clear()
@@ -139,21 +139,21 @@ class Auth(object):
             session.pop('logged_in', None)
         g.user = None
         flash('You are now logged out', 'success')
-    
+
     def get_logged_in_user(self):
         if session.get('logged_in'):
             if getattr(g, 'user', None):
                 return g.user
-            
+
             try:
                 return self.User.select().where(active=True).get(id=session.get('user_pk'))
             except self.User.DoesNotExist:
                 pass
-    
+
     def login(self):
         error = None
         Form = self.get_login_form()
-        
+
         if request.method == 'POST':
             form = Form(request.form)
             if form.validate():
@@ -171,7 +171,7 @@ class Auth(object):
                     flash('Incorrect username or password')
         else:
             form = Form()
-        
+
         return render_template('auth/login.html', error=error, form=form)
 
     def logout(self):
@@ -180,23 +180,23 @@ class Auth(object):
             request.args.get('next') or \
             self.default_next_url
         )
-    
+
     def configure_routes(self):
         for url, callback in self.get_urls():
             self.blueprint.route(url, methods=['GET', 'POST'])(callback)
-    
+
     def register_blueprint(self, **kwargs):
         self.app.register_blueprint(self.blueprint, url_prefix=self.url_prefix, **kwargs)
-    
+
     def load_user(self):
         g.user = self.get_logged_in_user()
-    
+
     def register_handlers(self):
         self.app.before_request(self.load_user)
-    
+
     def register_context_processors(self):
         self.app.template_context_processors[None].append(self.get_context_user)
-    
+
     def setup(self):
         self.configure_routes()
         self.register_blueprint()
