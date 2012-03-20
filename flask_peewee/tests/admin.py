@@ -627,10 +627,10 @@ class AdminFilterTestCase(BaseAdminTestCase):
         """
         Pass in something like (field_name, prefix, models)
         """
-        flattened = []
-        for model_lookup in lookups:
-            flattened.extend(model_lookup.get_lookups())
-        self.assertEqual(flattened, expected)
+        cleaned = {}
+        for k, lookup_list in lookups.items():
+            cleaned[k] = [x.lookup for x in lookup_list]
+        self.assertEqual(cleaned, expected)
     
     def test_lookups(self):
         users = self.create_users()
@@ -639,58 +639,56 @@ class AdminFilterTestCase(BaseAdminTestCase):
             self.login(c)
 
             resp = c.get('/admin/amodel/')
-            query_filter = self.get_context('query_filter')
-            model_lookups = query_filter.get_model_lookups()
-            self.assertLookups(model_lookups, [
-                Lookup(AModel.id),
-                Lookup(AModel.a_field),
-            ])
-            
+            lookups = self.get_context('lookups')
+            self.assertLookups(lookups, {
+                ('', AModel.a_field): ['eq', 'icontains', 'istartswith'],
+                ('', AModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+            })
+
             resp = c.get('/admin/bmodel/')
-            query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_model_lookups()
-            self.assertLookups(lookups, [
-                Lookup(BModel.id),
-                Lookup(BModel.a),
-                Lookup(BModel.b_field),
-                Lookup(AModel.id),
-                Lookup(AModel.a_field),
-            ])
-            
+            lookups = self.get_context('lookups')
+            self.assertLookups(lookups, {
+                ('', BModel.a): ['eq', 'in'],
+                ('', BModel.b_field): ['eq', 'icontains', 'istartswith'],
+                ('', BModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+
+                ('a__', AModel.a_field): ['eq', 'icontains', 'istartswith'],
+                ('a__', AModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+            })
+
             resp = c.get('/admin/cmodel/')
-            query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_model_lookups()
-            self.assertLookups(lookups, [
-                Lookup(CModel.id),
-                Lookup(CModel.b),
-                Lookup(CModel.c_field),
-                Lookup(BModel.id),
-                Lookup(BModel.a),
-                Lookup(BModel.b_field),
-                Lookup(AModel.id),
-                Lookup(AModel.a_field),
-                Lookup(BDetails.id),
-                Lookup(BDetails.b),
-            ])
+            lookups = self.get_context('lookups')
+            self.assertLookups(lookups, {
+                ('', CModel.b): ['eq', 'in'],
+                ('', CModel.c_field): ['eq', 'icontains', 'istartswith'],
+                ('', CModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+                
+                ('b__', BModel.a): ['eq', 'in'],
+                ('b__', BModel.b_field): ['eq', 'icontains', 'istartswith'],
+                ('b__', BModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+
+                ('b__a__', AModel.a_field): ['eq', 'icontains', 'istartswith'],
+                ('b__a__', AModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+            })
             
             resp = c.get('/admin/dmodel/')
-            query_filter = self.get_context('query_filter')
-            lookups = query_filter.get_model_lookups()
-            self.assertLookups(lookups, [
-                Lookup(DModel.id),
-                Lookup(DModel.c),
-                Lookup(DModel.d_field),
-                Lookup(CModel.id),
-                Lookup(CModel.b),
-                Lookup(CModel.c_field),
-                Lookup(BModel.id),
-                Lookup(BModel.a),
-                Lookup(BModel.b_field),
-                Lookup(AModel.id),
-                Lookup(AModel.a_field),
-                Lookup(BDetails.id),
-                Lookup(BDetails.b),
-            ])
+            lookups = self.get_context('lookups')
+            self.assertLookups(lookups, {
+                ('', DModel.c): ['eq', 'in'],
+                ('', DModel.d_field): ['eq', 'icontains', 'istartswith'],
+                ('', DModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+                
+                ('c__', CModel.b): ['eq', 'in'],
+                ('c__', CModel.c_field): ['eq', 'icontains', 'istartswith'],
+                ('c__', CModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+                
+                ('c__b__', BModel.a): ['eq', 'in'],
+                ('c__b__', BModel.b_field): ['eq', 'icontains', 'istartswith'],
+                ('c__b__', BModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+
+                ('c__b__a__', AModel.a_field): ['eq', 'icontains', 'istartswith'],
+                ('c__b__a__', AModel.id): ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
+            })
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):

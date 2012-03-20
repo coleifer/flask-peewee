@@ -119,26 +119,20 @@ auth = Auth(app, db, user_model=User)
 admin = Admin(app, auth)
 
 
-a_qf = QueryFilter(AModel.select())
-bd_qf = QueryFilter(BDetails.select())
-b_qf = QueryFilter(BModel.select(), related=[a_qf, bd_qf])
-c_qf = QueryFilter(CModel.select(), related=[b_qf])
-d_qf = QueryFilter(DModel.select(), related=[c_qf])
-
 class AAdmin(ModelAdmin):
     columns = ('a_field',)
 
 class BAdmin(ModelAdmin):
     columns = ('a', 'b_field',)
-    related_filters = [a_qf]
+    include_foreign_keys = {'a': 'a_field'}
 
 class CAdmin(ModelAdmin):
     columns = ('b', 'c_field',)
-    related_filters = [b_qf]
+    include_foreign_keys = {'b': 'b_field'}
 
 class DAdmin(ModelAdmin):
     columns = ('c', 'd_field',)
-    related_filters = [c_qf]
+    include_foreign_keys = {'c': 'c_field'}
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
