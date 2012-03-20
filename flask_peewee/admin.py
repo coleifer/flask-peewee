@@ -101,6 +101,10 @@ class ModelAdmin(object):
         self.admin = admin
         self.model = model
         self.pk_name = self.model._meta.pk_name
+        self.templates = { 'index'  : 'admin/models/index.html',
+                           'add'    : 'admin/models/add.html',
+                           'edit'   : 'admin/models/edit.html',
+                           'delete' : 'admin/models/delete.html' }
 
     def get_url_name(self, name):
         return '%s.%s_%s' % (
@@ -214,7 +218,7 @@ class ModelAdmin(object):
 
         lookups, active_lookups = self.get_lookups()
 
-        return render_template('admin/models/index.html',
+        return render_template(self.templates['index'],
             model_admin=self,
             query=pq,
             ordering=ordering,
@@ -245,7 +249,8 @@ class ModelAdmin(object):
         else:
             form = Form()
 
-        return render_template('admin/models/add.html', model_admin=self, form=form)
+        return render_template(self.templates['add'],
+                               model_admin=self, form=form)
 
     def edit(self, pk):
         try:
@@ -264,7 +269,8 @@ class ModelAdmin(object):
         else:
             form = Form(obj=instance)
 
-        return render_template('admin/models/edit.html', model_admin=self, instance=instance, form=form)
+        return render_template(self.templates['edit'],
+                               model_admin=self, instance=instance, form=form)
 
     def collect_objects(self, obj):
         select_queries, nullable_queries = obj.collect_queries()
@@ -303,11 +309,10 @@ class ModelAdmin(object):
             flash('Successfully deleted %s %ss' % (count, self.get_display_name()), 'success')
             return redirect(url_for(self.get_url_name('index')))
 
-        return render_template('admin/models/delete.html', **dict(
-            model_admin=self,
-            query=query,
-            collected=collected,
-        ))
+        return render_template(self.templates['delete'],
+                               **dict(model_admin=self,
+                                      query=query,
+                                      collected=collected))
 
     def collect_related_fields(self, model, accum, path):
         path_str = '__'.join(path)
