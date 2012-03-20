@@ -9,7 +9,7 @@ class Serializer(object):
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
     datetime_format = ' '.join([date_format, time_format])
-    
+
     def convert_value(self, value):
         if isinstance(value, datetime.datetime):
             return value.strftime(self.datetime_format)
@@ -21,7 +21,7 @@ class Serializer(object):
             return value.get_pk()
         else:
             return value
-    
+
     def clean_data(self, data):
         for key, value in data.items():
             if isinstance(value, dict):
@@ -29,7 +29,7 @@ class Serializer(object):
             else:
                 data[key] = self.convert_value(value)
         return data
-    
+
     def serialize_object(self, obj, fields=None, exclude=None, include_foreign_keys=False):
         data, models = get_dictionary_lookups_for_model(obj, include_foreign_keys, fields, exclude)
         return self.clean_data(data)
