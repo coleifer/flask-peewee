@@ -164,9 +164,10 @@ class ModelAdmin(object):
     def get_admin_name(self):
         return slugify(self.model.__name__)
 
-    def get_lookups(self, prefix=''):
+    def get_lookups(self, prefix='', seen=None):
         field_value_map = FieldValueMap(self)
 
+        seen = seen or set()
         lookups = {}
         active_lookups = []
 
@@ -186,8 +187,9 @@ class ModelAdmin(object):
             if isinstance(field, ForeignKeyField):
                 rel_prefix = '%s%s__' % (prefix, field.name)
                 rel_model = field.to
-                if rel_model in self.admin:
-                    rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix)
+                if rel_model in self.admin and rel_model not in seen:
+                    seen.add(rel_model)
+                    rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix, seen)
                     lookups.update(rel_lookups)
                     active_lookups.extend(rel_active)
 
