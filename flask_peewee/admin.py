@@ -187,8 +187,8 @@ class ModelAdmin(object):
             if isinstance(field, ForeignKeyField):
                 rel_prefix = '%s%s__' % (prefix, field.name)
                 rel_model = field.to
-                if rel_model in self.admin and rel_model not in seen:
-                    seen.add(rel_model)
+                if rel_model in self.admin and (rel_model, field.name) not in seen:
+                    seen.add((rel_model, field.name))
                     rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix, seen)
                     lookups.update(rel_lookups)
                     active_lookups.extend(rel_active)
