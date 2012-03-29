@@ -25,7 +25,7 @@ class User(db.Model, BaseUser):
 
     def followers(self):
         return User.select().join(
-            Relationship
+            Relationship, on='from_user_id'
         ).where(to_user=self).order_by('username')
 
     def is_following(self, user):
