@@ -1,5 +1,9 @@
+import sys
 from setuptools import setup, find_packages
 
+requirements = ['Flask', 'werkzeug', 'jinja2', 'peewee>=0.9.0', 'wtforms', 'wtf-peewee']
+if sys.version_info[:2] < (2, 6):
+    requirements.append('simplejson')
 
 setup(
     name='flask-peewee',
@@ -31,9 +35,7 @@ setup(
     },
     zip_safe=False,
     platforms='any',
-    install_requires=[
-        'Flask', 'werkzeug', 'jinja2', 'peewee>=0.9.0', 'wtforms', 'wtf-peewee',
-    ],
+    install_requires=requirements,
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
