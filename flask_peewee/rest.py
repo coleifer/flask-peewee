@@ -329,8 +329,9 @@ class RestResource(object):
         return self.response(self.serialize_object(instance))
 
     def edit(self, obj):
+        data = request.data or request.form.get('data') or ''
         try:
-            data = json.loads(request.data)
+            data = json.loads(data)
         except ValueError:
             return self.response_bad_request()
 
