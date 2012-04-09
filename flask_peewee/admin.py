@@ -354,7 +354,7 @@ class ModelAdmin(object):
         if request.method == 'POST':
             raw_fields = request.form.getlist('fields')
             export = Export(filtered_query, related, raw_fields)
-            return export.json_response()
+            return export.json_response('export-%s.json' % self.get_admin_name())
 
         lookups, active_lookups = self.get_lookups()
 
@@ -653,7 +653,7 @@ class Export(object):
         clone.query = select
         return clone
 
-    def json_response(self):
+    def json_response(self, filename='export.json'):
         serializer = Serializer()
         prepared_query = self.prepare_query()
 
@@ -668,5 +668,5 @@ class Export(object):
             yield '\n]'
         headers = Headers()
         headers.add('Content-Type', 'application/javascript')
-        headers.add('Content-Disposition', 'attachment; filename=export.json')
+        headers.add('Content-Disposition', 'attachment; filename=%s' % filename)
         return Response(generate(), mimetype='text/javascript', headers=headers, direct_passthrough=True)
