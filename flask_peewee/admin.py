@@ -12,7 +12,7 @@ from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelC
 from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup, FIELD_TYPES
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
-from peewee import BooleanField, DateTimeField, ForeignKeyField
+from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField
 from werkzeug import Headers
 from wtforms import fields, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
@@ -32,6 +32,9 @@ class FieldValueMap(object):
             (DateTimeField, 'today'): self.handle_dummy,
             (DateTimeField, 'yesterday'): self.handle_dummy,
             (DateTimeField, 'this_week'): self.handle_dummy,
+            (DateField, 'today'): self.handle_dummy,
+            (DateField, 'yesterday'): self.handle_dummy,
+            (DateField, 'this_week'): self.handle_dummy,
             (ForeignKeyField, 'eq'): self.handle_foreign_key,
             (ForeignKeyField, 'in'): self.handle_foreign_key_multi,
         }

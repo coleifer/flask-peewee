@@ -33,7 +33,8 @@ FIELD_TYPES = {
     'text': [CharField, TextField],
     'numeric': [PrimaryKeyField, IntegerField, FloatField, DecimalField, DoubleField],
     'boolean': [BooleanField],
-    'datetime': [DateTimeField],
+    'datetime': [DateTimeField, DateField],
+    'time': [TimeField],
 }
 
 INV_FIELD_TYPES = dict((v,k) for k in FIELD_TYPES for v in FIELD_TYPES[k])
@@ -44,6 +45,7 @@ FIELDS_TO_LOOKUPS = {
     'numeric': ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in'],
     'boolean': ['eq'],
     'datetime': ['today', 'yesterday', 'this_week', 'lte_days_ago', 'gte_days_ago', 'year_eq', 'year_lt', 'year_gt'],
+    'time': [],
 }
 
 

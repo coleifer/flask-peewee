@@ -1,6 +1,6 @@
 import datetime
 
-from peewee import BooleanField, DateTimeField, ForeignKeyField, TimeField
+from peewee import BooleanField, DateTimeField, ForeignKeyField, TimeField, DateField
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.widgets import HTMLString, html_params
@@ -56,15 +56,23 @@ class CustomTimeField(fields.Field):
                     raise ValueError(self.gettext(u'Not a valid time value'))
 
 
+def inject_class(kwargs, *klasses):
+    i_class = list(klasses)
+    copy = dict(kwargs)
+    if 'class' in copy:
+        i_class.append(copy.pop('class'))
+    copy['class'] = ' '.join(i_class)
+    return copy
+
 def datetime_widget(field, **kwargs):
     kwargs.setdefault('id', field.id)
-    dt_class = ['datetime-widget']
-    if 'class' in kwargs:
-        dt_class.append(kwargs.pop('class'))
-    kwargs['class'] = ' '.join(dt_class)
     html = []
     for subfield in field:
-        html.append(subfield(**kwargs))
+        if isinstance(subfield, fields.DateField):
+            kwarg_copy = inject_class(kwargs, 'date-widget', 'datetime-widget')
+        elif isinstance(subfield, CustomTimeField):
+            kwarg_copy = inject_class(kwargs, 'time-widget', 'datetime-widget')
+        html.append(subfield(**kwarg_copy))
 
     return HTMLString(u''.join(html))
 
@@ -107,6 +115,7 @@ class CustomModelConverter(ModelConverter):
         self.converters[BooleanField] = self.handle_boolean
         self.converters[DateTimeField] = self.handle_datetime
         self.converters[TimeField] = self.handle_time
+        self.converters[DateField] = self.handle_date
 
     def handle_boolean(self, model, field, **kwargs):
         return field.name, BooleanSelectField(**kwargs)
@@ -116,6 +125,9 @@ class CustomModelConverter(ModelConverter):
     
     def handle_time(self, model, field, **kwargs):
         return field.name, CustomTimeField(**kwargs)
+    
+    def handle_date(self, model, field, **kwargs):
+        return field.name, fields.DateField(**inject_class(kwargs, 'date-widget'))
 
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
