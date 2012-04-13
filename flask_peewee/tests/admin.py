@@ -151,7 +151,8 @@ class AdminTestCase(BaseAdminTestCase):
                 'password': 'new',
                 'active': '1',
                 'email': 'new@new.new',
-                'join_date': '2011-01-01 00:00:00',
+                'join_date-date': '2011-01-01',
+                'join_date-time': '00:00:00',
             })
             self.assertEqual(resp.status_code, 302)
             
@@ -218,7 +219,8 @@ class AdminTestCase(BaseAdminTestCase):
                 'password': '',
                 'active': '1',
                 'email': 'fap@fap.fap',
-                'join_date': '2011-01-01 00:00:00',
+                'join_date-date': '2011-01-01',
+                'join_date-time': '00:00:00',
             })
             self.assertEqual(resp.status_code, 200)
             
@@ -242,7 +244,8 @@ class AdminTestCase(BaseAdminTestCase):
                 'password': 'edited',
                 'active': '1',
                 'email': 'x@x.x',
-                'join_date': '2011-01-01 00:00:00',
+                'join_date-date': '2011-01-01',
+                'join_date-time': '00:00:00',
             })
             self.assertEqual(resp.status_code, 302)
             
@@ -267,7 +270,8 @@ class AdminTestCase(BaseAdminTestCase):
                 'password': user.password,
                 'active': '1',
                 'email': 'x@x.x',
-                'join_date': '2011-01-01 00:00:00',
+                'join_date-date': '2011-01-01',
+                'join_date-time': '00:00:00',
             })
             self.assertEqual(resp.status_code, 302)
             
