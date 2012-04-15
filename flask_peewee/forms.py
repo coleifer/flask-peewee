@@ -93,7 +93,13 @@ class CustomDateTimeField(FormField):
     def process(self, formdata, data=_unset_value):
         prefix = self.name + self.separator
         kwargs = {}
-        if data is not _unset_value:
+        if data is _unset_value:
+            try:
+                data = self.default()
+            except TypeError:
+                data = self.default
+        
+        if data and data is not _unset_value:
             kwargs['date'] = data.date()
             kwargs['time'] = data.time()
 
