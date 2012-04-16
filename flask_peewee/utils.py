@@ -34,7 +34,10 @@ class PaginatedQuery(object):
             self.query = self.model.select()
 
     def get_page(self):
-        return int(request.args.get(self.page_var) or 1)
+        curr_page = request.args.get(self.page_var)
+        if curr_page and curr_page.isdigit():
+            return int(curr_page)
+        return 1
 
     def get_pages(self):
         return math.ceil(float(self.query.count()) / self.paginate_by)
