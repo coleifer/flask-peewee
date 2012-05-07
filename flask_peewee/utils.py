@@ -159,13 +159,21 @@ def convert_string_lookups_to_dict(lookups):
 def get_models_from_dictionary(model, field_dict):
     if isinstance(model, Model):
         model_instance = model
+        check_fks = True
     else:
         model_instance = model()
+        check_fks = False
     models = [model_instance]
     for field_name, value in field_dict.items():
         field_obj = model._meta.fields[field_name]
         if isinstance(value, dict):
-            rel_inst, rel_models = get_models_from_dictionary(field_obj.to, value)
+            rel_obj = field_obj.to
+            if check_fks:
+                try:
+                    rel_obj = getattr(model, field_name)
+                except field_obj.to.DoesNotExist:
+                    pass
+            rel_inst, rel_models = get_models_from_dictionary(rel_obj, value)
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)
         else:

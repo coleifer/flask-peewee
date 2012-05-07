@@ -171,7 +171,8 @@ class RestResource(object):
         ]
 
     def deserialize_object(self, data, instance):
-        return self.get_deserializer().deserialize_object(instance, data)
+        d = self.get_deserializer()
+        return d.deserialize_object(instance, data)
 
     def response_forbidden(self):
         return Response('Forbidden', 403)
@@ -313,6 +314,14 @@ class RestResource(object):
     def object_detail(self, obj):
         return self.response(self.serialize_object(obj))
 
+    def save_related_objects(self, instance, data):
+        for k, v in data.items():
+            if k in self._resources and isinstance(v, dict):
+                rel_resource = self._resources[k]
+                rel_obj, rel_models = rel_resource.deserialize_object(v, getattr(instance, k))
+                rel_resource.save_related_objects(rel_obj, v)
+                setattr(instance, k, rel_resource.save_object(rel_obj, v))
+
     def create(self):
         data = request.data or request.form.get('data') or ''
 
@@ -322,9 +331,9 @@ class RestResource(object):
             return self.response_bad_request()
 
         instance, models = self.deserialize_object(data, self.model())
-        instance = self.save_object(instance, data)
 
-        # TODO: save additional models
+        self.save_related_objects(instance, data)
+        instance = self.save_object(instance, data)
 
         return self.response(self.serialize_object(instance))
 
@@ -336,9 +345,9 @@ class RestResource(object):
             return self.response_bad_request()
 
         obj, models = self.deserialize_object(data, obj)
-        obj = self.save_object(obj, data)
 
-        # TODO: save additional models
+        self.save_related_objects(obj, data)
+        obj = self.save_object(obj, data)
 
         return self.response(self.serialize_object(obj))
 

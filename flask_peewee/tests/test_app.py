@@ -9,7 +9,7 @@ from flask_peewee.admin import Admin, ModelAdmin, AdminPanel
 from flask_peewee.auth import Auth, BaseUser
 from flask_peewee.db import Database
 from flask_peewee.filters import QueryFilter
-from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication
+from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication, Authentication
 from flask_peewee.utils import get_object_or_404, object_list, make_password
 
 
@@ -158,8 +158,18 @@ class UserResource(RestResource):
     def get_query(self):
         return User.filter(active=True)
 
+class AResource(RestResource):
+    pass
+
+class BResource(RestResource):
+    include_resources = {'a': AResource}
+
+class CResource(RestResource):
+    include_resources = {'b': BResource}
+
 
 # rest api stuff
+dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
 admin_auth = AdminAuthentication(auth)
 api_key_auth = APIKeyAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
@@ -170,6 +180,9 @@ api.register(Message, RestrictOwnerResource)
 api.register(User, UserResource, auth=admin_auth)
 api.register(Note)
 api.register(TestModel, auth=api_key_auth)
+api.register(AModel, AResource, auth=dummy_auth)
+api.register(BModel, BResource, auth=dummy_auth)
+api.register(CModel, CResource, auth=dummy_auth)
 
 
 # views

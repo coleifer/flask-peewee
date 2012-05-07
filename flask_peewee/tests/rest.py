@@ -13,7 +13,7 @@ from flask import g
 
 from flask_peewee.rest import RestAPI, RestResource, Authentication, UserAuthentication
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, Message, Note, TestModel, APIKey
+from flask_peewee.tests.test_app import User, Message, Note, TestModel, APIKey, AModel, BModel, CModel
 from flask_peewee.utils import get_next, make_password, check_password
 
 
@@ -86,6 +86,227 @@ class RestApiTestCase(FlaskPeeweeTestCase):
     def assertAPITestModels(self, json_data, tms):
         for json_item, tm in zip(json_data['objects'], tms):
             self.assertAPITestModel(json_item, tm)
+
+
+class RestApiResourceTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiResourceTestCase, self).setUp()
+        CModel.delete().execute()
+        BModel.delete().execute()
+        AModel.delete().execute()
+    
+    def create_test_models(self):
+        self.a1 = AModel.create(a_field='a1')
+        self.a2 = AModel.create(a_field='a2')
+        self.b1 = BModel.create(b_field='b1', a=self.a1)
+        self.b2 = BModel.create(b_field='b2', a=self.a2)
+        self.c1 = CModel.create(c_field='c1', b=self.b1)
+        self.c2 = CModel.create(c_field='c2', b=self.b2)
+    
+    def test_resources_list_detail(self):
+        self.create_test_models()
+        
+        # amodel
+        resp = self.app.get('/api/amodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': self.a1.id, 'a_field': 'a1'},
+            {'id': self.a2.id, 'a_field': 'a2'},
+        ])
+        
+        resp = self.app.get('/api/amodel/%s/' % self.a2.id)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'id': self.a2.id,
+            'a_field': 'a2',
+        })
+        
+        # bmodel
+        resp = self.app.get('/api/bmodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': self.b1.id, 'b_field': 'b1', 'a': {'id': self.a1.id, 'a_field': 'a1'}},
+            {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}},
+        ])
+        
+        resp = self.app.get('/api/bmodel/%s/' % self.b2.id)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'id': self.b2.id,
+            'b_field': 'b2',
+            'a': {'id': self.a2.id, 'a_field': 'a2'},
+        })
+        
+        # cmodel
+        resp = self.app.get('/api/cmodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': self.c1.id, 'c_field': 'c1', 'b': {'id': self.b1.id, 'b_field': 'b1', 'a': {'id': self.a1.id, 'a_field': 'a1'}}},
+            {'id': self.c2.id, 'c_field': 'c2', 'b': {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}}},
+        ])
+        
+        resp = self.app.get('/api/cmodel/%s/' % self.c2.id)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'id': self.c2.id,
+            'c_field': 'c2',
+            'b': {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}},
+        })
+    
+    def post_to(self, url, data):
+        return self.app.post(url, data=json.dumps(data))
+    
+    def test_resources_create(self):
+        resp = self.post_to('/api/amodel/', {'a_field': 'ax'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(AModel.select().count(), 1)
+        a_obj = AModel.get(a_field='ax')
+        self.assertEqual(json.loads(resp.data), {
+            'id': a_obj.id,
+            'a_field': 'ax',
+        })
+        
+        resp = self.post_to('/api/bmodel/', {'b_field': 'by', 'a': {'a_field': 'ay'}})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(BModel.select().count(), 1)
+        self.assertEqual(AModel.select().count(), 2)
+        b_obj = BModel.get(b_field='by')
+        a_obj = AModel.get(a_field='ay')
+        
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': b_obj.id,
+            'b_field': 'by',
+            'a': {
+                'id': a_obj.id,
+                'a_field': 'ay',
+            },
+        })
+        
+        resp = self.post_to('/api/cmodel/', {'c_field': 'cz', 'b': {'b_field': 'bz', 'a': {'a_field': 'az'}}})
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(CModel.select().count(), 1)
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 3)
+        c_obj = CModel.get(c_field='cz')
+        b_obj = BModel.get(b_field='bz')
+        a_obj = AModel.get(a_field='az')
+        
+        self.assertEqual(c_obj.b, b_obj)
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': c_obj.id,
+            'c_field': 'cz',
+            'b': {
+                'id': b_obj.id,
+                'b_field': 'bz',
+                'a': {
+                    'id': a_obj.id,
+                    'a_field': 'az',
+                },
+            },
+        })
+    
+    def test_resources_edit(self):
+        self.create_test_models()
+        
+        resp = self.post_to('/api/amodel/%s/' % self.a2.id, {'a_field': 'a2-xxx'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(AModel.select().count(), 2)
+        a_obj = AModel.get(id=self.a2.id)
+        self.assertEqual(json.loads(resp.data), {
+            'id': self.a2.id,
+            'a_field': 'a2-xxx',
+        })
+
+        resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'b_field': 'b2-yyy', 'a': {'a_field': 'a2-yyy'}})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 2)
+        b_obj = BModel.get(id=self.b2.id)
+        a_obj = AModel.get(id=self.a2.id)
+        
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': b_obj.id,
+            'b_field': 'b2-yyy',
+            'a': {
+                'id': a_obj.id,
+                'a_field': 'a2-yyy',
+            },
+        })
+
+        resp = self.post_to('/api/cmodel/%s/' % self.c2.id, {'c_field': 'c2-zzz', 'b': {'b_field': 'b2-zzz', 'a': {'a_field': 'a2-zzz'}}})
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(CModel.select().count(), 2)
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 2)
+        c_obj = CModel.get(id=self.c2.id)
+        b_obj = BModel.get(id=self.b2.id)
+        a_obj = AModel.get(id=self.a2.id)
+        
+        self.assertEqual(c_obj.b, b_obj)
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': c_obj.id,
+            'c_field': 'c2-zzz',
+            'b': {
+                'id': b_obj.id,
+                'b_field': 'b2-zzz',
+                'a': {
+                    'id': a_obj.id,
+                    'a_field': 'a2-zzz',
+                },
+            },
+        })
+    
+    def test_resource_edit_partial(self):
+        self.create_test_models()
+        
+        resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'b_field': 'b2-yyy'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 2)
+        b_obj = BModel.get(id=self.b2.id)
+        a_obj = AModel.get(id=self.a2.id)
+        
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': b_obj.id,
+            'b_field': 'b2-yyy',
+            'a': {
+                'id': a_obj.id,
+                'a_field': 'a2',
+            },
+        })
+    
+    def test_resource_edit_by_fk(self):
+        self.create_test_models()
+        
+        resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'a': self.a1.id})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 2)
+        b_obj = BModel.get(id=self.b2.id)
+        a_obj = AModel.get(id=self.a1.id)
+        
+        self.assertEqual(b_obj.a, a_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': b_obj.id,
+            'b_field': 'b2',
+            'a': {
+                'id': a_obj.id,
+                'a_field': 'a1',
+            },
+        })
 
 
 class RestApiBasicTestCase(RestApiTestCase):
