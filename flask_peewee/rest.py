@@ -101,6 +101,9 @@ class RestResource(object):
     # mapping of field name to resource class
     include_resources = None
 
+    # delete behavior
+    delete_recursive = True
+
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api
         self.model = model
@@ -352,9 +355,7 @@ class RestResource(object):
         return self.response(self.serialize_object(obj))
 
     def delete(self, obj):
-        res = self.model.delete().where(**{
-            self.model._meta.pk_name: obj.get_pk()
-        }).execute()
+        res = obj.delete_instance(recursive=self.delete_recursive)
         return self.response({'deleted': res})
 
 
