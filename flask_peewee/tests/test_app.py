@@ -86,6 +86,14 @@ class BDetails(db.Model):
     b = ForeignKeyField(BModel)
 
 
+class EModel(db.Model):
+    e_field = CharField()
+
+class FModel(db.Model):
+    e = ForeignKeyField(EModel, null=True)
+    f_field = CharField()
+
+
 class APIKey(db.Model):
     key = CharField()
     secret = CharField()
@@ -167,6 +175,11 @@ class BResource(RestResource):
 class CResource(RestResource):
     include_resources = {'b': BResource}
 
+class EResource(RestResource):
+    pass
+
+class FResource(RestResource):
+    include_resources = {'e': EResource}
 
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
@@ -183,6 +196,9 @@ api.register(TestModel, auth=api_key_auth)
 api.register(AModel, AResource, auth=dummy_auth)
 api.register(BModel, BResource, auth=dummy_auth)
 api.register(CModel, CResource, auth=dummy_auth)
+
+api.register(EModel, EResource, auth=dummy_auth)
+api.register(FModel, FResource, auth=dummy_auth)
 
 
 # views

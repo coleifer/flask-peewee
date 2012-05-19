@@ -173,6 +173,8 @@ def get_models_from_dictionary(model, field_dict):
                     rel_obj = getattr(model, field_name)
                 except field_obj.to.DoesNotExist:
                     pass
+                if rel_obj is None:
+                    rel_obj = field_obj.to
             rel_inst, rel_models = get_models_from_dictionary(rel_obj, value)
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)

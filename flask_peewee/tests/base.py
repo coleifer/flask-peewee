@@ -1,7 +1,7 @@
 import unittest
 
 from flask_peewee.tests import test_app
-from flask_peewee.tests.test_app import User, Message, Note, AModel, BModel, CModel, DModel, BDetails
+from flask_peewee.tests.test_app import User, Message, Note, AModel, BModel, CModel, DModel, BDetails, EModel, FModel
 
 
 class FlaskPeeweeTestCase(unittest.TestCase):
@@ -12,6 +12,11 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         User.create_table()
         Message.create_table()
         Note.create_table()
+
+        FModel.drop_table(True)
+        EModel.drop_table(True)
+        EModel.create_table()
+        FModel.create_table()
         
         self.flask_app = test_app.app
         self.flask_app._template_context = {}

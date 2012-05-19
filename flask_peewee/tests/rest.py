@@ -13,7 +13,7 @@ from flask import g
 
 from flask_peewee.rest import RestAPI, RestResource, Authentication, UserAuthentication
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, Message, Note, TestModel, APIKey, AModel, BModel, CModel
+from flask_peewee.tests.test_app import User, Message, Note, TestModel, APIKey, AModel, BModel, CModel, EModel, FModel
 from flask_peewee.utils import get_next, make_password, check_password
 
 
@@ -91,6 +91,8 @@ class RestApiTestCase(FlaskPeeweeTestCase):
 class RestApiResourceTestCase(RestApiTestCase):
     def setUp(self):
         super(RestApiResourceTestCase, self).setUp()
+        FModel.delete().execute()
+        EModel.delete().execute()
         CModel.delete().execute()
         BModel.delete().execute()
         AModel.delete().execute()
@@ -102,6 +104,11 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.b2 = BModel.create(b_field='b2', a=self.a2)
         self.c1 = CModel.create(c_field='c1', b=self.b1)
         self.c2 = CModel.create(c_field='c2', b=self.b2)
+
+        self.e1 = EModel.create(e_field='e1')
+        self.e2 = EModel.create(e_field='e2')
+        self.f1 = FModel.create(f_field='f1', e=self.e1)
+        self.f2 = FModel.create(f_field='f2')
     
     def test_resources_list_detail(self):
         self.create_test_models()
@@ -152,11 +159,35 @@ class RestApiResourceTestCase(RestApiTestCase):
             'c_field': 'c2',
             'b': {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}},
         })
+
+        # fmodel
+        resp = self.app.get('/api/fmodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': self.f1.id, 'f_field': 'f1', 'e': {'id': self.e1.id, 'e_field': 'e1'}},
+            {'id': self.f2.id, 'f_field': 'f2'},
+        ])
+        
+        resp = self.app.get('/api/fmodel/%s/' % self.f1.id)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'id': self.f1.id,
+            'f_field': 'f1',
+            'e': {'id': self.e1.id, 'e_field': 'e1'},
+        })
+
+        resp = self.app.get('/api/fmodel/%s/' % self.f2.id)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'id': self.f2.id,
+            'f_field': 'f2',
+        })
     
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
     
     def test_resources_create(self):
+        # a model
         resp = self.post_to('/api/amodel/', {'a_field': 'ax'})
         self.assertEqual(resp.status_code, 200)
         
@@ -167,6 +198,7 @@ class RestApiResourceTestCase(RestApiTestCase):
             'a_field': 'ax',
         })
         
+        # b model
         resp = self.post_to('/api/bmodel/', {'b_field': 'by', 'a': {'a_field': 'ay'}})
         self.assertEqual(resp.status_code, 200)
         
@@ -185,6 +217,7 @@ class RestApiResourceTestCase(RestApiTestCase):
             },
         })
         
+        # c model
         resp = self.post_to('/api/cmodel/', {'c_field': 'cz', 'b': {'b_field': 'bz', 'a': {'a_field': 'az'}}})
         self.assertEqual(resp.status_code, 200)
 
@@ -209,10 +242,43 @@ class RestApiResourceTestCase(RestApiTestCase):
                 },
             },
         })
+
+        # f model
+        resp = self.post_to('/api/fmodel/', {'f_field': 'fy', 'e': {'e_field': 'ey'}})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(FModel.select().count(), 1)
+        self.assertEqual(EModel.select().count(), 1)
+        f_obj = FModel.get(f_field='fy')
+        e_obj = EModel.get(e_field='ey')
+        
+        self.assertEqual(f_obj.e, e_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'fy',
+            'e': {
+                'id': e_obj.id,
+                'e_field': 'ey',
+            },
+        })
+
+        resp = self.post_to('/api/fmodel/', {'f_field': 'fz'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(FModel.select().count(), 2)
+        self.assertEqual(EModel.select().count(), 1)
+        f_obj = FModel.get(f_field='fz')
+        
+        self.assertEqual(f_obj.e, None)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'fz',
+        })
     
     def test_resources_edit(self):
         self.create_test_models()
         
+        # a
         resp = self.post_to('/api/amodel/%s/' % self.a2.id, {'a_field': 'a2-xxx'})
         self.assertEqual(resp.status_code, 200)
         
@@ -223,6 +289,7 @@ class RestApiResourceTestCase(RestApiTestCase):
             'a_field': 'a2-xxx',
         })
 
+        # b
         resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'b_field': 'b2-yyy', 'a': {'a_field': 'a2-yyy'}})
         self.assertEqual(resp.status_code, 200)
         
@@ -241,6 +308,7 @@ class RestApiResourceTestCase(RestApiTestCase):
             },
         })
 
+        # c
         resp = self.post_to('/api/cmodel/%s/' % self.c2.id, {'c_field': 'c2-zzz', 'b': {'b_field': 'b2-zzz', 'a': {'a_field': 'a2-zzz'}}})
         self.assertEqual(resp.status_code, 200)
 
@@ -265,10 +333,44 @@ class RestApiResourceTestCase(RestApiTestCase):
                 },
             },
         })
+
+        # f
+        resp = self.post_to('/api/fmodel/%s/' % self.f1.id, {'f_field': 'f1-yyy', 'e': {'e_field': 'e1-yyy'}})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(FModel.select().count(), 2)
+        self.assertEqual(EModel.select().count(), 2)
+        f_obj = FModel.get(id=self.f1.id)
+        e_obj = EModel.get(id=self.e1.id)
+        
+        self.assertEqual(f_obj.e, e_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'f1-yyy',
+            'e': {
+                'id': e_obj.id,
+                'e_field': 'e1-yyy',
+            },
+        })
+
+        resp = self.post_to('/api/fmodel/%s/' % self.f2.id, {'f_field': 'f2-yyy'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(FModel.select().count(), 2)
+        self.assertEqual(EModel.select().count(), 2)
+        f_obj = FModel.get(id=self.f2.id)
+        
+        self.assertEqual(f_obj.e, None)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'f2-yyy',
+        })
+
     
     def test_resource_edit_partial(self):
         self.create_test_models()
         
+        # b model
         resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'b_field': 'b2-yyy'})
         self.assertEqual(resp.status_code, 200)
         
@@ -286,10 +388,30 @@ class RestApiResourceTestCase(RestApiTestCase):
                 'a_field': 'a2',
             },
         })
+
+        # f model
+        resp = self.post_to('/api/fmodel/%s/' % self.f1.id, {'f_field': 'f1-zzz'})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(FModel.select().count(), 2)
+        self.assertEqual(EModel.select().count(), 2)
+        f_obj = FModel.get(id=self.f1.id)
+        e_obj = EModel.get(id=self.e1.id)
+        
+        self.assertEqual(f_obj.e, e_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'f1-zzz',
+            'e': {
+                'id': e_obj.id,
+                'e_field': 'e1',
+            },
+        })
     
     def test_resource_edit_by_fk(self):
         self.create_test_models()
         
+        # b model
         resp = self.post_to('/api/bmodel/%s/' % self.b2.id, {'a': self.a1.id})
         self.assertEqual(resp.status_code, 200)
         
@@ -305,6 +427,25 @@ class RestApiResourceTestCase(RestApiTestCase):
             'a': {
                 'id': a_obj.id,
                 'a_field': 'a1',
+            },
+        })
+
+        # f model
+        resp = self.post_to('/api/fmodel/%s/' % self.f2.id, {'e': self.e2.id})
+        self.assertEqual(resp.status_code, 200)
+        
+        self.assertEqual(BModel.select().count(), 2)
+        self.assertEqual(AModel.select().count(), 2)
+        f_obj = FModel.get(id=self.f2.id)
+        e_obj = EModel.get(id=self.e2.id)
+        
+        self.assertEqual(f_obj.e, e_obj)
+        self.assertEqual(json.loads(resp.data), {
+            'id': f_obj.id,
+            'f_field': 'f2',
+            'e': {
+                'id': e_obj.id,
+                'e_field': 'e2',
             },
         })
     
@@ -324,6 +465,15 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(CModel.select().count(), 0)
         self.assertEqual(BModel.select().count(), 1)
         self.assertEqual(AModel.select().count(), 1)
+
+        resp = self.post_to('/api/emodel/%s/delete/' % self.e1.id, {})
+        self.assertEqual(json.loads(resp.data), {'deleted': 1})
+
+        self.assertEqual(EModel.select().count(), 1)
+        self.assertEqual(FModel.select().count(), 2)
+
+        f_obj = FModel.get(id=self.f1.id)
+        self.assertEqual(f_obj.e, None)
 
 
 class RestApiBasicTestCase(RestApiTestCase):
