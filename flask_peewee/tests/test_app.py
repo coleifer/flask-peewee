@@ -211,6 +211,11 @@ def homepage():
 def private_timeline():
     return Response()
 
+@app.route('/secret/')
+@auth.admin_required
+def secret_area():
+    return Response()
+
 
 admin.setup()
 api.setup()

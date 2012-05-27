@@ -162,3 +162,24 @@ class AuthTestCase(FlaskPeeweeTestCase):
             self.assertEqual(resp.status_code, 200)
             
             self.assertEqual(auth.get_logged_in_user(), self.admin)
+
+    def test_admin_required(self):
+        self.create_users()
+        
+        with self.flask_app.test_client() as c:
+            resp = c.get('/secret/')
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fsecret%2F'))
+            
+            self.login('normal', 'normal', c)
+            
+            resp = c.get('/secret/')
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fsecret%2F'))
+            self.assertEqual(auth.get_logged_in_user(), self.normal)
+            
+            self.login('admin', 'admin', c)
+            resp = c.get('/secret/')
+            self.assertEqual(resp.status_code, 200)
+            
+            self.assertEqual(auth.get_logged_in_user(), self.admin)

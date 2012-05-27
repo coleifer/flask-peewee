@@ -99,17 +99,24 @@ class Auth(object):
     def get_login_form(self):
         return LoginForm
 
+    def test_user(self, test_fn):
+        def decorator(fn):
+            @functools.wraps(fn)
+            def inner(*args, **kwargs):
+                user = self.get_logged_in_user()
+                
+                if not user or not test_fn(user):
+                    login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
+                    return redirect(login_url)
+                return fn(*args, **kwargs)
+            return inner
+        return decorator
+
     def login_required(self, func):
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            user = self.get_logged_in_user()
-
-            if not user:
-                login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
-                return redirect(login_url)
-
-            return func(*args, **kwargs)
-        return inner
+        return self.test_user(lambda u: True)(func)
+    
+    def admin_required(self, func):
+        return self.test_user(lambda u: u.admin)(func)
 
     def authenticate(self, username, password):
         active = self.User.select().where(active=True)
