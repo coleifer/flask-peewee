@@ -1,12 +1,12 @@
-import datetime
-
+import datetime, json
 from peewee import BooleanField, DateTimeField, ForeignKeyField, TimeField, DateField
 from wtforms import fields, form, widgets
-from wtforms.fields import FormField, _unset_value
+from wtforms.fields import FormField, TextAreaField, _unset_value
 from wtforms.widgets import HTMLString, html_params
 
 from wtfpeewee.fields import ModelSelectField, ModelHiddenField
 from wtfpeewee.orm import ModelConverter
+from flask_peewee.db import JSONField
 
 
 class BooleanSelectField(fields.SelectFieldBase):
@@ -114,6 +114,21 @@ class CustomDateTimeField(FormField):
             return datetime.datetime.combine(self.date.data, self.time.data)
 
 
+class CustomJSONField(TextAreaField):
+    def _value(self):
+        if self.raw_data:
+            return self.raw_data[0]
+        else:
+            return self.data and unicode(json.dumps(self.data)) or u''
+
+    def process_formdata(self, value):
+        if value:
+            try:
+                self.data = json.loads(value[0])
+            except ValueError:
+                raise ValueError(self.gettext(u'Not valid json'))
+
+
 class CustomModelConverter(ModelConverter):
     def __init__(self, model_admin, additional=None):
         super(CustomModelConverter, self).__init__(additional)
@@ -122,10 +137,11 @@ class CustomModelConverter(ModelConverter):
         self.converters[DateTimeField] = self.handle_datetime
         self.converters[TimeField] = self.handle_time
         self.converters[DateField] = self.handle_date
+        self.converters[JSONField] = self.handle_json
 
     def handle_boolean(self, model, field, **kwargs):
         return field.name, BooleanSelectField(**kwargs)
-    
+
     def handle_datetime(self, model, field, **kwargs):
         return field.name, CustomDateTimeField(**kwargs)
     
@@ -144,3 +160,7 @@ class CustomModelConverter(ModelConverter):
         else:
             form_field = ModelSelectField(model=field.to, **kwargs)
         return field.name, form_field
+
+    def handle_json(self, model, field, **kwargs):
+        return field.name, CustomJSONField(**kwargs)
+

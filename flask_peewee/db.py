@@ -1,3 +1,4 @@
+import json
 import peewee
 from peewee import *
 
@@ -51,3 +52,20 @@ class Database(object):
     def register_handlers(self):
         self.app.before_request(self.connect_db)
         self.app.after_request(self.close_db)
+
+
+class JSONColumn(peewee.TextColumn):
+    def db_value(self, value):
+        if value:
+            value = json.dumps(value)
+        return value
+
+    def python_value(self, value):
+        if value:
+            value = json.loads(value)
+        return value
+
+
+class JSONField(peewee.Field):
+    column_class = JSONColumn
+

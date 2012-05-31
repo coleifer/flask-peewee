@@ -2,6 +2,7 @@ import datetime
 import operator
 
 from flask import request
+from flask_peewee.db import JSONField
 from flask_peewee.utils import models_to_path
 from peewee import *
 
@@ -30,7 +31,7 @@ LOOKUP_TYPES = {
 
 FIELD_TYPES = {
     'foreign_key': [ForeignKeyField],
-    'text': [CharField, TextField],
+    'text': [CharField, TextField, JSONField],
     'numeric': [PrimaryKeyField, IntegerField, FloatField, DecimalField, DoubleField],
     'boolean': [BooleanField],
     'datetime': [DateTimeField, DateField],
