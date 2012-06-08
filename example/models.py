@@ -59,4 +59,5 @@ class Message(db.Model):
 class Note(db.Model):
     user = ForeignKeyField(User)
     message = TextField()
+    status = IntegerField(choices=((1, 'live'), (2, 'deleted')), null=True)
     created_date = DateTimeField(default=datetime.datetime.now)
