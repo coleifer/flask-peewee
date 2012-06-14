@@ -26,6 +26,7 @@ setup(
             'static/*/*.css',
             'static/*/*.js',
             'static/*/*.gif',
+            'static/*/*.png',
             'templates/*.html',
             'templates/*/*.html',
             'templates/*/*/*.html',
