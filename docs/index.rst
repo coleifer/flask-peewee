@@ -9,7 +9,7 @@ flask-peewee
 Welcome to the flask-peewee documentation!
 
 provides a layer of integration between the `flask <http://flask.pocoo.org/>`_ 
-web framework and the `peewee orm <http://charlesleifer.com/docs/peewee/>`_.
+web framework and the `peewee orm <http://peewee.rtfd.org/>`_.
 
 Contents:
 
