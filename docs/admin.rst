@@ -20,43 +20,43 @@ To get started with the admin, there are just a couple steps:
 1. Instantiate an :py:class:`Auth` backend for your project -- this component is responsible for providing the security for the admin area
 
     .. code-block:: python
-    
+
         from flask import Flask
-        
+
         from flask_peewee.auth import Auth
         from flask_peewee.db import Database
-        
+
         app = Flask(__name__)
         db = Database(app)
-        
+
         # needed for authentication
         auth = Auth(app, db)
-        
+
 
 2. Instantiate an :py:class:`Admin` object
 
     .. code-block:: python
-    
+
         # continued from above...
         from flask_peewee.admin import Admin
-        
+
         admin = Admin(app, auth)
-        
+
 3. Register any :py:class:`ModelAdmin` or :py:class:`AdminPanel` objects you would like to expose via the admin
 
     .. code-block:: python
-    
+
         # continuing... assuming "Blog" and "Entry" models
         admin.register(Blog) # register "Blog" with vanilla ModelAdmin
         admin.register(Entry, EntryAdmin) # register "Entry" with a custom ModelAdmin subclass
-        
+
         # assume we have an "AdminPanel" called "NotePanel"
         admin.register_panel('Notes', NotePanel)
 
 4. Call :py:meth:`Admin.setup()`, which registers the admin blueprint and configures the urls
 
     .. code-block:: python
-    
+
         # after all models and panels are registered, configure the urls
         admin.setup()
 
@@ -78,7 +78,7 @@ which looks like this:
         user = ForeignKeyField(User)
         content = TextField()
         pub_date = DateTimeField(default=datetime.datetime.now)
-        
+
         def __unicode__(self):
             return '%s: %s' % (self.user, self.content)
 
@@ -89,7 +89,7 @@ like this:
 
     admin = Admin(app, auth)
     admin.register(Message)
-    
+
     admin.setup()
 
 .. image:: fp-message-admin.jpg
@@ -101,12 +101,12 @@ admin, we'll subclass :py:class:`ModelAdmin`.
 .. code-block:: python
 
     from flask_peewee.admin import ModelAdmin
-    
+
     class MessageAdmin(ModelAdmin):
         columns = ('user', 'content', 'pub_date',)
-    
+
     admin.register(Message, MessageAdmin)
-    
+
     admin.setup()
 
 Now the admin shows all the columns and they can be clicked to sort the data:
@@ -124,13 +124,50 @@ the :py:meth:`~ModelAdmin.get_query` method:
 
 Now a user will only be able to see and edit their own messages.
 
+
+Overriding Admin Templates
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use the :py:meth:`ModelAdmin.get_template_overrides` method to override templates
+for an individual ``Model``:
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        columns = ('user', 'content', 'pub_date',)
+
+        def get_template_overrides(self):
+            # override the edit template with a custom one
+            return {'edit': 'messages/admin/edit.html'}
+
+    admin.register(Message, MessageAdmin)
+
+This instructs the admin to use a custom template for the edit page in the Message
+admin.  That template is stored in the application's templates.  It might look
+something like this:
+
+.. code-block:: jinja
+
+    {% extends "admin/models/edit.html" %} {# override the default edit template #}
+
+    {# override any blocks here #}
+
+There are five templates that can be overridden:
+
+* index
+* add
+* edit
+* delete
+* export
+
+
 Nicer display for Foreign Key fields
 ------------------------------------
 
 If you have a model that foreign keys to another, by default the related model
 instances are displayed in a <select> input.
 
-This can be problematic if you have a large list of models to search (causes slow 
+This can be problematic if you have a large list of models to search (causes slow
 load time, hurts the database).  To mitigate this pain, foreign key lookups can
 be done using a paginated widget that supports type-ahead searching.
 
@@ -200,12 +237,12 @@ Here's what the panel class looks like:
 
     class NotePanel(AdminPanel):
         template_name = 'admin/notes.html'
-        
+
         def get_urls(self):
             return (
                 ('/create/', self.create),
             )
-        
+
         def create(self):
             if request.method == 'POST':
                 if request.form.get('message'):
@@ -215,7 +252,7 @@ Here's what the panel class looks like:
                     )
             next = request.form.get('next') or self.dashboard_url()
             return redirect(next)
-        
+
         def get_context(self):
             return {
                 'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
@@ -262,29 +299,29 @@ file uploads.
     # models.py
     import datetime
     import os
-    
+
     from flask import Markup
     from peewee import *
     from werkzeug import secure_filename
-    
+
     from app import app, db
-    
-    
+
+
     class Photo(db.Model):
         image = CharField()
-    
+
         def __unicode__(self):
             return self.image
-    
+
         def save_image(self, file_obj):
             self.image = secure_filename(file_obj.filename)
             full_path = os.path.join(app.config['MEDIA_ROOT'], self.image)
             file_obj.save(full_path)
             self.save()
-    
+
         def url(self):
             return os.path.join(app.config['MEDIA_URL'], self.image)
-    
+
         def thumb(self):
             return Markup('<img src="%s" style="height: 80px;" />' % self.url())
 
