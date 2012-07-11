@@ -15,7 +15,7 @@ for you, but for reference they are:
 * `flask <https://github.com/mitsuhiko/flask>`_
 * `peewee <https://github.com/coleifer/peewee>`_
 * `wtforms <https://bitbucket.org/simplecodes/wtforms>`_
-* `wtforms-peewee <https://github.com/coleifer/wtf-peewee>`_
+* `wtf-peewee <https://github.com/coleifer/wtf-peewee>`_
 * python 2.5 or greater
 
 
