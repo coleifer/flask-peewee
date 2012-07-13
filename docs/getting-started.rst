@@ -8,7 +8,7 @@ further ado, let's get started.
 
 .. note::
     Hopefully you have some familiarity with the `flask framework <http://flask.pocoo.org/>`_ and
-    the `peewee orm <http://charlesleifer.com/docs/peewee/>`_, but if not those links
+    the `peewee orm <http://peewee.rtfd.org/>`_, but if not those links
     should help you get started.
 
 .. note::
