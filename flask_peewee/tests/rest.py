@@ -957,7 +957,7 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         
         new_pass = make_password('test')
         
-        user_data = {'username': 'test', 'password': new_pass}
+        user_data = {'username': 'test', 'password': new_pass, 'email': ''}
         serialized = json.dumps(user_data)
         
         # this request is not authorized
@@ -981,7 +981,7 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         
         new_pass = make_password('test')
         
-        user_data = {'username': 'test', 'password': new_pass}
+        user_data = {'username': 'test', 'password': new_pass, 'email': ''}
         serialized = json.dumps(user_data)
         
         # authorized as an admin
