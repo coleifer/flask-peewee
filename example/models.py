@@ -42,7 +42,7 @@ class User(db.Model, BaseUser):
 class Relationship(db.Model):
     from_user = ForeignKeyField(User, related_name='relationships')
     to_user = ForeignKeyField(User, related_name='related_to')
-    
+
     def __unicode__(self):
         return 'Relationship from %s to %s' % (self.from_user, self.to_user)
 
@@ -50,8 +50,8 @@ class Relationship(db.Model):
 class Message(db.Model):
     user = ForeignKeyField(User)
     content = TextField()
-    pub_date = DateTimeField(default=datetime.datetime.now)
-    
+    pub_date = DateField(default=datetime.datetime.now)
+
     def __unicode__(self):
         return '%s: %s' % (self.user, self.content)
 

@@ -56,6 +56,15 @@ class CustomTimeField(fields.Field):
                     raise ValueError(self.gettext(u'Not a valid time value'))
 
 
+class CustomDateWidget(widgets.TextInput):
+    def __call__(self, field, **kwargs):
+        return super(CustomDateWidget, self).__call__(field, **inject_class(kwargs, 'date-widget'))
+
+
+class CustomDateField(fields.DateField):
+    widget = CustomDateWidget()
+
+
 def inject_class(kwargs, *klasses):
     i_class = list(klasses)
     copy = dict(kwargs)
@@ -98,13 +107,13 @@ class CustomDateTimeField(FormField):
                 data = self.default()
             except TypeError:
                 data = self.default
-        
+
         if data and data is not _unset_value:
             kwargs['date'] = data.date()
             kwargs['time'] = data.time()
 
         self.form = self.form_class(formdata, prefix=prefix, **kwargs)
-    
+
     def populate_obj(self, obj, name):
         setattr(obj, name, self.data)
 
@@ -125,15 +134,15 @@ class CustomModelConverter(ModelConverter):
 
     def handle_boolean(self, model, field, **kwargs):
         return field.name, BooleanSelectField(**kwargs)
-    
+
     def handle_datetime(self, model, field, **kwargs):
         return field.name, CustomDateTimeField(**kwargs)
-    
+
     def handle_time(self, model, field, **kwargs):
         return field.name, CustomTimeField(**kwargs)
-    
+
     def handle_date(self, model, field, **kwargs):
-        return field.name, fields.DateField(**inject_class(kwargs, 'date-widget'))
+        return field.name, CustomDateField(**kwargs)
 
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
