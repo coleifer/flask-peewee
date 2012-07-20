@@ -30,8 +30,22 @@ class BooleanSelectField(fields.SelectFieldBase):
                 raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
 
 
+def inject_class(kwargs, *klasses):
+    i_class = list(klasses)
+    copy = dict(kwargs)
+    if 'class' in copy:
+        i_class.append(copy.pop('class'))
+    copy['class'] = ' '.join(i_class)
+    return copy
+
+
+class CustomTimeWidget(widgets.TextInput):
+    def __call__(self, field, **kwargs):
+        return super(CustomTimeWidget, self).__call__(field, **inject_class(kwargs, 'time-widget'))
+
+
 class CustomTimeField(fields.Field):
-    widget = widgets.TextInput()
+    widget = CustomTimeWidget()
 
     def __init__(self, label=None, validators=None, format='%H:%M:%S', **kwargs):
         super(CustomTimeField, self).__init__(label, validators, **kwargs)
@@ -65,28 +79,20 @@ class CustomDateField(fields.DateField):
     widget = CustomDateWidget()
 
 
-def inject_class(kwargs, *klasses):
-    i_class = list(klasses)
-    copy = dict(kwargs)
-    if 'class' in copy:
-        i_class.append(copy.pop('class'))
-    copy['class'] = ' '.join(i_class)
-    return copy
-
 def datetime_widget(field, **kwargs):
     kwargs.setdefault('id', field.id)
     html = []
     for subfield in field:
-        if isinstance(subfield, fields.DateField):
-            kwarg_copy = inject_class(kwargs, 'date-widget', 'datetime-widget')
+        if isinstance(subfield, CustomDateField):
+            kwarg_copy = inject_class(kwargs, 'datetime-widget')
         elif isinstance(subfield, CustomTimeField):
-            kwarg_copy = inject_class(kwargs, 'time-widget', 'datetime-widget')
+            kwarg_copy = inject_class(kwargs, 'datetime-widget')
         html.append(subfield(**kwarg_copy))
 
     return HTMLString(u''.join(html))
 
 class _DateTimeForm(form.Form):
-    date = fields.DateField()
+    date = CustomDateField()
     time = CustomTimeField()
 
 class CustomDateTimeField(FormField):
