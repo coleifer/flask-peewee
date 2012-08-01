@@ -994,13 +994,14 @@ Utilities
     :param **query: any number of keyword arguments, e.g. ``id=1``
     :rtype: either a single model instance or raises a ``NotFound`` (404 response)
 
-.. py:function:: object_list(template_name, qr[, var_name='object_list'[, **kwargs]])
+.. py:function:: object_list(template_name, qr[, var_name='object_list'[, paginate_by=20[, **kwargs]]])
 
     Returns a rendered template, passing in a paginated version of the query.
 
     :param template_name: a string representation of a path to a template
     :param qr: a ``SelectQuery``
     :param var_name: context variable name to use when rendering the template
+    :param paginate_by: number of results per page, defaults to 20
     :param **kwargs: any arbitrary keyword arguments to pass to the template during rendering
     :rtype: rendered ``Response``
 
