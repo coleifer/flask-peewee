@@ -15,13 +15,20 @@
 
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/chosen.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/datepicker.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
  
   <script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/bootstrap.min.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/bootstrap-datepicker.js') }}"></script>
+  <script src="{{ url_for('admin.static', filename='js/chosen.jquery.min.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
+  <script type="text/javascript">
+    $(function() {
+      $('select[data-role="chosen"]').chosen();
+    });
+  </script>
   {% block extra_script %}{% endblock %}
 </head>
 
