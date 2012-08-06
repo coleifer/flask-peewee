@@ -127,11 +127,12 @@ class ModelAdmin(object):
             name,
         )
 
-    def get_form(self):
-        return model_form(self.model, only=self.fields, exclude=self.exclude, converter=CustomModelConverter(self))
+    def get_form(self, adding=False):
+        allow_pk = adding and not self.model._meta.auto_increment
+        return model_form(self.model, allow_pk=allow_pk, only=self.fields, exclude=self.exclude, converter=CustomModelConverter(self))
 
     def get_add_form(self):
-        return self.get_form()
+        return self.get_form(adding=True)
 
     def get_edit_form(self):
         return self.get_form()
@@ -200,7 +201,7 @@ class ModelAdmin(object):
 
     def save_model(self, instance, form, adding=False):
         form.populate_obj(instance)
-        instance.save()
+        instance.save(force_insert=adding)
         return instance
 
     def apply_ordering(self, query, ordering):
