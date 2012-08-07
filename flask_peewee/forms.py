@@ -1,11 +1,6 @@
-import datetime
+from peewee import BooleanField, ForeignKeyField
 
-from peewee import BooleanField, DateTimeField, ForeignKeyField, TimeField, DateField
-from wtforms import fields, form, widgets
-from wtforms.fields import FormField, _unset_value
-from wtforms.widgets import HTMLString, html_params
-
-from wtfpeewee.fields import ModelSelectField, ModelHiddenField
+from wtfpeewee.fields import ModelSelectField, ModelHiddenField, BooleanSelectField
 from wtfpeewee.orm import ModelConverter
 
 
