@@ -8,7 +8,7 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.forms import BooleanSelectField, ForeignKeyField, CustomModelConverter
+from flask_peewee.forms import CustomModelConverter
 from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
