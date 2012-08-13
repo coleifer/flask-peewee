@@ -50,4 +50,4 @@ class Database(object):
 
     def register_handlers(self):
         self.app.before_request(self.connect_db)
-        self.app.after_request(self.close_db)
+        self.app.teardown_request(self.close_db)
