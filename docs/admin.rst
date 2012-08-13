@@ -344,7 +344,7 @@ file uploads.
     class PhotoAdmin(ModelAdmin):
         columns = ['image', 'thumb']
 
-        def get_form(self):
+        def get_form(self, adding=False):
             class PhotoForm(Form):
                 image = HiddenField()
                 image_file = FileField(u'Image file')

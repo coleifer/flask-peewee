@@ -8,7 +8,7 @@ flask-peewee
 
 Welcome to the flask-peewee documentation!
 
-provides a layer of integration between the `flask <http://flask.pocoo.org/>`_ 
+provides a layer of integration between the `flask <http://flask.pocoo.org/>`_
 web framework and the `peewee orm <http://peewee.rtfd.org/>`_.
 
 Contents:
@@ -16,7 +16,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
    installation
    getting-started
    database
@@ -24,6 +24,7 @@ Contents:
    auth
    rest-api
    utils
+   gevent
 
 API in depth:
 
@@ -39,4 +40,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

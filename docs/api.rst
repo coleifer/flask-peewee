@@ -232,11 +232,12 @@ Exposing Models with the ModelAdmin
         :rtype: The model instance with the given pk, raising a ``DoesNotExist``
                 in the event the model instance does not exist.
 
-    .. py:method:: get_form()
+    .. py:method:: get_form([adding=False])
 
         Provides a useful extension point in the event you want to define custom
         fields or custom validation behavior.
 
+        :param boolean adding: indicates whether adding a new instance or editing existing
         :rtype: A `wtf-peewee <http://github.com/coleifer/wtf-peewee>`_ Form subclass that
                 will be used when adding or editing model instances in the admin.
 
