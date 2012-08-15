@@ -40,7 +40,7 @@ class PaginatedQuery(object):
         return 1
 
     def get_pages(self):
-        return math.ceil(float(self.query.count()) / self.paginate_by)
+        return int(math.ceil(float(self.query.count()) / self.paginate_by))
 
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
