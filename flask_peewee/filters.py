@@ -31,7 +31,7 @@ LOOKUP_TYPES = {
 FIELD_TYPES = {
     'foreign_key': [ForeignKeyField],
     'text': [CharField, TextField],
-    'numeric': [PrimaryKeyField, IntegerField, FloatField, DecimalField, DoubleField],
+    'numeric': [PrimaryKeyField, IntegerField, BigIntegerField, FloatField, DecimalField, DoubleField],
     'boolean': [BooleanField],
     'datetime': [DateTimeField, DateField],
     'time': [TimeField],
