@@ -11,16 +11,16 @@
 
       /* load up any filter data that was passed in via the request.  need to
        * special-case foreign key lookups since they have a `repr` that we'll
-       * need to display on the button 
+       * need to display on the button
        */
-      {% for lookup in active_lookups %}
+      {# for lookup in active_lookups %}
         admin_filter.add_filter_request(
           '{{ lookup.name }}',
           {{ lookup.get_request()|tojson|safe }},
           '{{ lookup.field_type }}',
           {% if lookup.field_type in ('foreign_key', 'foreign_key_multiple') %}{{ lookup.get_repr()|tojson|safe }}{% else %}null{% endif %}
         );
-      {% endfor %}
+      {% endfor #}
     });
   </script>
 {% endblock %}

@@ -4,11 +4,12 @@ from wtfpeewee.fields import ModelSelectField, ModelHiddenField, BooleanSelectFi
 from wtfpeewee.orm import ModelConverter
 
 
-class CustomModelConverter(ModelConverter):
+class AdminModelConverter(ModelConverter):
     def __init__(self, model_admin, additional=None):
-        super(CustomModelConverter, self).__init__(additional)
+        super(AdminModelConverter, self).__init__(additional)
         self.model_admin = model_admin
         self.converters[BooleanField] = self.handle_boolean
+        self.converters[ForeignKeyField] = self.handle_foreign_key
 
     def handle_boolean(self, model, field, **kwargs):
         return field.name, BooleanSelectField(**kwargs)

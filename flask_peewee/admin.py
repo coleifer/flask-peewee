@@ -8,8 +8,8 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.forms import CustomModelConverter
-from flask_peewee.filters import QueryFilter, lookups_for_field, Lookup
+from flask_peewee.filters import FilterMapping, FilterForm
+from flask_peewee.forms import AdminModelConverter
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
 from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField
@@ -20,58 +20,6 @@ from wtfpeewee.orm import model_form
 
 
 current_dir = os.path.dirname(__file__)
-
-
-class FieldValueMap(object):
-    def __init__(self, model_admin):
-        self.model_admin = model_admin
-
-    def get_conversions(self):
-        return {
-            (BooleanField, 'eq'): self.handle_boolean,
-            (DateTimeField, 'today'): self.handle_dummy,
-            (DateTimeField, 'yesterday'): self.handle_dummy,
-            (DateTimeField, 'this_week'): self.handle_dummy,
-            (DateField, 'today'): self.handle_dummy,
-            (DateField, 'yesterday'): self.handle_dummy,
-            (DateField, 'this_week'): self.handle_dummy,
-            (ForeignKeyField, 'eq'): self.handle_foreign_key,
-            (ForeignKeyField, 'in'): self.handle_foreign_key_multi,
-        }
-
-    def convert(self, field, lookup, lookup_name, prefix):
-        conversions = self.get_conversions()
-        key = (type(field), lookup)
-        lookup_obj = conversions.get(key, self.handle_default)(field, lookup, prefix)
-
-        # wat
-        lookup_obj.lookup_name = lookup_name
-        lookup_obj.css_class = 'span2 input-small lookup-input'
-        return lookup_obj
-
-    def handle_default(self, field, lookup, prefix):
-        return Lookup(field, lookup, 'text', prefix=prefix)
-
-    def handle_dummy(self, field, lookup, prefix):
-        return Lookup(field, lookup, 'hidden', prefix=prefix)
-
-    def handle_boolean(self, field, lookup, prefix):
-        return Lookup(field, lookup, 'select', [('1', 'True'), ('', 'False')], prefix=prefix)
-
-    def fk_to_list(self, field):
-        return [(obj.get_pk(), unicode(obj)) for obj in field.to.select()]
-
-    def handle_foreign_key(self, field, lookup, prefix):
-        _fkl = self.model_admin.foreign_key_lookups or {}
-        if field.name not in _fkl:
-            return Lookup(field, lookup, 'select', self.fk_to_list(field), prefix=prefix)
-        return Lookup(field, lookup, 'foreign_key', field.to, prefix=prefix)
-
-    def handle_foreign_key_multi(self, field, lookup, prefix):
-        _fkl = self.model_admin.foreign_key_lookups or {}
-        if field.name not in _fkl:
-            return Lookup(field, lookup, 'select_multiple', self.fk_to_list(field), prefix=prefix)
-        return Lookup(field, lookup, 'foreign_key_multiple', field.to, prefix=prefix)
 
 
 class ModelAdmin(object):
@@ -100,6 +48,12 @@ class ModelAdmin(object):
     delete_collect_objects = True
     delete_recursive = True
 
+    # TODO: implement these
+    search_fields = None # fields to perform partial text matching on
+
+    filter_mapping = FilterMapping
+    model_converter = AdminModelConverter
+
     # templates, to override see get_template_overrides()
     base_templates = {
         'index': 'admin/models/index.html',
@@ -127,9 +81,27 @@ class ModelAdmin(object):
             name,
         )
 
+    def get_filter_form(self):
+        return FilterForm(
+            self.model,
+            self.model_converter(self),
+            self.filter_mapping(),
+            self.fields,
+            self.exclude,
+        )
+
+    def process_filters(self, query):
+        filter_form = self.get_filter_form()
+        return filter_form.process_request(query)
+
     def get_form(self, adding=False):
         allow_pk = adding and not self.model._meta.auto_increment
-        return model_form(self.model, allow_pk=allow_pk, only=self.fields, exclude=self.exclude, converter=CustomModelConverter(self))
+        return model_form(self.model,
+            allow_pk=allow_pk,
+            only=self.fields,
+            exclude=self.exclude,
+            converter=self.model_converter(self),
+        )
 
     def get_add_form(self):
         return self.get_form(adding=True)
@@ -142,9 +114,6 @@ class ModelAdmin(object):
 
     def get_object(self, pk):
         return self.get_query().get(**{self.pk_name: pk})
-
-    def get_query_filter(self, query):
-        return QueryFilter(query, self.ignore_filters)
 
     def get_urls(self):
         return (
@@ -168,37 +137,6 @@ class ModelAdmin(object):
     def get_admin_name(self):
         return slugify(self.model.__name__)
 
-    def get_lookups(self, prefix='', seen=None):
-        field_value_map = FieldValueMap(self)
-
-        seen = seen or set()
-        lookups = {}
-        active_lookups = []
-
-        for field in self.model._meta.get_fields():
-            if self.exclude_filters and field.name in self.exclude_filters:
-                continue
-
-            for lookup, lookup_name in lookups_for_field(field):
-                key = (prefix, field)
-                lookups.setdefault(key, [])
-                lookup_obj = field_value_map.convert(field, lookup, lookup_name, prefix)
-                lookups[key].append(lookup_obj)
-
-                if lookup_obj.name in request.args:
-                    active_lookups.append(lookup_obj)
-
-            if isinstance(field, ForeignKeyField):
-                rel_prefix = '%s%s__' % (prefix, field.name)
-                rel_model = field.to
-                if rel_model in self.admin and (rel_model, field.name) not in seen:
-                    seen.add((rel_model, field.name))
-                    rel_lookups, rel_active = self.admin[rel_model].get_lookups(rel_prefix, seen)
-                    lookups.update(rel_lookups)
-                    active_lookups.extend(rel_active)
-
-        return lookups, active_lookups
-
     def save_model(self, instance, form, adding=False):
         form.populate_obj(instance)
         instance.save(force_insert=adding)
@@ -217,14 +155,14 @@ class ModelAdmin(object):
         ordering = request.args.get('ordering') or ''
         query = self.apply_ordering(query, ordering)
 
-        # create a QueryFilter object with our current query
-        query_filter = self.get_query_filter(query)
-
         # process the filters from the request
-        filtered_query = query_filter.get_filtered_query()
+        # TODO: allow query filtering
+        #filtered_query = ??
+        filter_form, query = self.process_filters(query)
+
 
         # create a paginated query out of our filtered results
-        pq = PaginatedQuery(filtered_query, self.paginate_by)
+        pq = PaginatedQuery(query, self.paginate_by)
 
         if request.method == 'POST':
             id_list = request.form.getlist('id')
@@ -233,15 +171,12 @@ class ModelAdmin(object):
             else:
                 return redirect(url_for(self.get_url_name('export'), id__in=id_list))
 
-        lookups, active_lookups = self.get_lookups()
-
         return render_template(self.templates['index'],
             model_admin=self,
             query=pq,
             ordering=ordering,
-            query_filter=query_filter,
-            lookups=lookups,
-            active_lookups=active_lookups,
+            filter_form=filter_form,
+            # TODO: any additional metadata for filtering
         )
 
     def dispatch_save_redirect(self, instance):
@@ -347,11 +282,9 @@ class ModelAdmin(object):
         ordering = request.args.get('ordering') or ''
         query = self.apply_ordering(query, ordering)
 
-        # create a QueryFilter object with our current query
-        query_filter = self.get_query_filter(query)
-
         # process the filters from the request
-        filtered_query = query_filter.get_filtered_query()
+        # TODO: same logic as index for filtering
+        #filtered_query = ???
 
         related = self.collect_related_fields(self.model, {}, [])
 
@@ -360,16 +293,11 @@ class ModelAdmin(object):
             export = Export(filtered_query, related, raw_fields)
             return export.json_response('export-%s.json' % self.get_admin_name())
 
-        lookups, active_lookups = self.get_lookups()
-
         return render_template(self.templates['export'],
             model_admin=self,
-            model=filtered_query.model,
-            query=filtered_query,
-            query_filter=query_filter,
-            related_fields=related,
-            lookups=lookups,
-            active_lookups=active_lookups,
+            model=query.model,
+            query=query,
+            # TODO: any additional metadata
         )
 
     def ajax_list(self):
