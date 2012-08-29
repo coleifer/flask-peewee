@@ -181,7 +181,6 @@ class ModelAdmin(object):
             ordering=ordering,
             filter_form=filter_form,
             field_tree=field_tree,
-            # TODO: any additional metadata for filtering
         )
 
     def dispatch_save_redirect(self, instance):

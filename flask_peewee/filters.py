@@ -191,6 +191,7 @@ def make_field_tree(model, fields, exclude):
 
 class FilterForm(object):
     base_class = form.Form
+    separator = '-'
 
     def __init__(self, model, model_converter, filter_mapping, fields=None, exclude=None):
         self.model = model
@@ -228,7 +229,7 @@ class FilterForm(object):
             return datetime.date.today()
         elif isinstance(field, TimeField):
             return '00:00:00'
-        return None
+        return field.default
 
     def get_value_field(self, field):
         field_name, form_field = self.model_converter.convert(field.model, field, None)
@@ -249,7 +250,10 @@ class FilterForm(object):
 
         for prefix, node in node.children.items():
             child_fd = self.get_field_dict(node, prefix)
-            field_dict['fr_%s' % prefix] = fields.FormField(self.get_form(child_fd))
+            field_dict['fr_%s' % prefix] = fields.FormField(
+                self.get_form(child_fd),
+                separator=self.separator,
+            )
 
         return field_dict
 
@@ -260,15 +264,52 @@ class FilterForm(object):
             field_dict,
         )
 
+    def parse_query_filters(self):
+        # reconstruct the "select" and "value" fields we are searching for in the
+        # arguments from the request by depth-first searching the field tree --
+        # basically what we should have at the end is the field we're querying,
+        # the type of query (QueryFilter), the value requested, and the path we
+        # took to get there (joins)
+        accum = {}
+
+        def _dfs(node, prefix, models):
+            models.append(node.model)
+
+            for field in node.fields:
+                qf_select = 'fo_'.join((prefix, field.name))
+                qf_value = 'fv_'.join((prefix, field.name))
+
+                if qf_select in request.args and qf_value in request.args:
+                    accum.setdefault(field, [])
+                    accum[field].append((
+                        request.args.getlist(qf_select),
+                        request.args.getlist(qf_value),
+                        models,
+                    ))
+
+            for child_prefix, child in node.children.items():
+                _dfs(child, prefix + 'fr_' + child_prefix + '-', list(models))
+
+        _dfs(self._field_tree, '', [])
+
+        return accum
+
     def process_request(self, query):
         field_dict = self.get_field_dict()
         FormClass = self.get_form(field_dict)
 
         form = FormClass(request.args)
-        if form.validate():
-            #import ipdb; ipdb.set_trace()
-            print form.data
+        query_filters = self.parse_query_filters()
 
+        for field, filters in query_filters.items():
+            for (filter_idx_list, filter_value_list, path) in filters:
+                query = query.switch(self.model)
+                for model in path[1:]:
+                    query = query.join(model)
+                for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
+                    query_filter = self._query_filters[field][int(filter_idx)]
+                    query = query_filter.apply(query, filter_value)
+        print query.sql()
         return form, query
 
 
