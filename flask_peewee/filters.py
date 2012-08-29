@@ -250,8 +250,7 @@ class FilterForm(object):
 
         form = FormClass(request.args)
         if form.validate():
-            print 'pok'
-        else:
-            print form.errors
+            #import ipdb; ipdb.set_trace()
+            print form.data
 
         return form, query

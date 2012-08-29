@@ -96,7 +96,8 @@ class ModelAdmin(object):
 
     def process_filters(self, query):
         filter_form = self.get_filter_form()
-        return filter_form.process_request(query)
+        form, query = filter_form.process_request(query)
+        return form, query, filter_form._field_tree
 
     def get_form(self, adding=False):
         allow_pk = adding and not self.model._meta.auto_increment
@@ -160,8 +161,7 @@ class ModelAdmin(object):
         query = self.apply_ordering(query, ordering)
 
         # process the filters from the request
-        # TODO: allow query filtering
-        filter_form, query = self.process_filters(query)
+        filter_form, query, field_tree = self.process_filters(query)
 
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
@@ -178,6 +178,7 @@ class ModelAdmin(object):
             query=pq,
             ordering=ordering,
             filter_form=filter_form,
+            field_tree=field_tree,
             # TODO: any additional metadata for filtering
         )
 
