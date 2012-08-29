@@ -1,66 +1,17 @@
   <div class="well" id="filter-wrapper" style="display: none;">
-    <div class="hidden" id="lookup-fields">
-      {% for (prefix, field), lookup_list in lookups.items() %}
-        {% for lookup in lookup_list %}
-          <span class="wrapper">
-            {% if lookup.field_type == 'text' %}
-              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="text" />
-            {% elif lookup.field_type == 'hidden' %}
-              <input class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
-            {% elif lookup.field_type == 'select' %}
-              <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}">
-                {% for value, label in lookup.data %}
-                  <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            {% elif lookup.field_type == 'select_multiple' %}
-              <select class="{{ lookup.css_class }}" id="{{ lookup.name }}" name="{{ lookup.name }}" multiple="multiple">
-                {% for value, label in lookup.data %}
-                  <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            {% elif lookup.field_type == 'foreign_key' %}
-              <a class="btn fk-lookup small" href="#">Select...</a>
-              <input id="{{ lookup.name }}" name="{{ lookup.name }}" type="hidden" />
-            {% elif lookup.field_type == 'foreign_key_multiple' %}
-              <input class="dummy" id="{{ lookup.name }}" type="hidden" value="" />
-              <a class="btn btn-primary fk-lookup small" href="#">Add...</a>
-            {% endif %}
-          </span>
-        {% endfor %}
+    <div class="hidden" id="filter-fields">
+      {% for field in filter_form %}
+        {{ field() }}
       {% endfor %}
     </div>
-    {% for (prefix, field), lookup_list in lookups.items() %}
-      {% for lookup in lookup_list %}
-        {% if lookup.field_type in ('foreign_key', 'foreign_key_multiple') %}
-        <div class="modal {% if lookup.field_type == 'foreign_key_multiple' %}modal-multi {% endif %}hide" id="modal-{{ lookup.field.name }}-{{ lookup.lookup }}">
-          <div class="modal-header">
-            <a class="close" data-dismiss="modal">x</a>
-            <h3>Select a {{ lookup.field.verbose_name }}</h3>
-          </div>
-          <div class="modal-body">
-            <input class="fk-lookup-input" data-ajax-url="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ lookup.field.name }}" type="text" />
-            <ul class="result-list">
-            </ul>
-          </div>
-          <div class="modal-footer">
-            <a class="btn disabled previous" href="#">Previous</a>
-            <a class="btn disabled next" href="#">Next</a>
-          </div>
-        </div>
-        {% endif %}
-      {% endfor %}
-    {% endfor %}
     <form action="." class="form-inline modeladmin-filters" method="get">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
       <div class="row-fluid">
-        <div class="span8 filter-list"></div>
-        <div class="span4">
-          <div class="pull-right">
-          <button class="btn btn-primary small" type="submit">Apply selected filters</button>
+        <div class="pull-right">
+          <button class="btn btn-primary small" type="submit">Apply</button>
           <a class="btn small" href=".">Reset</a>
-          </div>
         </div>
+        <div class="filter-list"></div>
       </div>
     </form>
   </div>

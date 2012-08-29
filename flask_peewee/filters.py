@@ -4,6 +4,7 @@ import operator
 from flask import request
 from peewee import *
 from wtforms import fields, form, validators
+from wtfpeewee.orm import ModelConverter
 
 
 class QueryFilter(object):
@@ -176,8 +177,14 @@ def make_field_tree(model, fields, exclude):
                 if no_explicit_fields:
                     rel_fields = None
                 else:
-                    rel_fields = [rf for rf in fields if rf.startswith('%s__' % field_obj.name)]
-                rel_exclude = [rx for rx in exclude if rx.startswith('%s__' % field_obj.name)]
+                    rel_fields = [
+                        rf.replace('%s__' % field_obj.name, '') \
+                            for rf in fields if rf.startswith('%s__' % field_obj.name)
+                    ]
+                rel_exclude = [
+                    rx.replace('%s__' % field_obj.name, '') \
+                        for rx in exclude if rx.startswith('%s__' % field_obj.name)
+                ]
                 children[field_obj.name] = make_field_tree(field_obj.to, rel_fields, rel_exclude)
 
     return FieldTreeNode(model, model_fields, children)
@@ -210,16 +217,25 @@ class FilterForm(object):
     def get_operation_field(self, field):
         choices = [('', '')]
         for i, query_filter in enumerate(self._query_filters[field]):
-            choices.append(('filter_%s_%s' % (field.name, i), query_filter.operation()))
+            choices.append((str(i), query_filter.operation()))
 
         return fields.SelectField(choices=choices, validators=[validators.Optional()])
 
-    def get_value_field(self, field):
-        field_name, field = self.model_converter.convert(field.model, field, None)
+    def get_field_default(self, field):
+        if isinstance(field, DateTimeField):
+            return datetime.datetime.now()
+        elif isinstance(field, DateField):
+            return datetime.date.today()
+        elif isinstance(field, TimeField):
+            return '00:00:00'
+        return None
 
-        field.kwargs['default'] = None
-        field.kwargs['validators'] = [validators.Optional()]
-        return field
+    def get_value_field(self, field):
+        field_name, form_field = self.model_converter.convert(field.model, field, None)
+
+        form_field.kwargs['default'] = self.get_field_default(field)
+        form_field.kwargs['validators'] = [validators.Optional()]
+        return form_field
 
     def get_field_dict(self, node=None, prefix=None):
         field_dict = {}
@@ -254,3 +270,9 @@ class FilterForm(object):
             print form.data
 
         return form, query
+
+
+class FilterModelConverter(ModelConverter):
+    def __init__(self, *args, **kwargs):
+        super(FilterModelConverter, self).__init__(*args, **kwargs)
+        self.defaults[TextField] = fields.TextField

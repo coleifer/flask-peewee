@@ -24,18 +24,7 @@
   <script src="{{ url_for('admin.static', filename='js/bootstrap-datepicker.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/chosen.jquery.min.js') }}"></script>
   <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
-  <script type="text/javascript">
-    $(function() {
-      $('select[data-role="chosen"]').chosen();
-      var d = new Date();
-      $('.date-widget').each(function(idx, elem) {
-        if (elem.value === '') {
-          elem.value = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDay();
-        }
-        $(elem).datepicker({format: 'yyyy-mm-dd'});
-      });
-    });
-  </script>
+
   {% block extra_script %}{% endblock %}
 </head>
 

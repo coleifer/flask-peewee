@@ -1,14 +1,14 @@
 {% macro list_fields(node, prefix) %}
   {% for field in node.fields %}
-    <li><a class="field-filter" id="filter-{{ field.name }}" href="#">{% if prefix %}{{ prefix }}{% endif %}{{ field.name }}</a></li>
+    <li><a class="field-filter" data-field="{{ field.name|apply_prefix(prefix, 'fv_') }}" data-select="{{ field.name|apply_prefix(prefix, 'fo_') }}" href="#">{% if prefix %}{{ ' / '.join(prefix) }} / {% endif %}{{ field.name }}</a></li>
   {% endfor %}
   {% for child_prefix, child in node.children.items() %}
-    {{ list_fields(child, prefix + child_prefix + ' / ') }}
+    {{ list_fields(child, prefix + [child_prefix]) }}
   {% endfor %}
 {% endmacro %}
     <li class="dropdown" style="float:right">
       <a class="dropdown-toggle" data-toggle="dropdown" href="#">Add filter... <span class="caret" /></a>
       <ul class="dropdown-menu pull-right" id="filters">
-        {{ list_fields(field_tree, '') }}
+        {{ list_fields(field_tree, []) }}
       </ul>
     </li>

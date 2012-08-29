@@ -8,11 +8,11 @@ except ImportError:
     import json
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
-from flask_peewee.filters import FilterMapping, FilterForm
+from flask_peewee.filters import FilterMapping, FilterForm, FilterModelConverter
 from flask_peewee.forms import AdminModelConverter
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
-from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField
+from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField, TextField
 from werkzeug import Headers
 from wtforms import fields, widgets
 from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
@@ -45,6 +45,8 @@ class ModelAdmin(object):
     exclude = None
     fields = None
 
+    form_converter = AdminModelConverter
+
     # foreign_key_field --> related field to search on, e.g. {'user': 'username'}
     foreign_key_lookups = None
 
@@ -56,7 +58,7 @@ class ModelAdmin(object):
     search_fields = None # fields to perform partial text matching on
 
     filter_mapping = FilterMapping
-    model_converter = AdminModelConverter
+    filter_converter = FilterModelConverter
 
     # templates, to override see get_template_overrides()
     base_templates = {
@@ -88,7 +90,7 @@ class ModelAdmin(object):
     def get_filter_form(self):
         return FilterForm(
             self.model,
-            self.model_converter(self),
+            self.filter_converter(),
             self.filter_mapping(),
             self.filter_fields,
             self.filter_exclude,
@@ -105,7 +107,7 @@ class ModelAdmin(object):
             allow_pk=allow_pk,
             only=self.fields,
             exclude=self.exclude,
-            converter=self.model_converter(self),
+            converter=self.form_converter(self),
         )
 
     def get_add_form(self):
@@ -286,9 +288,7 @@ class ModelAdmin(object):
         query = self.apply_ordering(query, ordering)
 
         # process the filters from the request
-        # TODO: same logic as index for filtering
-        #filtered_query = ???
-
+        filter_form, query, field_tree = self.process_filters(query)
         related = self.collect_related_fields(self.model, {}, [])
 
         if request.method == 'POST':
@@ -300,7 +300,9 @@ class ModelAdmin(object):
             model_admin=self,
             model=query.model,
             query=query,
-            # TODO: any additional metadata
+            filter_form=filter_form,
+            field_tree=field_tree,
+            related_fields=related,
         )
 
     def ajax_list(self):
@@ -413,6 +415,13 @@ class AdminTemplateHelper(object):
             return model_admin.get_display_name()
         return model_class.__name__
 
+    def apply_prefix(self, field_name, prefix_accum, field_prefix, rel_prefix='fr_'):
+        accum = []
+        for prefix in prefix_accum:
+            accum.append('%s%s' % (rel_prefix, prefix))
+        accum.append('%s%s' % (field_prefix, field_name))
+        return '-'.join(accum)
+
     def prepare_environment(self):
         self.app.template_context_processors[None].append(self.get_model_admins)
 
@@ -423,6 +432,8 @@ class AdminTemplateHelper(object):
         self.app.jinja_env.globals['update_querystring'] = self.update_querystring
         self.app.jinja_env.globals['get_admin_url'] = self.get_admin_url
         self.app.jinja_env.globals['get_model_name'] = self.get_model_name
+
+        self.app.jinja_env.filters['apply_prefix'] = self.apply_prefix
 
 
 class Admin(object):
