@@ -10,7 +10,6 @@
           raw_id.init({% if instance %}'{{ form.data[field_name]|string }}'{% endif %});
         {% endfor %}
       {% endif %}
-      $('.date-widget').datepicker({format: 'yyyy-mm-dd'})
     });
   </script>
 {% endblock %}
