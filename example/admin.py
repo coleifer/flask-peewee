@@ -11,12 +11,12 @@ from models import User, Message, Note, Relationship
 
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
-    
+
     def get_urls(self):
         return (
             ('/create/', self.create),
         )
-    
+
     def create(self):
         if request.method == 'POST':
             if request.form.get('message'):
@@ -26,7 +26,7 @@ class NotePanel(AdminPanel):
                 )
         next = request.form.get('next') or self.dashboard_url()
         return redirect(next)
-    
+
     def get_context(self):
         return {
             'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
@@ -34,7 +34,7 @@ class NotePanel(AdminPanel):
 
 class UserStatsPanel(AdminPanel):
     template_name = 'admin/user_stats.html'
-    
+
     def get_context(self):
         last_week = datetime.datetime.now() - datetime.timedelta(days=7)
         signups_this_week = User.filter(join_date__gt=last_week).count()
@@ -51,6 +51,7 @@ admin = Admin(app, auth)
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
     foreign_key_lookups = {'user': 'username'}
+    filter_fields = ('user', 'content', 'pub_date', 'user__username')
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
