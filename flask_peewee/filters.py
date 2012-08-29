@@ -3,7 +3,7 @@ import operator
 
 from flask import request
 from peewee import *
-from wtforms import fields, form
+from wtforms import fields, form, validators
 
 
 class QueryFilter(object):
@@ -150,6 +150,38 @@ class FilterMapping(object):
         return [f(field, field.verbose_name, field.choices) for f in self.foreign_key]
 
 
+class FieldTreeNode(object):
+    def __init__(self, model, fields, children=None):
+        self.model = model
+        self.fields = fields
+        self.children = children or {}
+
+
+def make_field_tree(model, fields, exclude):
+    no_explicit_fields = fields is None # assume we want all of them
+    if no_explicit_fields:
+        fields = model._meta.get_field_names()
+    exclude = exclude or []
+
+    model_fields = []
+    children = {}
+
+    for f in fields:
+        if f in exclude:
+            continue
+        if f in model._meta.fields:
+            field_obj = model._meta.fields[f]
+            model_fields.append(field_obj)
+            if isinstance(field_obj, ForeignKeyField):
+                if no_explicit_fields:
+                    rel_fields = None
+                else:
+                    rel_fields = [rf for rf in fields if rf.startswith('%s__' % field_obj.name)]
+                rel_exclude = [rx for rx in exclude if rx.startswith('%s__' % field_obj.name)]
+                children[field_obj.name] = make_field_tree(field_obj.to, rel_fields, rel_exclude)
+
+    return FieldTreeNode(model, model_fields, children)
+
 class FilterForm(object):
     base_class = form.Form
 
@@ -158,60 +190,68 @@ class FilterForm(object):
         self.model_converter = model_converter
         self.filter_mapping = filter_mapping
 
-        if fields:
-            self._fields = [model._meta.fields[f] for f in fields]
-        else:
-            self._fields = model._meta.get_fields()
-
-        if exclude:
-            self._fields = [f for f in self._fields if f.name not in exclude]
+        # convert fields and exclude into a tree
+        self._field_tree = make_field_tree(model, fields, exclude)
 
         self._query_filters = self.load_query_filters()
 
     def load_query_filters(self):
         query_filters = {}
+        queue = [self._field_tree]
 
-        for field in self._fields:
-            query_filters[field] = self.filter_mapping.convert(field)
+        while queue:
+            curr = queue.pop(0)
+            for field in curr.fields:
+                query_filters[field] = self.filter_mapping.convert(field)
+            queue.extend(curr.children.values())
 
         return query_filters
 
     def get_operation_field(self, field):
-        # return a select for choosing an operation on the field
-        choices = []
+        choices = [('', '')]
         for i, query_filter in enumerate(self._query_filters[field]):
             choices.append(('filter_%s_%s' % (field.name, i), query_filter.operation()))
 
-        return fields.SelectField(choices=choices)
+        return fields.SelectField(choices=choices, validators=[validators.Optional()])
 
     def get_value_field(self, field):
-        field_name, field = self.model_converter.convert(self.model, field, None)
+        field_name, field = self.model_converter.convert(field.model, field, None)
+
+        field.kwargs['default'] = None
+        field.kwargs['validators'] = [validators.Optional()]
         return field
 
-    def get_field_dict(self):
+    def get_field_dict(self, node=None, prefix=None):
         field_dict = {}
+        node = node or self._field_tree
 
-        for field in self._fields:
+        for field in node.fields:
             op_field = self.get_operation_field(field)
             val_field = self.get_value_field(field)
-            field_dict['filter_op_%s' % (field.name)] = op_field
-            field_dict['filter_val_%s' % (field.name)] = val_field
+            field_dict['fo_%s' % (field.name)] = op_field
+            field_dict['fv_%s' % (field.name)] = val_field
+
+        for prefix, node in node.children.items():
+            child_fd = self.get_field_dict(node, prefix)
+            field_dict['fr_%s' % prefix] = fields.FormField(self.get_form(child_fd))
 
         return field_dict
 
-    def get_form(self):
+    def get_form(self, field_dict):
         return type(
             self.model.__name__ + 'FilterForm',
             (self.base_class, ),
-            self.get_field_dict(),
+            field_dict,
         )
 
     def process_request(self, query):
         field_dict = self.get_field_dict()
+        FormClass = self.get_form(field_dict)
 
-        FormClass = self.get_form()
         form = FormClass(request.args)
         if form.validate():
-            pass
+            print 'pok'
+        else:
+            print form.errors
 
         return form, query

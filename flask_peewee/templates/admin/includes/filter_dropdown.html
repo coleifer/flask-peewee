@@ -1,17 +1,8 @@
     <li class="dropdown" style="float:right">
       <a class="dropdown-toggle" data-toggle="dropdown" href="#">Add filter... <span class="caret" /></a>
       <ul class="dropdown-menu" id="filters">
-        {# for model_lookup in query_filter.get_model_lookups() #}
-          {% for prefix, field in lookups.keys()|sort %}
-          <li><a class="field-filter" id="filter-{{ prefix }}{{ field.name }}" href="#">{% if prefix %}{{ ' / '.join(prefix.split('__')) }} {% endif %}{{ field.name }}</a>
-            <select class="lookup-select span3 hidden">
-              <option value="">---------------</option>
-              {% for lookup in lookups[(prefix, field)] %}
-                <option value="{{ lookup.lookup }}">{{ lookup.lookup_name }}</option>
-              {% endfor %}
-            </select>
-          </li>
-          {% endfor %}
-        {# endfor #}
+        {% for field in filter_form %}
+          <li><a class="field-filter" id="filter-{{ field.name }}" href="#">{{ field.name }}</a></li>
+        {% endfor %}
       </ul>
     </li>

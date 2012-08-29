@@ -10,13 +10,19 @@
         <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
       </ul>
     </li>
-    {# include "admin/includes/filter_dropdown.html" #}
+    {% include "admin/includes/filter_dropdown.html" %}
 {% endblock %}
 
 {% block content %}
   {# include "admin/includes/filter_widgets.html" #}
 
   <!-- filter form here -->
+  <form action="." class="form-horizontal" method="get">
+    {% for field in filter_form %}
+      <p>{{ field.label }} {{ field() }}</p>
+    {% endfor %}
+    <button type="submit">Submit</button>
+  </form>
 
   <form action="." class="form-horizontal" id="model-list" method="post"><input type="hidden" name="action" value="" />
   <table class="table table-bordered table-striped">

@@ -33,8 +33,12 @@ class ModelAdmin(object):
     # a model instance, though in the latter case they will not be sortable
     columns = None
 
-    # filter parameters -- what is available for filtering via the request
-    exclude_filters = None
+    # exclude certian fields from being exposed as filters -- for related fields
+    # use "__" notation, e.g. user__password
+    filter_exclude = None
+    filter_fields = None
+
+    # ignore these when processing the request
     ignore_filters = ('ordering', 'page',)
 
     # form parameters, lists of fields
@@ -86,8 +90,8 @@ class ModelAdmin(object):
             self.model,
             self.model_converter(self),
             self.filter_mapping(),
-            self.fields,
-            self.exclude,
+            self.filter_fields,
+            self.filter_exclude,
         )
 
     def process_filters(self, query):
@@ -157,9 +161,7 @@ class ModelAdmin(object):
 
         # process the filters from the request
         # TODO: allow query filtering
-        #filtered_query = ??
         filter_form, query = self.process_filters(query)
-
 
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
