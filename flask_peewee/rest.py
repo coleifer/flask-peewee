@@ -99,7 +99,6 @@ class RestResource(object):
     # use "__" notation, e.g. user__password
     filter_exclude = None
     filter_fields = None
-    filter_ignore = ('ordering', 'page', 'limit', 'key', 'secret',)
     filter_recursive = True
 
     # mapping of field name to resource class
