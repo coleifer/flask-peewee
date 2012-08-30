@@ -7,7 +7,7 @@ except ImportError:
 from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
 from peewee import *
 
-from flask_peewee.filters import QueryFilter
+from flask_peewee.filters import make_field_tree
 from flask_peewee.serializer import Serializer, Deserializer
 from flask_peewee.utils import PaginatedQuery, slugify, get_object_or_404
 
@@ -90,13 +90,16 @@ class AdminAuthentication(UserAuthentication):
 class RestResource(object):
     paginate_by = 20
 
-    # filtering
-    exclude_filters = None
-    ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
-
     # serializing: dictionary of model -> field names to restrict output
     fields = None
     exclude = None
+
+    # exclude certian fields from being exposed as filters -- for related fields
+    # use "__" notation, e.g. user__password
+    filter_exclude = None
+    filter_fields = None
+    filter_ignore = ('ordering', 'page', 'limit', 'key', 'secret',)
+    filter_recursive = True
 
     # mapping of field name to resource class
     include_resources = None
@@ -110,13 +113,20 @@ class RestResource(object):
         self.authentication = authentication
         self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
 
+        self._operations = self.model._meta.database.adapter.operations
+
         self._fields = {self.model: self.fields or self.model._meta.get_field_names()}
         if self.exclude:
             self._exclude = {self.model: self.exclude}
         else:
             self._exclude = {}
 
+        self._filter_fields = self.filter_fields or self.model._meta.get_field_names()
+        self._filter_exclude = self.filter_exclude or []
+
         self._resources = {}
+
+        # recurse into nested resources
         if self.include_resources:
             for field_name, resource in self.include_resources.items():
                 field_obj = self.model._meta.fields[field_name]
@@ -125,9 +135,14 @@ class RestResource(object):
                 self._fields.update(resource_obj._fields)
                 self._exclude.update(resource_obj._exclude)
 
+                self._filter_fields.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
+                self._filter_exclude.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])
+
             self._include_foreign_keys = False
         else:
             self._include_foreign_keys = True
+
+        self._field_tree = make_field_tree(self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
 
     def authorize(self):
         return self.authentication.authorize()
@@ -145,8 +160,34 @@ class RestResource(object):
     def get_query(self):
         return self.model.select()
 
-    def get_query_filter(self, query):
-        return QueryFilter(query, self.exclude_filters, self.ignore_filters)
+    def process_query(self, query):
+        raw_filters = {}
+        for key in request.args:
+            if '__' in key:
+                expr, op = key.rsplit('__', 1)
+                if op not in self._operations:
+                    expr = key
+                    op = 'eq'
+            else:
+                expr = key
+                op = 'eq'
+            raw_filters.setdefault(expr, [])
+            raw_filters[expr].append((op, request.args.getlist(key)))
+
+        cleaned_filters = {}
+
+        queue = [(self._field_tree, '')]
+        while queue:
+            node, prefix = queue.pop(0)
+            for field in node.fields:
+                filter_expr = '%s%s' % (prefix, field.name)
+                if filter_expr in raw_filters:
+                    for op, arg_list in raw_filters[filter_expr]:
+                        cleaned_filters['%s__%s' % (filter_expr, op)] = arg_list
+            for child_prefix, child_node in node.children.items():
+                queue.append((child_node, prefix + child_prefix + '__'))
+
+        return query.filter(**cleaned_filters)
 
     def get_serializer(self):
         return Serializer()
@@ -303,16 +344,13 @@ class RestResource(object):
         query = self.get_query()
         query = self.apply_ordering(query)
 
-        # create a QueryFilter object with our current query
-        query_filter = self.get_query_filter(query)
-
-        # process the filters from the request
-        filtered_query = query_filter.get_filtered_query()
+        # process any filters
+        query = self.process_query(query)
 
         if self.paginate_by or 'limit' in request.args:
-            return self.paginated_object_list(filtered_query)
+            return self.paginated_object_list(query)
 
-        return self.response(self.serialize_query(filtered_query))
+        return self.response(self.serialize_query(query))
 
     def object_detail(self, obj):
         return self.response(self.serialize_object(obj))

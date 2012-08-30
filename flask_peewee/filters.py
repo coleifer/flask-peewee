@@ -150,7 +150,7 @@ class FieldTreeNode(object):
         self.children = children or {}
 
 
-def make_field_tree(model, fields, exclude):
+def make_field_tree(model, fields, exclude, force_recursion=False):
     no_explicit_fields = fields is None # assume we want all of them
     if no_explicit_fields:
         fields = model._meta.get_field_names()
@@ -159,25 +159,29 @@ def make_field_tree(model, fields, exclude):
     model_fields = []
     children = {}
 
-    for f in fields:
-        if f in exclude:
+    for field_obj in model._meta.get_fields():
+        if field_obj.name in exclude:
             continue
-        if f in model._meta.fields:
-            field_obj = model._meta.fields[f]
+
+        if field_obj.name in fields:
             model_fields.append(field_obj)
-            if isinstance(field_obj, ForeignKeyField):
-                if no_explicit_fields:
-                    rel_fields = None
-                else:
-                    rel_fields = [
-                        rf.replace('%s__' % field_obj.name, '') \
-                            for rf in fields if rf.startswith('%s__' % field_obj.name)
-                    ]
-                rel_exclude = [
-                    rx.replace('%s__' % field_obj.name, '') \
-                        for rx in exclude if rx.startswith('%s__' % field_obj.name)
+
+        if isinstance(field_obj, ForeignKeyField):
+            if no_explicit_fields:
+                rel_fields = None
+            else:
+                rel_fields = [
+                    rf.replace('%s__' % field_obj.name, '') \
+                        for rf in fields if rf.startswith('%s__' % field_obj.name)
                 ]
-                children[field_obj.name] = make_field_tree(field_obj.to, rel_fields, rel_exclude)
+                if not rel_fields and force_recursion:
+                    rel_fields = None
+
+            rel_exclude = [
+                rx.replace('%s__' % field_obj.name, '') \
+                    for rx in exclude if rx.startswith('%s__' % field_obj.name)
+            ]
+            children[field_obj.name] = make_field_tree(field_obj.to, rel_fields, rel_exclude, force_recursion)
 
     return FieldTreeNode(model, model_fields, children)
 
@@ -191,6 +195,9 @@ class SmallSelectWidget(widgets.Select):
 class FilterForm(object):
     base_class = form.Form
     separator = '-'
+    field_operation_prefix = 'fo_'
+    field_value_prefix = 'fv_'
+    field_relation_prefix = 'fr_'
 
     def __init__(self, model, model_converter, filter_mapping, fields=None, exclude=None):
         self.model = model
@@ -244,12 +251,12 @@ class FilterForm(object):
         for field in node.fields:
             op_field = self.get_operation_field(field)
             val_field = self.get_value_field(field)
-            field_dict['fo_%s' % (field.name)] = op_field
-            field_dict['fv_%s' % (field.name)] = val_field
+            field_dict['%s%s' % (self.field_operation_prefix, field.name)] = op_field
+            field_dict['%s%s' % (self.field_value_prefix, field.name)] = val_field
 
         for prefix, node in node.children.items():
             child_fd = self.get_field_dict(node, prefix)
-            field_dict['fr_%s' % prefix] = fields.FormField(
+            field_dict['%s%s' % (self.field_relation_prefix, prefix)] = fields.FormField(
                 self.get_form(child_fd),
                 separator=self.separator,
             )
@@ -273,8 +280,8 @@ class FilterForm(object):
 
         def _dfs(node, prefix, models, join_columns):
             for field in node.fields:
-                qf_select = 'fo_'.join((prefix, field.name))
-                qf_value = 'fv_'.join((prefix, field.name))
+                qf_select = self.field_operation_prefix.join((prefix, field.name))
+                qf_value = self.field_value_prefix.join((prefix, field.name))
 
                 if qf_select in request.args and qf_value in request.args:
                     accum.setdefault(field, [])
@@ -288,7 +295,7 @@ class FilterForm(object):
                     ))
 
             for child_prefix, child in node.children.items():
-                new_prefix = prefix + 'fr_' + child_prefix + '-'
+                new_prefix = prefix + self.field_relation_prefix + child_prefix + self.separator
                 model_copy = list(models) + [child.model]
                 join_copy = list(join_columns) + [child_prefix]
                 _dfs(child, new_prefix, model_copy, join_copy)
