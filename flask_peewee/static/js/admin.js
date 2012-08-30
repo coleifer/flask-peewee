@@ -123,7 +123,11 @@ var Admin = window.Admin || {};
     });
   }
 
-  ModelAdminFilter.prototype.add_row = function(field_label, input_elem, select_elem) {
+  ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
+    var select_elem = this.lookups_elem.find('#'+qf_s),
+        input_elem = this.lookups_elem.find('#'+qf_v),
+        field_label = $('#filter-'+qf_s).text();
+
     var self = this,
         select_clone = select_elem.clone(),
         input_clone = input_elem.clone(),
@@ -134,6 +138,11 @@ var Admin = window.Admin || {};
           , '</a> </div>'
         ].join('\n'),
         row_elem = $(row).append(select_clone).append(input_clone);
+
+    if (ival && sval) {
+        select_clone.val(sval);
+        input_clone.val(ival);
+    }
 
     row_elem.find('a.btn-close').click(function(e) {
       row_elem.remove();
@@ -160,16 +169,12 @@ var Admin = window.Admin || {};
 
   /* add a filter of a given type */
   ModelAdminFilter.prototype.add_filter = function(elem) {
-    var field_label = elem.text(),
-        input_elem = this.lookups_elem.find('#'+elem.data('field')),
-        select_elem = this.lookups_elem.find('#'+elem.data('select'));
-
-    return this.add_row(field_label, input_elem, select_elem);
+    return this.add_row(elem.data('field'), elem.data('select'));
   }
 
   /* pull request data and simulate adding a filter */
-  ModelAdminFilter.prototype.add_filter_request = function(filter, value, lookup_type, extra) {
-
+  ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val) {
+    return this.add_row(qf_v, qf_s, filter_val, filter_idx);
   }
 
   /* export */

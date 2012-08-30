@@ -3,7 +3,7 @@ import operator
 
 from flask import request
 from peewee import *
-from wtforms import fields, form, validators
+from wtforms import fields, form, validators, widgets
 from wtfpeewee.orm import ModelConverter
 
 
@@ -189,6 +189,13 @@ def make_field_tree(model, fields, exclude):
 
     return FieldTreeNode(model, model_fields, children)
 
+
+class SmallSelectWidget(widgets.Select):
+    def __call__(self, field, **kwargs):
+        kwargs['class'] = 'span2'
+        return super(SmallSelectWidget, self).__call__(field, **kwargs)
+
+
 class FilterForm(object):
     base_class = form.Form
     separator = '-'
@@ -220,7 +227,7 @@ class FilterForm(object):
         for i, query_filter in enumerate(self._query_filters[field]):
             choices.append((str(i), query_filter.operation()))
 
-        return fields.SelectField(choices=choices, validators=[validators.Optional()])
+        return fields.SelectField(choices=choices, validators=[validators.Optional()], widget=SmallSelectWidget())
 
     def get_field_default(self, field):
         if isinstance(field, DateTimeField):
@@ -285,6 +292,8 @@ class FilterForm(object):
                         request.args.getlist(qf_select),
                         request.args.getlist(qf_value),
                         models,
+                        qf_select,
+                        qf_value,
                     ))
 
             for child_prefix, child in node.children.items():
@@ -300,20 +309,25 @@ class FilterForm(object):
 
         form = FormClass(request.args)
         query_filters = self.parse_query_filters()
+        cleaned = []
 
         for field, filters in query_filters.items():
-            for (filter_idx_list, filter_value_list, path) in filters:
+            for (filter_idx_list, filter_value_list, path, qf_s, qf_v) in filters:
                 query = query.switch(self.model)
                 for model in path[1:]:
                     query = query.join(model)
+
                 for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
-                    query_filter = self._query_filters[field][int(filter_idx)]
+                    idx = int(filter_idx)
+                    cleaned.append((qf_s, idx, qf_v, filter_value))
+                    query_filter = self._query_filters[field][idx]
                     query = query_filter.apply(query, filter_value)
-        print query.sql()
-        return form, query
+
+        return form, query, cleaned
 
 
 class FilterModelConverter(ModelConverter):
     def __init__(self, *args, **kwargs):
         super(FilterModelConverter, self).__init__(*args, **kwargs)
+        self.defaults = dict(self.defaults)
         self.defaults[TextField] = fields.TextField

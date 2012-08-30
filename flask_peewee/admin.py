@@ -98,8 +98,8 @@ class ModelAdmin(object):
 
     def process_filters(self, query):
         filter_form = self.get_filter_form()
-        form, query = filter_form.process_request(query)
-        return form, query, filter_form._field_tree
+        form, query, cleaned = filter_form.process_request(query)
+        return form, query, cleaned, filter_form._field_tree
 
     def get_form(self, adding=False):
         allow_pk = adding and not self.model._meta.auto_increment
@@ -163,7 +163,7 @@ class ModelAdmin(object):
         query = self.apply_ordering(query, ordering)
 
         # process the filters from the request
-        filter_form, query, field_tree = self.process_filters(query)
+        filter_form, query, cleaned, field_tree = self.process_filters(query)
 
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
@@ -181,6 +181,7 @@ class ModelAdmin(object):
             ordering=ordering,
             filter_form=filter_form,
             field_tree=field_tree,
+            active_filters=cleaned,
         )
 
     def dispatch_save_redirect(self, instance):
@@ -287,7 +288,7 @@ class ModelAdmin(object):
         query = self.apply_ordering(query, ordering)
 
         # process the filters from the request
-        filter_form, query, field_tree = self.process_filters(query)
+        filter_form, query, cleaned, field_tree = self.process_filters(query)
         related = self.collect_related_fields(self.model, {}, [])
 
         if request.method == 'POST':
@@ -301,6 +302,7 @@ class ModelAdmin(object):
             query=query,
             filter_form=filter_form,
             field_tree=field_tree,
+            active_filters=cleaned,
             related_fields=related,
         )
 
