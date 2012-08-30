@@ -13,21 +13,18 @@
 
 {% block content %}
   {% include "admin/includes/filter_widgets.html" %}
-  
+
   <div class="well">
     <h4 id="export-summary">Currently {{ query.count() }} records are scheduled for export <small><a href="#" onclick="$('#export-details').toggle();">details</a></small></h4>
     <div id="export-details" style="display:none;">
-      <ul>
-      {% for lookup, value in query_filter.raw_lookups %}
-        <li>{{ lookup }}: {{ value }}</li>
-      {% else %}
-        <li>No filters have been selected</li>
-      {% endfor %}
-      </ul>
-      <pre>{{ query.sql() }}</pre>
+      <pre>SQL:
+{{ query.sql()[0] }}
+
+PARAMS:
+{{ query.sql()[1] }}</pre>
     </div>
   </div>
-  
+
   <form action="./?{{ request.query_string }}" class="form-horizontal" method="post">
     <fieldset>
       <legend>Select fields to export</legend>
@@ -41,7 +38,7 @@
           {% endfor %}
         </div>
       </div>
-      
+
       {% for (model, path), fields in related_fields.items() %}
         <legend>Select related fields to export</legend>
         <div class="control-group">
@@ -55,7 +52,7 @@
           </div>
         </div>
       {% endfor %}
-      
+
       <div class="form-actions">
         <button class="btn btn-primary" type="submit">Export JSON</button>
         <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string }}">Cancel</a>

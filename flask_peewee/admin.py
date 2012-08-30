@@ -290,7 +290,7 @@ class ModelAdmin(object):
 
         if request.method == 'POST':
             raw_fields = request.form.getlist('fields')
-            export = Export(filtered_query, related, raw_fields)
+            export = Export(query, related, raw_fields)
             return export.json_response('export-%s.json' % self.get_admin_name())
 
         return render_template(self.templates['export'],
