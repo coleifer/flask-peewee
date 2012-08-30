@@ -54,9 +54,6 @@ class ModelAdmin(object):
     delete_collect_objects = True
     delete_recursive = True
 
-    # TODO: implement these
-    search_fields = None # fields to perform partial text matching on
-
     filter_mapping = FilterMapping
     filter_converter = FilterModelConverter
 
