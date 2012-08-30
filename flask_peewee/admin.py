@@ -38,9 +38,6 @@ class ModelAdmin(object):
     filter_exclude = None
     filter_fields = None
 
-    # ignore these when processing the request
-    ignore_filters = ('ordering', 'page',)
-
     # form parameters, lists of fields
     exclude = None
     fields = None
@@ -413,12 +410,12 @@ class AdminTemplateHelper(object):
             return model_admin.get_display_name()
         return model_class.__name__
 
-    def apply_prefix(self, field_name, prefix_accum, field_prefix, rel_prefix='fr_'):
+    def apply_prefix(self, field_name, prefix_accum, field_prefix, rel_prefix='fr_', rel_sep='-'):
         accum = []
         for prefix in prefix_accum:
             accum.append('%s%s' % (rel_prefix, prefix))
         accum.append('%s%s' % (field_prefix, field_name))
-        return '-'.join(accum)
+        return rel_sep.join(accum)
 
     def prepare_environment(self):
         self.app.template_context_processors[None].append(self.get_model_admins)
