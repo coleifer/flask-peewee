@@ -17,7 +17,7 @@ class QueryFilter(object):
         self.name = name
         self.options = options
 
-    def apply(self, query, value):
+    def query(self, value):
         raise NotImplementedError
 
     def operation(self):
@@ -28,75 +28,67 @@ class QueryFilter(object):
 
 
 class EqualQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field == value)
+    def query(self, value):
+        return self.field == value
 
     def operation(self):
         return 'equal to'
 
 
 class NotEqualQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field != value)
+    def query(self, value):
+        return self.field != value
 
     def operation(self):
         return 'not equal to'
 
 
 class LessThanQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field < value)
+    def query(self, value):
+        return self.field < value
 
     def operation(self):
         return 'less than'
 
 
 class LessThanEqualToQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field <= value)
+    def query(self, value):
+        return self.field <= value
 
     def operation(self):
         return 'less than or equal to'
 
 
 class GreaterThanQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field > value)
+    def query(self, value):
+        return self.field > value
 
     def operation(self):
         return 'greater than'
 
 
 class GreaterThanEqualToQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field >= value)
+    def query(self, value):
+        return self.field >= value
 
     def operation(self):
         return 'greater than or equal to'
 
 
 class StartsWithQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field ^ value)
+    def query(self, value):
+        return self.field ^ value
 
     def operation(self):
         return 'starts with'
 
 
 class ContainsQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field ** value)
+    def query(self, value):
+        return self.field ** value
 
     def operation(self):
         return 'contains'
-
-
-class InQueryFilter(QueryFilter):
-    def apply(self, query, value):
-        return query.where(self.field << value)
-
-    def operation(self):
-        return 'is one of'
 
 
 class FilterMapping(object):
@@ -106,7 +98,7 @@ class FilterMapping(object):
     string = (EqualQueryFilter, NotEqualQueryFilter, StartsWithQueryFilter, ContainsQueryFilter)
     numeric = (EqualQueryFilter, NotEqualQueryFilter, LessThanQueryFilter, GreaterThanQueryFilter,
         LessThanEqualToQueryFilter, GreaterThanEqualToQueryFilter)
-    foreign_key = (EqualQueryFilter, NotEqualQueryFilter, InQueryFilter)
+    foreign_key = (EqualQueryFilter, NotEqualQueryFilter)
     boolean = (EqualQueryFilter, NotEqualQueryFilter)
 
     def get_field_types(self):
@@ -223,7 +215,7 @@ class FilterForm(object):
         return query_filters
 
     def get_operation_field(self, field):
-        choices = [('', '')]
+        choices = []
         for i, query_filter in enumerate(self._query_filters[field]):
             choices.append((str(i), query_filter.operation()))
 
@@ -279,9 +271,7 @@ class FilterForm(object):
         # took to get there (joins)
         accum = {}
 
-        def _dfs(node, prefix, models):
-            models.append(node.model)
-
+        def _dfs(node, prefix, models, join_columns):
             for field in node.fields:
                 qf_select = 'fo_'.join((prefix, field.name))
                 qf_value = 'fv_'.join((prefix, field.name))
@@ -292,14 +282,18 @@ class FilterForm(object):
                         request.args.getlist(qf_select),
                         request.args.getlist(qf_value),
                         models,
+                        join_columns,
                         qf_select,
                         qf_value,
                     ))
 
             for child_prefix, child in node.children.items():
-                _dfs(child, prefix + 'fr_' + child_prefix + '-', list(models))
+                new_prefix = prefix + 'fr_' + child_prefix + '-'
+                model_copy = list(models) + [child.model]
+                join_copy = list(join_columns) + [child_prefix]
+                _dfs(child, new_prefix, model_copy, join_copy)
 
-        _dfs(self._field_tree, '', [])
+        _dfs(self._field_tree, '', [], [])
 
         return accum
 
@@ -312,16 +306,19 @@ class FilterForm(object):
         cleaned = []
 
         for field, filters in query_filters.items():
-            for (filter_idx_list, filter_value_list, path, qf_s, qf_v) in filters:
+            for (filter_idx_list, filter_value_list, path, join_path, qf_s, qf_v) in filters:
                 query = query.switch(self.model)
-                for model in path[1:]:
-                    query = query.join(model)
+                for join, model in zip(join_path, path):
+                    query = query.join(model, on=join)
 
+                q_objects = []
                 for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
                     idx = int(filter_idx)
                     cleaned.append((qf_s, idx, qf_v, filter_value))
                     query_filter = self._query_filters[field][idx]
-                    query = query_filter.apply(query, filter_value)
+                    q_objects.append(query_filter.query(filter_value))
+
+                query = query.where(reduce(operator.or_, q_objects))
 
         return form, query, cleaned
 
