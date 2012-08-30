@@ -1,4 +1,5 @@
 import functools
+import operator
 try:
     import simplejson as json
 except ImportError:
@@ -162,6 +163,8 @@ class RestResource(object):
 
     def process_query(self, query):
         raw_filters = {}
+
+        # clean and normalize the request parameters
         for key in request.args:
             if '__' in key:
                 expr, op = key.rsplit('__', 1)
@@ -174,8 +177,9 @@ class RestResource(object):
             raw_filters.setdefault(expr, [])
             raw_filters[expr].append((op, request.args.getlist(key)))
 
-        cleaned_filters = {}
-
+        # do a breadth first search across the field tree created by filter_fields,
+        # searching for matching keys in the request parameters -- when found,
+        # filter the query accordingly
         queue = [(self._field_tree, '')]
         while queue:
             node, prefix = queue.pop(0)
@@ -183,11 +187,22 @@ class RestResource(object):
                 filter_expr = '%s%s' % (prefix, field.name)
                 if filter_expr in raw_filters:
                     for op, arg_list in raw_filters[filter_expr]:
-                        cleaned_filters['%s__%s' % (filter_expr, op)] = arg_list
+                        query = self.apply_filter(query, filter_expr, op, arg_list)
+
             for child_prefix, child_node in node.children.items():
                 queue.append((child_node, prefix + child_prefix + '__'))
 
-        return query.filter(**cleaned_filters)
+        return query
+
+    def apply_filter(self, query, expr, op, arg_list):
+        query_expr = '%s__%s' % (expr, op)
+        if op == 'in':
+            return query.filter(**{query_expr: arg_list})
+        elif len(arg_list) == 1:
+            return query.filter(**{query_expr: arg_list[0]})
+        else:
+            query_clauses = [Q(**{query_expr: val}) for val in arg_list]
+            return query.filter(reduce(operator.or_, query_clauses))
 
     def get_serializer(self):
         return Serializer()
