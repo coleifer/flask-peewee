@@ -123,10 +123,14 @@ var Admin = window.Admin || {};
     });
   }
 
-  ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
+  ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval, ifield) {
     var select_elem = this.lookups_elem.find('#'+qf_s),
         input_elem = this.lookups_elem.find('#'+qf_v),
         field_label = $('#filter-'+qf_s).text();
+
+    if (ifield) {
+        input_elem = $(ifield);
+    }
 
     var self = this,
         select_clone = select_elem.clone(),
@@ -173,8 +177,8 @@ var Admin = window.Admin || {};
   }
 
   /* pull request data and simulate adding a filter */
-  ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val) {
-    return this.add_row(qf_v, qf_s, filter_val, filter_idx);
+  ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val, filter_field) {
+    return this.add_row(qf_v, qf_s, filter_val, filter_idx, filter_field);
   }
 
   /* export */

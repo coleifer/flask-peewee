@@ -13,9 +13,9 @@
        * special-case foreign key lookups since they have a `repr` that we'll
        * need to display on the button
        */
-      {% for qf_s, filter_idx, qf_v, filter_val in active_filters %}
+      {% for qf_s, filter_idx, qf_v, filter_val, form_field in active_filters %}
         admin_filter.add_filter_request(
-          '{{ qf_s }}', {{ filter_idx }}, '{{ qf_v }}', {{ filter_val|tojson|safe }}
+          '{{ qf_s }}', {{ filter_idx }}, '{{ qf_v }}', null, '{{ form_field()|safe }}'
         );
       {% endfor %}
     });

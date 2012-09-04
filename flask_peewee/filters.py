@@ -270,17 +270,24 @@ class FilterForm(object):
             field_dict,
         )
 
+    def get_form_data(self, field_name, form):
+        data = form.data
+        import ipdb; ipdb.set_trace()
+        for piece in field_name.split(self.separator):
+            data = data[piece]
+        return data
+
+    def get_query_field(self, field_name, form):
+        field = form
+        for piece in field_name.split(self.separator):
+            field = field[piece]
+        return field
+
     def get_query_value(self, raw_field_name, form=None):
         if form is None:
             return request.args.getlist(raw_field_name)
-        if self.separator in raw_field_name:
-            pieces = raw_field_name.split(self.separator)
-            data = form.data[pieces[0]]
-            for piece in pieces[1:]:
-                data = data[piece]
-        else:
-            data = form.data[raw_field_name]
 
+        data = self.get_form_data(raw_field_name, form)
         if not isinstance(data, list):
             data = [data]
         return data
@@ -336,7 +343,8 @@ class FilterForm(object):
                 q_objects = []
                 for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
                     idx = int(filter_idx)
-                    cleaned.append((qf_s, idx, qf_v, filter_value))
+                    form_field = self.get_query_field(qf_v, form)
+                    cleaned.append((qf_s, idx, qf_v, filter_value, form_field))
                     query_filter = self._query_filters[field][idx]
                     q_objects.append(query_filter.query(filter_value))
 
