@@ -270,7 +270,22 @@ class FilterForm(object):
             field_dict,
         )
 
-    def parse_query_filters(self):
+    def get_query_value(self, raw_field_name, form=None):
+        if form is None:
+            return request.args.getlist(raw_field_name)
+        if self.separator in raw_field_name:
+            pieces = raw_field_name.split(self.separator)
+            data = form.data[pieces[0]]
+            for piece in pieces[1:]:
+                data = data[piece]
+        else:
+            data = form.data[raw_field_name]
+
+        if not isinstance(data, list):
+            data = [data]
+        return data
+
+    def parse_query_filters(self, form=None):
         # reconstruct the "select" and "value" fields we are searching for in the
         # arguments from the request by depth-first searching the field tree --
         # basically what we should have at the end is the field we're querying,
@@ -283,11 +298,11 @@ class FilterForm(object):
                 qf_select = self.field_operation_prefix.join((prefix, field.name))
                 qf_value = self.field_value_prefix.join((prefix, field.name))
 
-                if qf_select in request.args and qf_value in request.args:
+                if qf_select in request.args:# and qf_value in request.args:
                     accum.setdefault(field, [])
                     accum[field].append((
                         request.args.getlist(qf_select),
-                        request.args.getlist(qf_value),
+                        self.get_query_value(qf_value, form),
                         models,
                         join_columns,
                         qf_select,
@@ -309,7 +324,7 @@ class FilterForm(object):
         FormClass = self.get_form(field_dict)
 
         form = FormClass(request.args)
-        query_filters = self.parse_query_filters()
+        query_filters = self.parse_query_filters(form)
         cleaned = []
 
         for field, filters in query_filters.items():
