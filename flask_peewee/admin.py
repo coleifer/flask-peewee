@@ -9,17 +9,35 @@ except ImportError:
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
 from flask_peewee.filters import FilterMapping, FilterForm, FilterModelConverter
-from flask_peewee.forms import AdminModelConverter
+from flask_peewee.forms import BaseModelConverter
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
 from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField, TextField
 from werkzeug import Headers
 from wtforms import fields, widgets
-from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField
+from wtfpeewee.fields import ModelSelectField, ModelSelectMultipleField, ModelHiddenField
 from wtfpeewee.orm import model_form
 
 
 current_dir = os.path.dirname(__file__)
+
+
+class AdminModelConverter(BaseModelConverter):
+    def __init__(self, model_admin, additional=None):
+        super(AdminModelConverter, self).__init__(additional)
+        self.model_admin = model_admin
+
+        self.converters[ForeignKeyField] = self.handle_foreign_key
+
+    def handle_foreign_key(self, model, field, **kwargs):
+        if field.null:
+            kwargs['allow_blank'] = True
+
+        if field.name in (self.model_admin.foreign_key_lookups or ()):
+            form_field = ModelHiddenField(model=field.to, **kwargs)
+        else:
+            form_field = ModelSelectField(model=field.to, **kwargs)
+        return field.name, form_field
 
 
 class ModelAdmin(object):

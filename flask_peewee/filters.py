@@ -2,9 +2,9 @@ import datetime
 import operator
 
 from flask import request
+from flask_peewee.forms import BaseModelConverter
 from peewee import *
 from wtforms import fields, form, validators, widgets
-from wtfpeewee.orm import ModelConverter
 
 
 class QueryFilter(object):
@@ -330,7 +330,7 @@ class FilterForm(object):
         return form, query, cleaned
 
 
-class FilterModelConverter(ModelConverter):
+class FilterModelConverter(BaseModelConverter):
     def __init__(self, *args, **kwargs):
         super(FilterModelConverter, self).__init__(*args, **kwargs)
         self.defaults = dict(self.defaults)
