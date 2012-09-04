@@ -335,3 +335,4 @@ class FilterModelConverter(BaseModelConverter):
         super(FilterModelConverter, self).__init__(*args, **kwargs)
         self.defaults = dict(self.defaults)
         self.defaults[TextField] = fields.TextField
+        self.defaults[DateTimeField] = fields.DateTimeField
