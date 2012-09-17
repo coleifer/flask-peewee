@@ -20,11 +20,11 @@ def homepage():
 @auth.login_required
 def private_timeline():
     user = auth.get_logged_in_user()
-    
+
     messages = Message.select().where(
         user__in=user.following()
     ).order_by(('pub_date', 'desc'))
-    
+
     return object_list('private_messages.html', messages, 'message_list')
 
 @app.route('/public/')
@@ -46,7 +46,7 @@ def join():
             )
             user.set_password(request.form['password'])
             user.save()
-            
+
             auth.login_user(user)
             return redirect(url_for('homepage'))
 
@@ -110,3 +110,16 @@ def create():
         return redirect(url_for('user_detail', username=user.username))
 
     return render_template('create.html')
+
+@app.route('/edit/<int:message_id>/', methods=['GET', 'POST'])
+@auth.login_required
+def edit(message_id):
+    user = auth.get_logged_in_user()
+    message = get_object_or_404(Message, user=user, id=message_id)
+    if request.method == 'POST' and request.form['content']:
+        message.content = request.form['content']
+        message.save()
+        flash('Your changes were saved')
+        return redirect(url_for('user_detail', username=user.username))
+
+    return render_template('edit.html', message=message)

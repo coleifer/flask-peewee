@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content_title %}Edit message{% endblock %}
+
+{% block content %}
+  <form action="{{ url_for('edit', message_id=message.id) }}" method=post>
+    <dl>
+      <dt>Message:</dt>
+      <dd><textarea name="content">{{ message.content }}</textarea></dd>
+      <dd><input type="submit" value="Save" /></dd>
+    </dl>
+  </form>
+{% endblock %}

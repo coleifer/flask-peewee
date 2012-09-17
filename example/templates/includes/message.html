@@ -1,2 +1,3 @@
+{% if user and message.user == user %}<a class="message-edit" href="{{ url_for('edit', message_id=message.id) }}">edit</a>{% endif %}
 <a class="avatar" href="{{ url_for('user_detail', username=message.user.username) }}"><img src="{{ message.user.gravatar_url() }}" /></a>
 <p class="message-content">{{ message.content|urlize }}</p>

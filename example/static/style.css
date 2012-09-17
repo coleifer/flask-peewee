@@ -14,3 +14,4 @@ h2              { font-size: 1.2em; }
                   border: 1px solid #AACBE2; }
 .avatar         { display: block; float: left; margin: 0 10px 0 0; }
 .message-content { min-height: 80px; }
+.message-edit   { float: right; font-size: 0.6em; }
