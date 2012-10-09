@@ -84,6 +84,7 @@ class ModelAdmin(object):
     def __init__(self, admin, model):
         self.admin = admin
         self.model = model
+        self.db = model._meta.database
         self.pk = self.model._meta.primary_key
 
         self.templates = dict(self.base_templates)
@@ -186,7 +187,7 @@ class ModelAdmin(object):
             if request.form['action'] == 'delete':
                 return redirect(url_for(self.get_url_name('delete'), id=id_list))
             else:
-                return redirect(url_for(self.get_url_name('export'), id__in=id_list))
+                return redirect(url_for(self.get_url_name('export'), id=id_list))
 
         return render_template(self.templates['index'],
             model_admin=self,
@@ -309,12 +310,13 @@ class ModelAdmin(object):
 
         return render_template(self.templates['export'],
             model_admin=self,
-            model=query.model,
+            model=query.model_class,
             query=query,
             filter_form=filter_form,
             field_tree=field_tree,
             active_filters=cleaned,
             related_fields=related,
+            sql=query.sql(self.db.get_compiler()),
         )
 
     def ajax_list(self):

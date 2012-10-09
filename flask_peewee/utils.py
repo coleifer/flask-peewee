@@ -190,10 +190,9 @@ def path_to_models(model, path):
         next, path = path.split('__')
     else:
         next, path = path, ''
-    if next in model._meta.rel_fields:
-        field_name = model._meta.rel_fields[next]
-        model = model._meta.get_field_by_name(field_name).rel_model
-        accum.append(model)
+    if next in model._meta.rel:
+        field = model._meta.rel[next]
+        accum.append(field.rel_model)
     else:
         raise AttributeError('%s has no related field named "%s"' % (model, next))
     if path:
