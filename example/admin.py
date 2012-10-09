@@ -29,7 +29,7 @@ class NotePanel(AdminPanel):
 
     def get_context(self):
         return {
-            'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
+            'note_list': Note.select().order_by(Note.created_date.desc()).paginate(1, 3)
         }
 
 class UserStatsPanel(AdminPanel):
@@ -37,8 +37,8 @@ class UserStatsPanel(AdminPanel):
 
     def get_context(self):
         last_week = datetime.datetime.now() - datetime.timedelta(days=7)
-        signups_this_week = User.filter(join_date__gt=last_week).count()
-        messages_this_week = Message.filter(pub_date__gt=last_week).count()
+        signups_this_week = User.select().where(User.join_date > last_week).count()
+        messages_this_week = Message.select().where(Message.pub_date > last_week).count()
         return {
             'signups': signups_this_week,
             'messages': messages_this_week,

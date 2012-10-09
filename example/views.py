@@ -22,21 +22,21 @@ def private_timeline():
     user = auth.get_logged_in_user()
 
     messages = Message.select().where(
-        user__in=user.following()
-    ).order_by(('pub_date', 'desc'))
+        Message.user << user.following()
+    ).order_by(Message.pub_date.desc())
 
     return object_list('private_messages.html', messages, 'message_list')
 
 @app.route('/public/')
 def public_timeline():
-    messages = Message.select().order_by(('pub_date', 'desc'))
+    messages = Message.select().order_by(Message.pub_date.desc())
     return object_list('public_messages.html', messages, 'message_list')
 
 @app.route('/join/', methods=['GET', 'POST'])
 def join():
     if request.method == 'POST' and request.form['username']:
         try:
-            user = User.get(username=request.form['username'])
+            user = User.select().where(User.username==request.form['username']).get()
             flash('That username is already taken')
         except User.DoesNotExist:
             user = User(
@@ -66,19 +66,19 @@ def followers():
 
 @app.route('/users/')
 def user_list():
-    users = User.select().order_by('username')
+    users = User.select().order_by(User.username)
     return object_list('user_list.html', users, 'user_list')
 
 @app.route('/users/<username>/')
 def user_detail(username):
-    user = get_object_or_404(User, username=username)
-    messages = user.message_set.order_by(('pub_date', 'desc'))
+    user = get_object_or_404(User, User.username==username)
+    messages = user.message_set.order_by(Message.pub_date.desc())
     return object_list('user_detail.html', messages, 'message_list', person=user)
 
 @app.route('/users/<username>/follow/', methods=['POST'])
 @auth.login_required
 def user_follow(username):
-    user = get_object_or_404(User, username=username)
+    user = get_object_or_404(User, User.username==username)
     Relationship.get_or_create(
         from_user=auth.get_logged_in_user(),
         to_user=user,
@@ -89,10 +89,10 @@ def user_follow(username):
 @app.route('/users/<username>/unfollow/', methods=['POST'])
 @auth.login_required
 def user_unfollow(username):
-    user = get_object_or_404(User, username=username)
+    user = get_object_or_404(User, User.username==username)
     Relationship.delete().where(
-        from_user=auth.get_logged_in_user(),
-        to_user=user,
+        Relationship.from_user==auth.get_logged_in_user(),
+        Relationship.to_user==user,
     ).execute()
     flash('You are no longer following %s' % user.username)
     return redirect(url_for('user_detail', username=user.username))
@@ -115,7 +115,7 @@ def create():
 @auth.login_required
 def edit(message_id):
     user = auth.get_logged_in_user()
-    message = get_object_or_404(Message, user=user, id=message_id)
+    message = get_object_or_404(Message, Message.user==user, Message.id==message_id)
     if request.method == 'POST' and request.form['content']:
         message.content = request.form['content']
         message.save()

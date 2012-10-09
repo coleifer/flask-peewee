@@ -20,18 +20,18 @@ class User(db.Model, BaseUser):
 
     def following(self):
         return User.select().join(
-            Relationship, on='to_user_id'
-        ).where(from_user=self).order_by('username')
+            Relationship, on=Relationship.to_user
+        ).where(Relationship.from_user==self).order_by(User.username)
 
     def followers(self):
         return User.select().join(
-            Relationship, on='from_user_id'
-        ).where(to_user=self).order_by('username')
+            Relationship, on=Relationship.from_user
+        ).where(Relationship.to_user==self).order_by(User.username)
 
     def is_following(self, user):
-        return Relationship.filter(
-            from_user=self,
-            to_user=user
+        return Relationship.select().where(
+            Relationship.from_user==self,
+            Relationship.to_user==user
         ).exists()
 
     def gravatar_url(self, size=80):
