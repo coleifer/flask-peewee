@@ -244,14 +244,14 @@ class ModelAdmin(object):
         deps = obj.dependencies()
         objects = []
 
-        #for query, fk_field, depth in select_queries:
-        #    model = query.model
-        #    query.query = ['*']
-        #    collected = [obj for obj in query.execute().iterator()]
-        #    if collected:
-        #        objects.append((depth, model, fk_field, collected))
+        for query, fk in obj.dependencies():
+            if not fk.null:
+                sq = fk.model_class.select().where(query)
+                collected = [rel_obj for rel_obj in sq.execute().iterator()]
+                if collected:
+                    objects.append((0, fk.model_class, collected))
 
-        #return sorted(objects, key=lambda i: (i[0], i[1].__name__))
+        return sorted(objects, key=lambda i: (i[0], i[1].__name__))
 
     def delete(self):
         if request.method == 'GET':

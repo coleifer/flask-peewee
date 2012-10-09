@@ -364,10 +364,10 @@ class AdminTestCase(BaseAdminTestCase):
             collected = self.get_context('collected')
             self.assertEqual(collected, {
                 a1.id: [
-                    (1, BModel, 'a', [b1]),
-                    (2, BDetails, 'a', [bd1]),
-                    (2, CModel, 'a', [c1]),
-                    (3, DModel, 'a', [d1]),
+                    (0, BDetails, [bd1]),
+                    (0, BModel, [b1]),
+                    (0, CModel, [c1]),
+                    (0, DModel, [d1]),
                 ]
             })
 
@@ -392,8 +392,8 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(len(u_k), 2)
 
             self.assertEqual(u_k, [
-                (1, Message, 'user', [m1, m2]),
-                (1, Note, 'user', [n1, n2]),
+                (0, Message, [m1, m2]),
+                (0, Note, [n1, n2]),
             ])
 
             # post to it, get a redirect on success
@@ -414,8 +414,8 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(len(u_k), 2)
 
             self.assertEqual(u_k, [
-                (1, Message, 'user', [m3]),
-                (1, Note, 'user', [n3]),
+                (0, Message, [m3]),
+                (0, Note, [n3]),
             ])
 
             u_k = collected[self.inactive.id]

@@ -24,7 +24,7 @@
             {% endif %}
             {% if collected and object.get_id() in collected %}
               <ul>
-                {% for depth, model, fk_field, collected_objects in collected[object.get_id()] %}
+                {% for depth, model, collected_objects in collected[object.get_id()] %}
                   {% for sub_object in collected_objects %}
                     <li><span>{{ get_model_name(model) }}:</span>
                       {% if get_admin_url(sub_object) %}
