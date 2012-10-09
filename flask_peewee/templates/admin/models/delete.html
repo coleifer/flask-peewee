@@ -11,7 +11,7 @@
 
 {% block content %}
   <form action="." class="form-horizontal" method="post">
-    {% for object in query %}<input type="hidden" name="id" value="{{ object.get_pk() }}" />{% endfor %}
+    {% for object in query %}<input type="hidden" name="id" value="{{ object.get_id() }}" />{% endfor %}
     <fieldset>
       <legend>Confirm delete</legend>
       <ul>
@@ -22,9 +22,9 @@
             {% else %}
               <span>{{ object }}</span>
             {% endif %}
-            {% if collected and object.get_pk() in collected %}
+            {% if collected and object.get_id() in collected %}
               <ul>
-                {% for depth, model, fk_field, collected_objects in collected[object.get_pk()] %}
+                {% for depth, model, fk_field, collected_objects in collected[object.get_id()] %}
                   {% for sub_object in collected_objects %}
                     <li><span>{{ get_model_name(model) }}:</span>
                       {% if get_admin_url(sub_object) %}

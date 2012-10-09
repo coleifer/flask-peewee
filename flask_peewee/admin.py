@@ -34,9 +34,9 @@ class AdminModelConverter(BaseModelConverter):
             kwargs['allow_blank'] = True
 
         if field.name in (self.model_admin.foreign_key_lookups or ()):
-            form_field = ModelHiddenField(model=field.to, **kwargs)
+            form_field = ModelHiddenField(model=field.rel_model, **kwargs)
         else:
-            form_field = ModelSelectField(model=field.to, **kwargs)
+            form_field = ModelSelectField(model=field.rel_model, **kwargs)
         return field.name, form_field
 
 
@@ -84,7 +84,7 @@ class ModelAdmin(object):
     def __init__(self, admin, model):
         self.admin = admin
         self.model = model
-        self.pk_name = self.model._meta.pk_name
+        self.pk = self.model._meta.primary_key
 
         self.templates = dict(self.base_templates)
         self.templates.update(self.get_template_overrides())
@@ -132,7 +132,7 @@ class ModelAdmin(object):
         return self.model.select()
 
     def get_object(self, pk):
-        return self.get_query().get(**{self.pk_name: pk})
+        return self.get_query().where(self.pk==pk).get()
 
     def get_urls(self):
         return (
@@ -165,7 +165,8 @@ class ModelAdmin(object):
         if ordering:
             desc, column = ordering.startswith('-'), ordering.lstrip('-')
             if self.column_is_sortable(column):
-                query = query.order_by((column, desc and 'desc' or 'asc'))
+                field = self.model._meta.fields[column]
+                query = query.order_by(field.asc() if not desc else field.desc())
         return query
 
     def index(self):
@@ -203,7 +204,7 @@ class ModelAdmin(object):
             return redirect(url_for(self.get_url_name('add')))
         else:
             return redirect(
-                url_for(self.get_url_name('edit'), pk=instance.get_pk())
+                url_for(self.get_url_name('edit'), pk=instance.get_id())
             )
 
     def add(self):
@@ -240,17 +241,17 @@ class ModelAdmin(object):
         return render_template(self.templates['edit'], model_admin=self, instance=instance, form=form)
 
     def collect_objects(self, obj):
-        select_queries, nullable_queries = obj.collect_queries()
+        deps = obj.dependencies()
         objects = []
 
-        for query, fk_field, depth in select_queries:
-            model = query.model
-            query.query = ['*']
-            collected = [obj for obj in query.execute().iterator()]
-            if collected:
-                objects.append((depth, model, fk_field, collected))
+        #for query, fk_field, depth in select_queries:
+        #    model = query.model
+        #    query.query = ['*']
+        #    collected = [obj for obj in query.execute().iterator()]
+        #    if collected:
+        #        objects.append((depth, model, fk_field, collected))
 
-        return sorted(objects, key=lambda i: (i[0], i[1].__name__))
+        #return sorted(objects, key=lambda i: (i[0], i[1].__name__))
 
     def delete(self):
         if request.method == 'GET':
@@ -258,15 +259,13 @@ class ModelAdmin(object):
         else:
             id_list = request.form.getlist('id')
 
-        query = self.model.select().where(**{
-            '%s__in' % self.model._meta.pk_name: id_list
-        })
+        query = self.model.select().where(self.pk << id_list)
 
         if request.method == 'GET':
             collected = {}
             if self.delete_collect_objects:
                 for obj in query:
-                    collected[obj.get_pk()] = self.collect_objects(obj)
+                    collected[obj.get_id()] = self.collect_objects(obj)
 
         elif request.method == 'POST':
             count = query.count()
@@ -286,7 +285,7 @@ class ModelAdmin(object):
         path_str = '__'.join(path)
         for field in model._meta.get_fields():
             if isinstance(field, ForeignKeyField):
-                self.collect_related_fields(field.to, accum, path + [field.name])
+                self.collect_related_fields(field.rel_model, accum, path + [field.name])
             elif model != self.model:
                 accum.setdefault((model, path_str), [])
                 accum[(model, path_str)].append(field)
@@ -329,11 +328,11 @@ class ModelAdmin(object):
             data = []
         else:
             rel_model = models.pop()
-            rel_field = self.foreign_key_lookups[field]
-
-            query = rel_model.select().where(**{
-                '%s__icontains'% rel_field: request.args.get('query', ''),
-            }).order_by(rel_field)
+            rel_field = rel_model._meta.fields[self.foreign_key_lookups[field]]
+            query = rel_model.select().order_by(rel_field)
+            query_string = request.args.get('query')
+            if query_string:
+                query = query.where(rel_field ** ('%%%s%%' % query_string))
 
             pq = PaginatedQuery(query, self.filter_paginate_by)
             current_page = pq.get_page()
@@ -343,7 +342,7 @@ class ModelAdmin(object):
                 next_page = current_page + 1
 
             data = [
-                {'id': obj.get_pk(), 'repr': unicode(obj)} \
+                {'id': obj.get_id(), 'repr': unicode(obj)} \
                     for obj in pq.get_list()
             ]
 
@@ -420,7 +419,7 @@ class AdminTemplateHelper(object):
     def get_admin_url(self, obj):
         model_admin = self.admin.get_admin_for(type(obj))
         if model_admin:
-            return url_for(model_admin.get_url_name('edit'), pk=obj.get_pk())
+            return url_for(model_admin.get_url_name('edit'), pk=obj.get_id())
 
     def get_model_name(self, model_class):
         model_admin = self.admin.get_admin_for(model_class)
@@ -581,7 +580,7 @@ class Export(object):
     def prepare_query(self):
         clone = self.query.clone()
 
-        select = {}
+        select = []
 
         def ensure_join(query, m, p):
             if m not in query._joined_models:
@@ -606,10 +605,10 @@ class Export(object):
                 model = self.query.model
                 column = lookup
 
-            select.setdefault(model, [])
-            select[model].append(column)
+            field = model._meta.fields[column]
+            select.append(field)
 
-        clone.query = select
+        clone._select = select
         return clone
 
     def json_response(self, filename='export.json'):

@@ -77,7 +77,7 @@ class GreaterThanEqualToQueryFilter(QueryFilter):
 
 class StartsWithQueryFilter(QueryFilter):
     def query(self, value):
-        return self.field ^ value
+        return fn.Lower(fn.Substr(self.field, 1, len(value))) == value.lower()
 
     def operation(self):
         return 'starts with'
@@ -181,7 +181,7 @@ def make_field_tree(model, fields, exclude, force_recursion=False):
                 rx.replace('%s__' % field_obj.name, '') \
                     for rx in exclude if rx.startswith('%s__' % field_obj.name)
             ]
-            children[field_obj.name] = make_field_tree(field_obj.to, rel_fields, rel_exclude, force_recursion)
+            children[field_obj.name] = make_field_tree(field_obj.rel_model, rel_fields, rel_exclude, force_recursion)
 
     return FieldTreeNode(model, model_fields, children)
 
@@ -238,7 +238,7 @@ class FilterForm(object):
         return field.default
 
     def get_value_field(self, field):
-        field_name, form_field = self.model_converter.convert(field.model, field, None)
+        field_name, form_field = self.model_converter.convert(field.model_class, field, None)
 
         form_field.kwargs['default'] = self.get_field_default(field)
         form_field.kwargs['validators'] = [validators.Optional()]

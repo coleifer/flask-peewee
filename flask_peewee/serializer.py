@@ -18,7 +18,7 @@ class Serializer(object):
         elif isinstance(value, datetime.time):
             return value.strftime(self.time_format)
         elif isinstance(value, Model):
-            return value.get_pk()
+            return value.get_id()
         else:
             return value
 

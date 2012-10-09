@@ -64,7 +64,7 @@ class TestModel(db.Model):
     data = TextField()
     
     class Meta:
-        ordering = ('id',)
+        order_by = ('id',)
 
 
 class AModel(db.Model):

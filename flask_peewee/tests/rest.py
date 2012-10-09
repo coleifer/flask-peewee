@@ -559,7 +559,7 @@ class RestApiBasicTestCase(RestApiTestCase):
             'next': '',
             'page': 1,
         })
-        self.assertAPINotes(resp_json, self.normal.note_set.order_by('id'))
+        self.assertAPINotes(resp_json, self.normal.note_set.order_by(Note.id))
 
         # do a filter following a join
         resp = self.app.get('/api/note/?user__username=admin&ordering=id')
@@ -571,10 +571,10 @@ class RestApiBasicTestCase(RestApiTestCase):
             'next': '',
             'page': 1,
         })
-        self.assertAPINotes(resp_json, self.admin.note_set.order_by('id'))
+        self.assertAPINotes(resp_json, self.admin.note_set.order_by(Note.id))
 
         # filter multiple fields
-        notes = list(self.admin.note_set.order_by('id'))
+        notes = list(self.admin.note_set.order_by(Note.id))
         third_id = notes[3].id
 
         resp = self.app.get('/api/note/?user__username=admin&id__lt=%s&ordering=id' % third_id)
@@ -591,11 +591,11 @@ class RestApiBasicTestCase(RestApiTestCase):
             'next': '',
             'page': 1,
         })
-        self.assertAPINotes(resp_json, Note.filter(user__in=[self.admin, self.inactive]).order_by('id'))
+        self.assertAPINotes(resp_json, Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
 
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
-        notes = list(self.admin.note_set.order_by('id'))
+        notes = list(self.admin.note_set.order_by(Note.id))
 
         # do a simple filter on a related model
         resp = self.app.get('/api/note/?user__username=admin&limit=4&ordering=id')

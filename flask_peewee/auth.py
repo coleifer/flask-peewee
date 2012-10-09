@@ -119,11 +119,9 @@ class Auth(object):
         return self.test_user(lambda u: u.admin)(func)
 
     def authenticate(self, username, password):
-        active = self.User.select().where(active=True)
+        active = self.User.select().where(self.User.active==True)
         try:
-            user = active.get(
-                username=username,
-            )
+            user = active.where(self.User.username==username).get()
         except self.User.DoesNotExist:
             return False
         else:
@@ -134,7 +132,7 @@ class Auth(object):
 
     def login_user(self, user):
         session['logged_in'] = True
-        session['user_pk'] = user.get_pk()
+        session['user_pk'] = user.get_id()
         session.permanent = True
         g.user = user
         flash('You are logged in as %s' % user.username, 'success')
@@ -153,7 +151,10 @@ class Auth(object):
                 return g.user
 
             try:
-                return self.User.select().where(active=True).get(id=session.get('user_pk'))
+                return self.User.select().where(
+                    self.User.active==True, 
+                    self.User.id==session.get('user_pk')
+                ).get()
             except self.User.DoesNotExist:
                 pass
 

@@ -7,6 +7,7 @@ except ImportError:
 
 from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
 from peewee import *
+from peewee import DJANGO_MAP
 
 from flask_peewee.filters import make_field_tree
 from flask_peewee.serializer import Serializer, Deserializer
@@ -32,16 +33,24 @@ class APIKeyAuthentication(Authentication):
     Requires a model that has at least two fields, "key" and "secret", which will
     be searched for when authing a request
     """
+    key_field = 'key'
+    secret_field = 'secret'
+
     def __init__(self, model, protected_methods=None):
         super(APIKeyAuthentication, self).__init__(protected_methods)
         self.model = model
+        self._key_field = model._meta.fields[self.key_field]
+        self._secret_field = model._meta.fields[self.secret_field]
 
     def get_query(self):
         return self.model.select()
 
     def get_key(self, k, s):
         try:
-            return self.get_query().get(key=k, secret=s)
+            return self.get_query().where(
+                self._key_field==k,
+                self._secret_field==s
+            ).get()
         except self.model.DoesNotExist:
             pass
 
@@ -110,10 +119,10 @@ class RestResource(object):
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api
         self.model = model
+        self.pk = model._meta.primary_key
+
         self.authentication = authentication
         self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
-
-        self._operations = self.model._meta.database.adapter.operations
 
         self._fields = {self.model: self.fields or self.model._meta.get_field_names()}
         if self.exclude:
@@ -130,7 +139,7 @@ class RestResource(object):
         if self.include_resources:
             for field_name, resource in self.include_resources.items():
                 field_obj = self.model._meta.fields[field_name]
-                resource_obj = resource(self.api, field_obj.to, self.authentication, self.allowed_methods)
+                resource_obj = resource(self.api, field_obj.rel_model, self.authentication, self.allowed_methods)
                 self._resources[field_name] = resource_obj
                 self._fields.update(resource_obj._fields)
                 self._exclude.update(resource_obj._exclude)
@@ -167,7 +176,7 @@ class RestResource(object):
         for key in request.args:
             if '__' in key:
                 expr, op = key.rsplit('__', 1)
-                if op not in self._operations:
+                if op not in DJANGO_MAP:
                     expr = key
                     op = 'eq'
             else:
@@ -200,7 +209,7 @@ class RestResource(object):
         elif len(arg_list) == 1:
             return query.filter(**{query_expr: arg_list[0]})
         else:
-            query_clauses = [Q(**{query_expr: val}) for val in arg_list]
+            query_clauses = [DQ(**{query_expr: val}) for val in arg_list]
             return query.filter(reduce(operator.or_, query_clauses))
 
     def get_serializer(self):
@@ -286,9 +295,7 @@ class RestResource(object):
             return self.create()
 
     def api_detail(self, pk, method=None):
-        obj = get_object_or_404(self.get_query(), **{
-            self.model._meta.pk_name: pk
-        })
+        obj = get_object_or_404(self.get_query(), self.pk==pk)
 
         method = method or request.method
 
@@ -310,7 +317,8 @@ class RestResource(object):
         if ordering:
             desc, column = ordering.startswith('-'), ordering.lstrip('-')
             if column in self.model._meta.fields:
-                query = query.order_by((column, desc and 'desc' or 'asc'))
+                field = self.model._meta.fields[column]
+                query = query.order_by(field.asc() if not desc else field.desc())
 
         return query
 

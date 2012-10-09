@@ -21,15 +21,15 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         user = self.create_user('test', 'test')
         
         # test with model as first arg
-        self.assertRaises(NotFound, get_object_or_404, User, username='not-here')
-        self.assertEqual(user, get_object_or_404(User, username='test'))
+        self.assertRaises(NotFound, get_object_or_404, User, User.username=='not-here')
+        self.assertEqual(user, get_object_or_404(User, User.username=='test'))
         
         # test with query as first arg
-        active = User.select().where(active=True)
-        inactive = User.select().where(active=False)
-        self.assertRaises(NotFound, get_object_or_404, active, username='not-here')
-        self.assertRaises(NotFound, get_object_or_404, inactive, username='test')
-        self.assertEqual(user, get_object_or_404(active, username='test'))
+        active = User.select().where(User.active==True)
+        inactive = User.select().where(User.active==False)
+        self.assertRaises(NotFound, get_object_or_404, active, User.username=='not-here')
+        self.assertRaises(NotFound, get_object_or_404, inactive, User.username=='test')
+        self.assertEqual(user, get_object_or_404(active, User.username=='test'))
     
     def test_passwords(self):
         p = make_password('testing')

@@ -8,9 +8,11 @@ from flask import abort, request, render_template
 from peewee import Model, DoesNotExist, SelectQuery, ForeignKeyField
 
 
-def get_object_or_404(query_or_model, **query):
+def get_object_or_404(query_or_model, *query):
+    if not isinstance(query_or_model, SelectQuery):
+        query_or_model = query_or_model.select()
     try:
-        return query_or_model.get(**query)
+        return query_or_model.where(*query).get()
     except DoesNotExist:
         abort(404)
 
@@ -28,7 +30,7 @@ class PaginatedQuery(object):
 
         if isinstance(query_or_model, SelectQuery):
             self.query = query_or_model
-            self.model = self.query.model
+            self.model = self.query.model_class
         else:
             self.model = query_or_model
             self.query = self.model.select()
@@ -91,7 +93,7 @@ def get_string_lookups_for_model(model, include_foreign_keys=False, fields=None,
 
     for field in model._meta.get_fields():
         if isinstance(field, ForeignKeyField):
-            rel_model = field.to
+            rel_model = field.rel_model
 
             if isinstance(model, Model):
                 try:
@@ -167,14 +169,14 @@ def get_models_from_dictionary(model, field_dict):
     for field_name, value in field_dict.items():
         field_obj = model._meta.fields[field_name]
         if isinstance(value, dict):
-            rel_obj = field_obj.to
+            rel_obj = field_obj.rel_model
             if check_fks:
                 try:
                     rel_obj = getattr(model, field_name)
-                except field_obj.to.DoesNotExist:
+                except field_obj.rel_model.DoesNotExist:
                     pass
                 if rel_obj is None:
-                    rel_obj = field_obj.to
+                    rel_obj = field_obj.rel_model
             rel_inst, rel_models = get_models_from_dictionary(rel_obj, value)
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)
@@ -190,7 +192,7 @@ def path_to_models(model, path):
         next, path = path, ''
     if next in model._meta.rel_fields:
         field_name = model._meta.rel_fields[next]
-        model = model._meta.get_field_by_name(field_name).to
+        model = model._meta.get_field_by_name(field_name).rel_model
         accum.append(model)
     else:
         raise AttributeError('%s has no related field named "%s"' % (model, next))
