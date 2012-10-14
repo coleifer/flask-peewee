@@ -85,7 +85,7 @@ class StartsWithQueryFilter(QueryFilter):
 
 class ContainsQueryFilter(QueryFilter):
     def query(self, value):
-        return self.field ** value
+        return self.field ** ('%%%s%%' % value)
 
     def operation(self):
         return 'contains'
