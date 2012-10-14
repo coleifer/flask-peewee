@@ -227,13 +227,13 @@ class RestResource(object):
     def serialize_object(self, obj):
         s = self.get_serializer()
         return self.prepare_data(
-            obj, s.serialize_object(obj, self._fields, self._exclude, self._include_foreign_keys)
+            obj, s.serialize_object(obj, self._fields, self._exclude)
         )
 
     def serialize_query(self, query):
         s = self.get_serializer()
         return [
-            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude, self._include_foreign_keys)) \
+            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude)) \
                 for obj in query
         ]
 

@@ -165,7 +165,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual(resp_json['objects'], [
             {'id': self.f1.id, 'f_field': 'f1', 'e': {'id': self.e1.id, 'e_field': 'e1'}},
-            {'id': self.f2.id, 'f_field': 'f2'},
+            {'id': self.f2.id, 'f_field': 'f2', 'e': None},
         ])
 
         resp = self.app.get('/api/fmodel/%s/' % self.f1.id)
@@ -181,6 +181,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(resp_json, {
             'id': self.f2.id,
             'f_field': 'f2',
+            'e': None,
         })
 
     def post_to(self, url, data):
@@ -273,6 +274,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(json.loads(resp.data), {
             'id': f_obj.id,
             'f_field': 'fz',
+            'e': None,
         })
 
     def test_resources_edit(self):
@@ -364,6 +366,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(json.loads(resp.data), {
             'id': f_obj.id,
             'f_field': 'f2-yyy',
+            'e': None,
         })
 
 

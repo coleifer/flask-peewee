@@ -303,6 +303,11 @@ class ModelAdmin(object):
         filter_form, query, cleaned, field_tree = self.process_filters(query)
         related = self.collect_related_fields(self.model, {}, [])
 
+        # check for raw id
+        id_list = request.args.getlist('id')
+        if id_list:
+            query = query.where(self.pk << id_list)
+
         if request.method == 'POST':
             raw_fields = request.form.getlist('fields')
             export = Export(query, related, raw_fields)
@@ -583,16 +588,18 @@ class Export(object):
         clone = self.query.clone()
 
         select = []
+        joined = set()
 
         def ensure_join(query, m, p):
-            if m not in query._joined_models:
+            if m not in joined:
                 if '__' not in p:
-                    next_model = query.model
+                    next_model = query.model_class
                 else:
                     next, _ = p.rsplit('__', 1)
                     next_model = self.alias_to_model[next]
                     query = ensure_join(query, next_model, next)
 
+                joined.add(m)
                 return query.switch(next_model).join(m)
             else:
                 return query
@@ -604,7 +611,7 @@ class Export(object):
                 model = self.alias_to_model[path]
                 clone = ensure_join(clone, model, path)
             else:
-                model = self.query.model
+                model = self.query.model_class
                 column = lookup
 
             field = model._meta.fields[column]
@@ -616,13 +623,17 @@ class Export(object):
     def json_response(self, filename='export.json'):
         serializer = Serializer()
         prepared_query = self.prepare_query()
+        field_dict = {}
+        for field in prepared_query._select:
+            field_dict.setdefault(field.model_class, [])
+            field_dict[field.model_class].append(field)
 
         def generate():
             i = prepared_query.count()
             yield '[\n'
             for obj in prepared_query:
                 i -= 1
-                yield json.dumps(serializer.serialize_object(obj, prepared_query.query))
+                yield json.dumps(serializer.serialize_object(obj, field_dict))
                 if i > 0:
                     yield ',\n'
             yield '\n]'

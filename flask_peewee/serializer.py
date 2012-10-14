@@ -2,7 +2,7 @@ import datetime
 import sys
 
 from peewee import Model
-from flask_peewee.utils import get_dictionary_lookups_for_model, get_models_from_dictionary
+from flask_peewee.utils import get_dictionary_from_model, get_model_from_dictionary
 
 
 class Serializer(object):
@@ -30,11 +30,11 @@ class Serializer(object):
                 data[key] = self.convert_value(value)
         return data
 
-    def serialize_object(self, obj, fields=None, exclude=None, include_foreign_keys=False):
-        data, models = get_dictionary_lookups_for_model(obj, include_foreign_keys, fields, exclude)
+    def serialize_object(self, obj, fields=None, exclude=None):
+        data = get_dictionary_from_model(obj, fields, exclude)
         return self.clean_data(data)
 
 
 class Deserializer(object):
     def deserialize_object(self, model, data):
-        return get_models_from_dictionary(model, data)
+        return get_model_from_dictionary(model, data)
