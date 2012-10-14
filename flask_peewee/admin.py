@@ -626,7 +626,7 @@ class Export(object):
         field_dict = {}
         for field in prepared_query._select:
             field_dict.setdefault(field.model_class, [])
-            field_dict[field.model_class].append(field)
+            field_dict[field.model_class].append(field.name)
 
         def generate():
             i = prepared_query.count()
