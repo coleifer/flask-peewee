@@ -78,9 +78,6 @@ var Admin = window.Admin || {};
   ModelAdminValidator.prototype.init = function() {
     var self = this
       , elements = $('input, select, textarea', this.form);
-    elements.change(function(e) {
-      self.input_handler(this, e);
-    });
     elements.blur(function(e) {
       self.input_handler(this, e);
     });
@@ -99,7 +96,7 @@ var Admin = window.Admin || {};
     if (is_valid) {
       wrapper.removeClass('error');
     } else {
-      wrapper.removeClass('success').addClass('error');
+      wrapper.addClass('error');
       for (var i = 0, l = error_list.length; i < l; i++) {
         controls.append('<span class="error-list help-inline">'+ error_list[i] +'</span>');
       }
