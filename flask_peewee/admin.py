@@ -60,6 +60,8 @@ class ModelAdmin(object):
     exclude = None
     fields = None
 
+    ajax_validation = False
+
     form_converter = AdminModelConverter
 
     # foreign_key_field --> related field to search on, e.g. {'user': 'username'}
@@ -143,6 +145,7 @@ class ModelAdmin(object):
             ('/export/', self.export),
             ('/<pk>/', self.edit),
             ('/_ajax/', self.ajax_list),
+            ('/_validate/', self.validate),
         )
 
     def get_columns(self):
@@ -355,6 +358,16 @@ class ModelAdmin(object):
 
         json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
+
+    def validate(self):
+        FormClass = self.get_form()
+        form = FormClass(request.args)
+        validation = {}
+        for field in request.args:
+            if field in form:
+                form_field = form[field]
+                validation[field] = [form_field.validate(form), form_field.errors]
+        return Response(json.dumps(validation), mimetype='application/json')
 
 
 class AdminPanel(object):

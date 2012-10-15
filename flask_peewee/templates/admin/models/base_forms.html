@@ -13,6 +13,14 @@
 
       $('form select[data-role="chosen"]').chosen();
       $('.date-widget').datepicker({format: 'yyyy-mm-dd'});
+
+      {% if model_admin.ajax_validation %}
+      var validator = new Admin.ModelAdminValidator(
+        $('form.modelform'),
+        '{{ url_for(model_admin.get_url_name('validate')) }}'
+      );
+      validator.init();
+      {% endif %}
     });
   </script>
 {% endblock %}

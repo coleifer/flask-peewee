@@ -20,7 +20,7 @@
       {% endif %}
       {{ field(class=css_class, **kwargs) }}
       {% if field.description %}<span class="help-inline">{{ field.description|safe() }}</span>{% endif %}
-      {% for error in field.errors %}<span class="help-inline">{{ error|e }}</span>{% endfor %}
+      {% for error in field.errors %}<span class="error-list help-inline">{{ error|e }}</span>{% endfor %}
     </div>
   </div>
 {% endmacro %}

@@ -15,7 +15,7 @@
       <p>There were errors with your form submission</p>
     </div>
   {% endif %}
-  <form method="post" action="." class="add form-horizontal" enctype="multipart/form-data">
+  <form method="post" action="." class="modelform add form-horizontal" enctype="multipart/form-data">
     <fieldset>
       <legend>Add a new {{ model_admin.get_display_name() }}</legend>
       {% for field in form %}

@@ -70,6 +70,56 @@ var Admin = window.Admin || {};
     });
   }
 
+  var ModelAdminValidator = function(form_elem, url) {
+    this.form = form_elem;
+    this.url = url;
+  }
+
+  ModelAdminValidator.prototype.init = function() {
+    var self = this
+      , elements = $('input, select, textarea', this.form);
+    elements.change(function(e) {
+      self.input_handler(this, e);
+    });
+    elements.blur(function(e) {
+      self.input_handler(this, e);
+    });
+  }
+  
+  ModelAdminValidator.prototype.input_handler = function(elem, ev) {
+    var data = {};
+    data[elem.id] = $(elem).val();
+    this.validate(data);
+  }
+
+  ModelAdminValidator.prototype.refresh = function(elem, is_valid, error_list) {
+    var wrapper = elem.parents('.control-group')
+      , controls = elem.parents('.controls');
+    controls.find('span.error-list').remove();
+    if (is_valid) {
+      wrapper.removeClass('error');
+    } else {
+      wrapper.removeClass('success').addClass('error');
+      for (var i = 0, l = error_list.length; i < l; i++) {
+        controls.append('<span class="error-list help-inline">'+ error_list[i] +'</span>');
+      }
+    }
+  }
+
+  ModelAdminValidator.prototype.validate = function(data) {
+    var self = this;
+    $.get(this.url, data, function(resp) {
+      for (var key in resp) {
+        if (resp.hasOwnProperty(key)) {
+          var elem = $('#' + key, self.form)
+            , is_valid = resp[key][0]
+            , error_list = resp[key][1];
+          self.refresh(elem, is_valid, error_list);
+        }
+      }
+    });
+  }
+
   var ModelAdminRawIDField = function(field_name) {
     this.field_name = field_name;
     this.selector = 'input#'+this.field_name;
@@ -179,6 +229,7 @@ var Admin = window.Admin || {};
 
   /* export */
   A.ModelAdminRawIDField = ModelAdminRawIDField;
+  A.ModelAdminValidator = ModelAdminValidator;
   A.ModelAdminFilter = ModelAdminFilter;
 
   /* bind a simple listener */
