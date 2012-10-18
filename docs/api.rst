@@ -189,9 +189,38 @@ Exposing Models with the ModelAdmin
             class EntryAdmin(ModelAdmin):
                 columns = ['title', 'pub_date', 'blog']
 
-    .. py:attribute:: paginate_by
+    .. py:attribute:: filter_exclude
 
-        How many records to paginate by when viewing lists of models, defaults to 20.
+        Exclude certain fields from being exposed as filters.  Related fields can
+        be excluded using "__" notation, e.g. ``user__password``
+
+    .. py:attribute:: filter_fields
+
+        Only allow filtering on the given fields
+
+    .. py:attribute:: exclude
+
+        A list of field names to exclude from the "add" and "edit" forms
+
+    .. py:attribute:: fields
+
+        Only display the given fields on the "add" and "edit" form
+
+    .. py:attribute:: paginate_by = 20
+
+        Number of records to display on index pages
+
+    .. py:attribute:: filter_paginate_by = 15
+
+        Default pagination when filtering in a modal dialog
+
+    .. py:attribute:: delete_collect_objects = True
+
+        Collect and display a list of "dependencies" when deleting
+
+    .. py:attribute:: delete_recursive = True
+
+        Delete "dependencies" recursively
 
     .. py:method:: get_query()
 
@@ -216,7 +245,7 @@ Exposing Models with the ModelAdmin
                     # if they are not a superuser, only show them their own
                     # account in the admin
                     if not current_user.is_superuser:
-                        return User.filter(id=current_user.id)
+                        return User.select().where(User.id==current_user.id)
 
                     # otherwise, show them all users
                     return User.select()
@@ -255,12 +284,12 @@ Exposing Models with the ModelAdmin
 
     .. py:method:: get_filter_form()
 
-        Provide a form for use when filtering the list of objects in the model admin's
-        index view.  This form is slightly different in that it is tailored for use
+        Provide a special form for use when filtering the list of objects in the model admin's
+        index/export views.  This form is slightly different in that it is tailored for use
         when filtering the list of models.
 
-        :rtype: A `wtf-peewee <http://github.com/coleifer/wtf-peewee>`_ Form subclass that
-                will be used when filtering the list of objects in the index view.
+        :rtype: A special Form instance (:py:class:`FilterForm`) that will be used 
+                when filtering the list of objects in the index view.
 
     .. py:method:: save_model(instance, form, adding=False)
 
@@ -322,6 +351,20 @@ Exposing Models with the ModelAdmin
 
         Since urls are namespaced, this function provides an easy way to get
         full urls to views provided by this ModelAdmin
+
+    .. py:method:: process_filters(query)
+
+        Applies any filters specified by the user to the given query, returning
+        metadata about the filters.
+
+        Returns a 4-tuple containing:
+
+        * special ``Form`` instance containing fields for filtering
+        * filtered query
+        * a list containing the currently selected filters
+        * a tree-structure containing the fields available for filtering (:py:class:`FieldTreeNode`)
+
+        :rtype: A tuple as described above
 
 
 Extending admin functionality using AdminPanel
@@ -616,7 +659,7 @@ Database
 REST API
 --------
 
-.. py:class:: RestAPI(app[, prefix='/api'[, default_auth=None]])
+.. py:class:: RestAPI(app[, prefix='/api'[, default_auth=None[, name='api']]])
 
     The :py:class:`RestAPI` acts as a container for the various :py:class:`RestResource`
     objects.  By default it binds all resources to ``/api/<model-name>/``.  Much like
@@ -645,6 +688,7 @@ REST API
     :param app: flask application to bind API to
     :param prefix: url to serve REST API from
     :param default_auth: default :py:class:`Authentication` type to use with registered resources
+    :param name: the name for the API blueprint
 
     .. py:method:: register(model[, provider=RestResource[, auth=None[, allowed_methods=None]]])
 
@@ -665,11 +709,14 @@ REST API
 RESTful Resources and their subclasses
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. py:class:: RestResource
+.. py:class:: RestResource(rest_api, model, authentication[, allowed_methods=None])
 
     Class that determines how a peewee ``Model`` is exposed by the Rest API.  Provides
     a way of encapsulating model-specific configuration and behaviors.  Provided
     when registering a model with the :py:class:`RestAPI` instance (see :py:meth:`RestAPI.register`).
+
+    Should not be instantiated directly in most cases. Instead should be "registered" with
+    a ``RestAPI`` instance.
 
     Example usage:
 
@@ -700,10 +747,58 @@ RESTful Resources and their subclasses
 
         A list or tuple of fields to **not** expose when serializing
 
-    .. py:attribute:: ignore_filters = ('ordering', 'page', 'limit', 'key', 'secret',)
+    .. py:attribute:: filter_exclude
 
-        A list or tuple of GET arguments to ignore when applying filters.  Generally
-        these are special url arguments that have special meaning.
+        A list of fields that **cannot** be used to filter API results
+
+    .. py:attribute:: filter_fields
+
+        A list of fields that can be used to filter the API results
+
+    .. py:attribute:: filter_recursive = True
+
+        Allow filtering on related resources
+
+    .. py:attribute:: include_resources
+
+        A mapping of field name to resource class for handling of foreign-keys.
+        When provided, foreign keys will be "nested".
+
+        .. code-block:: python
+
+            class UserResource(RestResource):
+                exclude = ('password', 'email')
+
+            class MessageResource(RestResource):
+                include_resources = {'user': UserResource} # 'user' is a foreign key field
+
+        .. code-block:: javascript
+
+            /* messages without "include_resources" */
+            {
+              "content": "flask and peewee, together at last!",
+              "pub_date": "2011-09-16 18:36:15",
+              "id": 1,
+              "user": 2
+            },
+
+            /* messages with "include_resources = {'user': UserResource} */
+            {
+              "content": "flask and peewee, together at last!",
+              "pub_date": "2011-09-16 18:36:15",
+              "id": 1,
+              "user": {
+                "username": "coleifer",
+                "active": true,
+                "join_date": "2011-09-16 18:35:56",
+                "admin": false,
+                "id": 2
+              }
+            }
+            
+    .. py:attribute:: delete_recursive = True
+
+        Recursively delete dependencies
 
     .. py:method:: get_query()
 
@@ -986,25 +1081,51 @@ Authenticating requests to the API
 Utilities
 ---------
 
-.. py:function:: get_object_or_404(query_or_model, **query)
+.. py:function:: get_object_or_404(query_or_model, *query)
 
-    Given any number of keyword arguments, retrieve a single instance of the
-    ``query_or_model`` parameter or return a 404
+    Provides a handy way of getting an object or 404ing if not found, useful
+    for urls that match based on ID.
 
-    :param query_or_model: either a ``Model`` class or a ``SelectQuery``
-    :param **query: any number of keyword arguments, e.g. ``id=1``
-    :rtype: either a single model instance or raises a ``NotFound`` (404 response)
+    :param query_or_model: a query or model to filter using the given expressions
+    :param query: a list of query expressions
 
-.. py:function:: object_list(template_name, qr[, var_name='object_list'[, paginate_by=20[, **kwargs]]])
+    .. code-block:: python
+    
+        @app.route('/blog/<title>/')
+        def blog_detail(title):
+            blog = get_object_or_404(Blog.select().where(Blog.active==True), Blog.title==title)
+            return render_template('blog/detail.html', blog=blog)
 
-    Returns a rendered template, passing in a paginated version of the query.
+.. py:function:: object_list(template_name, qr[, var_name='object_list'[, **kwargs]])
 
-    :param template_name: a string representation of a path to a template
-    :param qr: a ``SelectQuery``
-    :param var_name: context variable name to use when rendering the template
-    :param paginate_by: number of results per page, defaults to 20
-    :param **kwargs: any arbitrary keyword arguments to pass to the template during rendering
-    :rtype: rendered ``Response``
+    Wraps the given query and handles pagination automatically. Pagination defaults to ``20``
+    but can be changed by passing in ``paginate_by=XX``.
+
+    :param template_name: template to render
+    :param qr: a select query
+    :param var_name: the template variable name to use for the paginated query
+    :param kwargs: arbitrary context to pass in to the template
+
+    .. code-block:: python
+    
+        @app.route('/blog/')
+        def blog_list():
+            active = Blog.select().where(Blog.active==True)
+            return object_list('blog/index.html', active)
+    
+    .. code-block:: html
+    
+        <!-- template -->
+        {% for blog in object_list %}
+          {# render the blog here #}
+        {% endfor %}
+        
+        {% if page > 1 %}
+          <a href="./?page={{ page - 1 }}">Prev</a>
+        {% endif %}
+        {% if page < pagination.get_pages() %}
+          <a href="./?page={{ page + 1 }}">Next</a>
+        {% endif %}
 
 .. py:function:: get_next()
 
@@ -1017,18 +1138,27 @@ Utilities
     :param s: any string to be slugified
     :rtype: url-friendly version of string ``s``
 
-.. py:class:: PaginatedQuery
+.. py:class:: PaginatedQuery(query_or_model, paginate_by)
 
-    Wraps a ``SelectQuery`` with helpers for paginating.
+    A wrapper around a query (or model class) that handles pagination.
 
     .. py:attribute:: page_var = 'page'
 
-        GET argument to use for determining request page
+        The URL variable used to store the current page
 
-    .. py:method:: __init__(query_or_model, paginate_by)
+    Example:
 
-        :param query_or_model: either a ``Model`` class or a ``SelectQuery``
-        :param paginate_by: number of results to return per-page
+    .. code-block:: python
+    
+        query = Blog.select().where(Blog.active==True)
+        pq = PaginatedQuery(query)
+        
+        # assume url was /?page=3
+        obj_list = pq.get_list()  # returns 3rd page of results
+        
+        pq.get_page() # returns "3"
+        
+        pq.get_pages() # returns total objects / objects-per-page
 
     .. py:method:: get_list()
 

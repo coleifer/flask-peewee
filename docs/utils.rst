@@ -12,20 +12,26 @@ Getting objects
 
 :py:func:`get_object_or_404`
 
+    Provides a handy way of getting an object or 404ing if not found, useful
+    for urls that match based on ID.
+
     .. code-block:: python
     
         @app.route('/blog/<title>/')
         def blog_detail(title):
-            blog = get_object_or_404(Blog.select().where(active=True), title=title)
+            blog = get_object_or_404(Blog.select().where(Blog.active==True), Blog.title==title)
             return render_template('blog/detail.html', blog=blog)
 
 :py:func:`object_list`
+
+    Wraps the given query and handles pagination automatically. Pagination defaults to ``20``
+    but can be changed by passing in ``paginate_by=XX``.
 
     .. code-block:: python
     
         @app.route('/blog/')
         def blog_list():
-            active = Blog.select().where(active=True)
+            active = Blog.select().where(Blog.active==True)
             return object_list('blog/index.html', active)
     
     .. code-block:: html
@@ -44,9 +50,13 @@ Getting objects
 
 :py:class:`PaginatedQuery`
 
+    A wrapper around a query (or model class) that handles pagination.
+
+    Example:
+
     .. code-block:: python
     
-        query = Blog.select().where(active=True)
+        query = Blog.select().where(Blog.active==True)
         pq = PaginatedQuery(query)
         
         # assume url was /?page=3
@@ -61,7 +71,10 @@ Misc
 ----
 
 
-:py:func:`slugify`
+.. py:function:: slugify(string)
+
+    Convert a string into something suitable for use as part of a URL,
+    e.g. "This is a url" becomes "this-is-a-url"
 
     .. code-block:: python
     
@@ -72,6 +85,14 @@ Misc
             title = CharField()
             slug = CharField()
             
-            def save(self):
+            def save(self, *args, **kwargs):
                 self.slug = slugify(self.title)
-                super(Blog, self).save()
+                super(Blog, self).save(*args, **kwargs)
+
+.. py:function:: make_password(raw_password)
+
+    Create a salted hash for the given plain-text password
+
+.. py:function:: check_password(raw_password, enc_password)
+
+    Compare a plain-text password against a salted/hashed password

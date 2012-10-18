@@ -120,7 +120,7 @@ the :py:meth:`~ModelAdmin.get_query` method:
 .. code-block:: python
 
     def get_query(self):
-        return self.model.filter(user=g.user)
+        return self.model.select().where(self.model.user == g.user)
 
 Now a user will only be able to see and edit their own messages.
 
@@ -255,7 +255,7 @@ Here's what the panel class looks like:
 
         def get_context(self):
             return {
-                'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
+                'note_list': Note.select().order_by(Note.created_date.desc()).limit(3)
             }
 
 When the admin dashboard is rendered (``/admin/``), all panels are rendered using
