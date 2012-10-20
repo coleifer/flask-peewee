@@ -150,18 +150,20 @@ class FieldTreeNode(object):
         self.children = children or {}
 
 
-def make_field_tree(model, fields, exclude, force_recursion=False):
+def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
     no_explicit_fields = fields is None # assume we want all of them
     if no_explicit_fields:
         fields = model._meta.get_field_names()
     exclude = exclude or []
+    seen = seen or set()
 
     model_fields = []
     children = {}
 
     for field_obj in model._meta.get_fields():
-        if field_obj.name in exclude:
+        if field_obj.name in exclude or field_obj in seen:
             continue
+        seen.add(field_obj)
 
         if field_obj.name in fields:
             model_fields.append(field_obj)
@@ -181,7 +183,7 @@ def make_field_tree(model, fields, exclude, force_recursion=False):
                 rx.replace('%s__' % field_obj.name, '') \
                     for rx in exclude if rx.startswith('%s__' % field_obj.name)
             ]
-            children[field_obj.name] = make_field_tree(field_obj.rel_model, rel_fields, rel_exclude, force_recursion)
+            children[field_obj.name] = make_field_tree(field_obj.rel_model, rel_fields, rel_exclude, force_recursion, seen)
 
     return FieldTreeNode(model, model_fields, children)
 
