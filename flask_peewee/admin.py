@@ -421,7 +421,7 @@ class AdminTemplateHelper(object):
             return field.verbose_name
 
     def get_model_admins(self):
-        return {'model_admins': self.admin.get_model_admins()}
+        return {'model_admins': self.admin.get_model_admins(), 'branding': self.admin.branding}
 
     def get_admin_url(self, obj):
         model_admin = self.admin.get_admin_for(type(obj))
@@ -457,7 +457,7 @@ class AdminTemplateHelper(object):
 
 class Admin(object):
     def __init__(self, app, auth, template_helper=AdminTemplateHelper,
-                 prefix='/admin', name='admin'):
+                 prefix='/admin', name='admin', branding='flask-peewee'):
         self.app = app
         self.auth = auth
 
@@ -470,6 +470,8 @@ class Admin(object):
 
         self.template_helper = template_helper(self)
         self.template_helper.prepare_environment()
+
+        self.branding = branding
 
     def auth_required(self, func):
         @functools.wraps(func)
