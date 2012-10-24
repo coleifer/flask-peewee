@@ -62,9 +62,10 @@ var Admin = window.Admin || {};
       target.find('a').click(function(e) {
         var data = $(this).data('object-id')
           , repr = $(this).text()
+          , html = $(this).html()
           , sender = modal.data('sender');
 
-        click_cb(sender, repr, data);
+        click_cb(sender, repr, data, html);
         target.parents('.modal').modal('hide');
       });
     });
@@ -98,8 +99,12 @@ var Admin = window.Admin || {};
     hidden_elem.after(new_elem);
   }
 
-  ModelAdminRawIDField.prototype.on_click = function(sender, repr, data) {
-    sender.text(repr);
+  ModelAdminRawIDField.prototype.on_click = function(sender, repr, data, html) {
+    if (repr) {
+      sender.text(repr);
+    } else {
+      sender.html(html);
+    }
     sender.parent().find('input[type="hidden"]').val(data);
   }
 
