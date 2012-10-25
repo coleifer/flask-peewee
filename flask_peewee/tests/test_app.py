@@ -164,7 +164,7 @@ class UserResource(RestResource):
     exclude = ('password', 'email',)
     
     def get_query(self):
-        return User.filter(active=True)
+        return User.select().where(User.active==True)
 
 class AResource(RestResource):
     pass

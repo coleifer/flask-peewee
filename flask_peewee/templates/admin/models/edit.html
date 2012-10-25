@@ -23,6 +23,7 @@
       {% for field in form %}
         {{ admin_field(field) }}
       {% endfor %}
+      {% block extra_form %}{% endblock %}
       <div class="form-actions">
         <button class="btn btn-primary" name="save" type="submit">Save</button>
         <button class="btn" name="save_add" type="submit">Save and add new</button>

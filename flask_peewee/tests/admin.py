@@ -711,4 +711,4 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
             admin._registry[Message],
             admin._registry[Note],
             admin._registry[User],
-        ]})
+        ], 'branding': 'flask-peewee'})
