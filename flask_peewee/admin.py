@@ -170,6 +170,9 @@ class ModelAdmin(object):
                 query = query.order_by(field.asc() if not desc else field.desc())
         return query
 
+    def get_extra_context(self):
+        return {}
+
     def index(self):
         query = self.get_query()
 
@@ -196,6 +199,7 @@ class ModelAdmin(object):
             filter_form=filter_form,
             field_tree=field_tree,
             active_filters=cleaned,
+            **self.get_extra_context()
         )
 
     def dispatch_save_redirect(self, instance):
@@ -220,7 +224,11 @@ class ModelAdmin(object):
         else:
             form = Form()
 
-        return render_template(self.templates['add'], model_admin=self, form=form)
+        return render_template(self.templates['add'],
+            model_admin=self,
+            form=form,
+            **self.get_extra_context()
+        )
 
     def edit(self, pk):
         try:
@@ -239,7 +247,12 @@ class ModelAdmin(object):
         else:
             form = Form(obj=instance)
 
-        return render_template(self.templates['edit'], model_admin=self, instance=instance, form=form)
+        return render_template(self.templates['edit'],
+            model_admin=self,
+            instance=instance,
+            form=form,
+            **self.get_extra_context()
+        )
 
     def collect_objects(self, obj):
         deps = obj.dependencies()
@@ -280,6 +293,7 @@ class ModelAdmin(object):
             model_admin=self,
             query=query,
             collected=collected,
+            **self.get_extra_context()
         ))
 
     def collect_related_fields(self, model, accum, path):
@@ -322,6 +336,7 @@ class ModelAdmin(object):
             active_filters=cleaned,
             related_fields=related,
             sql=query.sql(self.db.get_compiler()),
+            **self.get_extra_context()
         )
 
     def ajax_list(self):
