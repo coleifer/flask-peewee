@@ -214,11 +214,12 @@ class ModelAdmin(object):
 
     def add(self):
         Form = self.get_add_form()
+        instance = self.model()
 
         if request.method == 'POST':
             form = Form(request.form)
             if form.validate():
-                instance = self.save_model(self.model(), form, True)
+                instance = self.save_model(instance, form, True)
                 flash('New %s saved successfully' % self.get_display_name(), 'success')
                 return self.dispatch_save_redirect(instance)
         else:
@@ -227,6 +228,7 @@ class ModelAdmin(object):
         return render_template(self.templates['add'],
             model_admin=self,
             form=form,
+            instance=instance,
             **self.get_extra_context()
         )
 
