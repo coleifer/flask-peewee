@@ -126,7 +126,7 @@ class ModelAdmin(object):
     def get_add_form(self):
         return self.get_form(adding=True)
 
-    def get_edit_form(self):
+    def get_edit_form(self, instance):
         return self.get_form()
 
     def get_query(self):
@@ -238,7 +238,7 @@ class ModelAdmin(object):
         except self.model.DoesNotExist:
             abort(404)
 
-        Form = self.get_edit_form()
+        Form = self.get_edit_form(instance)
 
         if request.method == 'POST':
             form = Form(request.form, obj=instance)
