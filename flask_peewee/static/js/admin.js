@@ -128,6 +128,16 @@ var Admin = window.Admin || {};
     });
   }
 
+  ModelAdminFilter.prototype.chosen_handler = function(data) {
+    var results = {}
+      , object_list = data.object_list;
+    for (var i = 0, l = object_list.length; i < l; i++) {
+      var item = object_list[i];
+      results[item['id']] = item['repr']
+    }
+    return results;
+  }
+
   ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
     var select_elem = this.lookups_elem.find('#'+qf_s),
         input_elem = this.lookups_elem.find('#'+qf_v),
@@ -162,6 +172,15 @@ var Admin = window.Admin || {};
       input_clone.datepicker({format: 'yyyy-mm-dd'});
     } else if (input_clone.data('role') === 'chosen') {
       input_clone.chosen();
+    } else if (input_clone.data('role') === 'ajax-chosen') {
+      input_clone.ajaxChosen({
+          type: 'GET',
+          url: input_clone.data('source'),
+          jsonTermKey: 'query',
+          dataType: 'json',
+          data: {'field': input_clone.data('param')},
+          minTermLength: 2
+      }, this.chosen_handler);
     }
 
     $(this.wrapper).show();

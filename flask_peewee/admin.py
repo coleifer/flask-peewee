@@ -9,7 +9,7 @@ except ImportError:
 
 from flask import Blueprint, render_template, abort, request, url_for, redirect, flash, Response
 from flask_peewee.filters import FilterMapping, FilterForm, FilterModelConverter
-from flask_peewee.forms import BaseModelConverter
+from flask_peewee.forms import BaseModelConverter, ChosenAjaxSelectWidget, LimitedModelSelectField
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import get_next, PaginatedQuery, path_to_models, slugify
 from peewee import BooleanField, DateTimeField, ForeignKeyField, DateField, TextField
@@ -27,14 +27,27 @@ class AdminModelConverter(BaseModelConverter):
         super(AdminModelConverter, self).__init__(additional)
         self.model_admin = model_admin
 
-        self.converters[ForeignKeyField] = self.handle_foreign_key
-
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
             kwargs['allow_blank'] = True
 
         if field.name in (self.model_admin.foreign_key_lookups or ()):
             form_field = ModelHiddenField(model=field.rel_model, **kwargs)
+        else:
+            form_field = ModelSelectField(model=field.rel_model, **kwargs)
+        return field.name, form_field
+
+
+class AdminFilterModelConverter(FilterModelConverter):
+    def __init__(self, model_admin, additional=None):
+        super(AdminFilterModelConverter, self).__init__(additional)
+        self.model_admin = model_admin
+
+    def handle_foreign_key(self, model, field, **kwargs):
+        if field.name in (self.model_admin.foreign_key_lookups or ()):
+            data_source = url_for(self.model_admin.get_url_name('ajax_list'))
+            widget = ChosenAjaxSelectWidget(data_source, field.name)
+            form_field = LimitedModelSelectField(model=field.rel_model, widget=widget, **kwargs)
         else:
             form_field = ModelSelectField(model=field.rel_model, **kwargs)
         return field.name, form_field
@@ -70,7 +83,7 @@ class ModelAdmin(object):
     delete_recursive = True
 
     filter_mapping = FilterMapping
-    filter_converter = FilterModelConverter
+    filter_converter = AdminFilterModelConverter
 
     # templates, to override see get_template_overrides()
     base_templates = {
@@ -103,7 +116,7 @@ class ModelAdmin(object):
     def get_filter_form(self):
         return FilterForm(
             self.model,
-            self.filter_converter(),
+            self.filter_converter(self),
             self.filter_mapping(),
             self.filter_fields,
             self.filter_exclude,
