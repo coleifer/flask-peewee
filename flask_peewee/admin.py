@@ -311,11 +311,13 @@ class ModelAdmin(object):
             **self.get_extra_context()
         ))
 
-    def collect_related_fields(self, model, accum, path):
+    def collect_related_fields(self, model, accum, path, seen=None):
+        seen = seen or set()
         path_str = '__'.join(path)
         for field in model._meta.get_fields():
-            if isinstance(field, ForeignKeyField):
-                self.collect_related_fields(field.rel_model, accum, path + [field.name])
+            if isinstance(field, ForeignKeyField) and field not in seen:
+                seen.add(field)
+                self.collect_related_fields(field.rel_model, accum, path + [field.name], seen)
             elif model != self.model:
                 accum.setdefault((model, path_str), [])
                 accum[(model, path_str)].append(field)
