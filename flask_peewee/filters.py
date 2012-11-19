@@ -163,12 +163,12 @@ def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
     for field_obj in model._meta.get_fields():
         if field_obj.name in exclude or field_obj in seen:
             continue
-        seen.add(field_obj)
 
         if field_obj.name in fields:
             model_fields.append(field_obj)
 
         if isinstance(field_obj, ForeignKeyField):
+            seen.add(field_obj)
             if no_explicit_fields:
                 rel_fields = None
             else:
