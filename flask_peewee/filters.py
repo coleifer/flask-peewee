@@ -325,7 +325,7 @@ class FilterForm(object):
                     idx = int(filter_idx)
                     cleaned.append((qf_s, idx, qf_v, filter_value))
                     query_filter = self._query_filters[field][idx]
-                    q_objects.append(query_filter.query(filter_value))
+                    q_objects.append(query_filter.query(field.db_value(filter_value)))
 
                 query = query.where(reduce(operator.or_, q_objects))
 
