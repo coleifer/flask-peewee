@@ -118,10 +118,13 @@ class Auth(object):
     def admin_required(self, func):
         return self.test_user(lambda u: u.admin)(func)
 
-    def authenticate(self, username, password):
+    def authenticate(self, identifier, password, id_type='username'):
         active = self.User.select().where(self.User.active==True)
         try:
-            user = active.where(self.User.username==username).get()
+            if id_type == 'username':
+                user = active.where(self.User.username==identifier).get()
+            if id_type == 'email':
+                user = active.where(self.User.email==identifier).get()
         except self.User.DoesNotExist:
             return False
         else:
@@ -129,6 +132,7 @@ class Auth(object):
                 return False
 
         return user
+
 
     def login_user(self, user):
         session['logged_in'] = True
