@@ -38,6 +38,8 @@ class Auth(object):
 
         self.clear_session = clear_session
         self.default_next_url = default_next_url
+        
+        self.id_type = id_type
 
         self.setup()
 
