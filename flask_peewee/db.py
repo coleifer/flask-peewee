@@ -17,8 +17,8 @@ class Database(object):
     def load_database(self):
         self.database_config = self.app.config['DATABASE']
         try:
-            self.database_name = self.database_config.get('name')
-            self.database_engine = self.database_config.get('engine')
+            self.database_name = self.database_config.pop('name')
+            self.database_engine = self.database_config.pop('engine')
         except KeyError:
             raise ImproperlyConfigured('Please specify a "name" and "engine" for your database')
 
