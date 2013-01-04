@@ -46,11 +46,11 @@ class Auth(object):
 
     def get_user_model(self):
         class User(self.db.Model, BaseUser):
-            username = CharField()
+            username = CharField(unique=True)
             password = CharField()
-            email = CharField()
+            email = CharField(unique=True)
             active = BooleanField()
-            admin = BooleanField()
+            admin = BooleanField(default=False)
 
             def __unicode__(self):
                 return self.username
