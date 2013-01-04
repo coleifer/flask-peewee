@@ -27,7 +27,7 @@ class BaseUser(object):
 
 class Auth(object):
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
-                 clear_session=False, default_next_url='/'):
+                 clear_session=False, default_next_url='/',id_type='username'):
         self.app = app
         self.db = db
 
@@ -38,6 +38,8 @@ class Auth(object):
 
         self.clear_session = clear_session
         self.default_next_url = default_next_url
+        
+        self.id_type = id_type
 
         self.setup()
 
@@ -118,10 +120,13 @@ class Auth(object):
     def admin_required(self, func):
         return self.test_user(lambda u: u.admin)(func)
 
-    def authenticate(self, username, password):
+    def authenticate(self, identifier, password):
         active = self.User.select().where(self.User.active==True)
         try:
-            user = active.where(self.User.username==username).get()
+            if self.id_type == 'username':
+                user = active.where(self.User.username==identifier).get()
+            if self.id_type == 'email':
+                user = active.where(self.User.email==identifier).get()
         except self.User.DoesNotExist:
             return False
         else:
@@ -129,6 +134,7 @@ class Auth(object):
                 return False
 
         return user
+
 
     def login_user(self, user):
         session['logged_in'] = True
