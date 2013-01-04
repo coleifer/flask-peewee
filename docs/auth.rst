@@ -110,7 +110,7 @@ Here's a simple example of extending the auth system to use a custom user model:
 
 .. code-block:: python
 
-    from flask_peewee.auth import BaseModel # <-- implements set_password and check_password
+    from flask_peewee.auth import BaseUser # <-- implements set_password and check_password
 
     app = Flask(__name__)
     db = Database(app)
