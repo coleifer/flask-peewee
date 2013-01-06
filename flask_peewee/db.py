@@ -15,7 +15,7 @@ class Database(object):
         self.Model = self.get_model_class()
 
     def load_database(self):
-        self.database_config = self.app.config['DATABASE']
+        self.database_config = dict(self.app.config['DATABASE'])
         try:
             self.database_name = self.database_config.pop('name')
             self.database_engine = self.database_config.pop('engine')
