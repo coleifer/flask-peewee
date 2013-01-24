@@ -352,7 +352,7 @@ class ModelAdmin(object):
             field_tree=field_tree,
             active_filters=cleaned,
             related_fields=related,
-            sql=query.sql(self.db.get_compiler()),
+            sql=query.sql(),
             **self.get_extra_context()
         )
 
