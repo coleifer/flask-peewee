@@ -1,13 +1,13 @@
 import sys
 from setuptools import setup, find_packages
 
-requirements = ['Flask', 'werkzeug', 'jinja2', 'peewee>2.0.0', 'wtforms', 'wtf-peewee']
+requirements = ['Flask', 'werkzeug', 'jinja2', 'peewee>2.0.6', 'wtforms', 'wtf-peewee']
 if sys.version_info[:2] < (2, 6):
     requirements.append('simplejson')
 
 setup(
     name='flask-peewee',
-    version='0.6.2',
+    version='0.6.3',
     url='http://github.com/coleifer/flask-peewee/',
     license='BSD',
     author='Charles Leifer',
