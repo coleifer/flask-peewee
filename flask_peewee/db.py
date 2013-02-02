@@ -45,7 +45,8 @@ class Database(object):
         self.database.connect()
 
     def close_db(self, exc):
-        self.database.close()
+        if not self.database.is_closed():
+            self.database.close()
 
     def register_handlers(self):
         self.app.before_request(self.connect_db)
