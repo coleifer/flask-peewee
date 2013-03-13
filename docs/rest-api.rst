@@ -430,6 +430,35 @@ Joins can be traversed using the django double-underscore notation:
       ]
     }
 
+It is also supported to use different comparison operators with the same double-underscore notation:
+
+.. code-block:: console
+
+    $ curl http://127.0.0.1:5000/api/user/?user__lt=2
+
+.. code-block:: javascript
+
+    {
+      "meta": {
+        "model": "user",
+        "next": "",
+        "page": 1,
+        "previous": ""
+        }, 
+    "objects": [{
+        "username": "admin",
+        "admin": true,
+        "email": "admin@admin",
+        "active": true,
+        "password": "214de$25",
+        "id": 1
+        }]
+    }
+
+
+Valid Comparison Operators are: 
+    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'like', 'ilike'
+
 
 Sorting results
 ---------------
