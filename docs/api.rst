@@ -586,9 +586,11 @@ Auth
 
         :param user: ``User`` instance
 
-    .. py:method:: logout_user()
+    .. py:method:: logout_user(user)
 
         Mark the requesting user as logged-out
+
+        :param user: ``User`` instance
 
 
 The BaseUser mixin
