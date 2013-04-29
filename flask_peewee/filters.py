@@ -91,13 +91,57 @@ class ContainsQueryFilter(QueryFilter):
         return 'contains'
 
 
+class YearFilter(QueryFilter):
+    def query(self, value):
+        value = int(value)
+        return self.field.year == value
+
+    def operation(self):
+        return 'year equals'
+
+
+class MonthFilter(QueryFilter):
+    def query(self, value):
+        value = int(value)
+        return self.field.month == value
+
+    def operation(self):
+        return 'month equals'
+
+
+class WithinDaysAgoFilter(QueryFilter):
+    def query(self, value):
+        value = int(value)
+        return self.field >= (
+            datetime.date.today() - datetime.timedelta(days=value))
+
+    def operation(self):
+        return 'within X days ago'
+
+
+class OlderThanDaysAgoFilter(QueryFilter):
+    def query(self, value):
+        value = int(value)
+        return self.field < (
+            datetime.date.today() - datetime.timedelta(days=value))
+
+    def operation(self):
+        return 'older than X days ago'
+
+
 class FilterMapping(object):
     """
     Map a peewee field to a list of valid query filters for that field
     """
-    string = (EqualQueryFilter, NotEqualQueryFilter, StartsWithQueryFilter, ContainsQueryFilter)
-    numeric = (EqualQueryFilter, NotEqualQueryFilter, LessThanQueryFilter, GreaterThanQueryFilter,
-        LessThanEqualToQueryFilter, GreaterThanEqualToQueryFilter)
+    string = (
+        EqualQueryFilter, NotEqualQueryFilter, StartsWithQueryFilter,
+        ContainsQueryFilter)
+    numeric = (
+        EqualQueryFilter, NotEqualQueryFilter, LessThanQueryFilter,
+        GreaterThanQueryFilter, LessThanEqualToQueryFilter,
+        GreaterThanEqualToQueryFilter)
+    datetime_date = (numeric + (
+        WithinDaysAgoFilter, OlderThanDaysAgoFilter, YearFilter, MonthFilter))
     foreign_key = (EqualQueryFilter, NotEqualQueryFilter)
     boolean = (EqualQueryFilter, NotEqualQueryFilter)
 
@@ -105,8 +149,8 @@ class FilterMapping(object):
         return {
             CharField: 'string',
             TextField: 'string',
-            DateTimeField: 'numeric',
-            DateField: 'numeric',
+            DateTimeField: 'datetime_date',
+            DateField: 'datetime_date',
             TimeField: 'numeric',
             IntegerField: 'numeric',
             BigIntegerField: 'numeric',
@@ -134,6 +178,9 @@ class FilterMapping(object):
 
     def convert_numeric(self, field):
         return [f(field, field.verbose_name, field.choices) for f in self.numeric]
+
+    def convert_datetime_date(self, field):
+        return [f(field, field.verbose_name, field.choices) for f in self.datetime_date]
 
     def convert_boolean(self, field):
         boolean_choices = [('True', '1', 'False', '')]
