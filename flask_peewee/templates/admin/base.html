@@ -7,7 +7,7 @@
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-  <title>{% block title %}{% endblock %} | Admin</title>
+  <title>{% block title %}{% endblock %} | {{ branding }}</title>
   <meta name="description" content="">
   <meta name="author" content="">
 
@@ -33,7 +33,7 @@
   <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
       <div class="container-fluid">
-        <a class="brand" href="{{ url_for('admin.index') }}">Site Admin <small>{{ branding }}</small></a>
+        <a class="brand" href="{{ url_for('admin.index') }}">{{ branding }}</a>
         <ul class="nav">
           <li class="active"><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
           <li><a href="/">View site</a></li>
