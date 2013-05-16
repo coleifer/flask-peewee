@@ -45,7 +45,7 @@ class UserStatsPanel(AdminPanel):
         }
 
 
-admin = Admin(app, auth)
+admin = Admin(app, auth, branding='Example Site')
 
 
 class MessageAdmin(ModelAdmin):
