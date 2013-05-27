@@ -28,10 +28,10 @@ following code:
 .. code-block:: python
 
     from flask import Flask
-        
+
     app = Flask(__name__)
     app.config.from_object(__name__)
-    
+
     if __name__ == '__main__':
         app.run()
 
@@ -90,8 +90,8 @@ Now we can create a model:
 
     import datetime
     from peewee import *
-    
-    
+
+
     class Note(db.Model):
         message = TextField()
         created = DateTimeField(default=datetime.datetime.now)
@@ -132,7 +132,7 @@ among other things, and is required by the :py:class:`Admin`.
 .. code-block:: python
 
     from flask_peewee.auth import Auth
-    
+
     # create an Auth object for use with our flask app and database wrapper
     auth = Auth(app, db)
 
@@ -144,7 +144,7 @@ if need be:
     if __name__ == '__main__':
         auth.User.create_table(fail_silently=True)
         Note.create_table(fail_silently=True)
-        
+
         app.run()
 
 After cleaning up the imports and declarations, we have something like the following:
@@ -184,7 +184,7 @@ After cleaning up the imports and declarations, we have something like the follo
     if __name__ == '__main__':
         auth.User.create_table(fail_silently=True)
         Note.create_table(fail_silently=True)
-        
+
         app.run()
 
 
@@ -205,19 +205,19 @@ the initialization of the ``Auth`` class:
 
 
 We now have a functioning admin site!  Of course, we'll need a user log in with,
-so open up an interactive terminal in the directory alongside the app and run
+so open up an interactive python shell in the directory alongside the app and run
 the following:
 
 .. code-block:: python
 
-    from app import auth
-    admin = auth.User(username='admin', admin=True, active=True)
+    from auth import User
+    admin = User(username='admin', admin=True, active=True)
     admin.set_password('admin')
     admin.save()
 
 It should now be possible to:
 
-1. navigate to http://127.0.0.1:5000/admin/ 
+1. navigate to http://127.0.0.1:5000/admin/
 2. enter in the username and password ("admin", "admin")
 3. be redirected to the admin dashboard
 
@@ -274,7 +274,7 @@ The first step, then, is to create the :py:class:`RestAPI` object:
 
     # create a RestAPI container
     api = RestAPI(app)
-    
+
     api.setup()
 
 This doesn't do anything yet, we need to register models with it first.  Let's
@@ -284,10 +284,10 @@ register the ``Note`` model from earlier:
 
     # create a RestAPI container
     api = RestAPI(app)
-    
+
     # register the Note model
     api.register(Note)
-    
+
     api.setup()
 
 Assuming your project is still running, try executing the following command (or
@@ -303,20 +303,20 @@ You should see something like the following:
 
     {
       "meta": {
-        "model": "note", 
-        "next": "", 
-        "page": 1, 
+        "model": "note",
+        "next": "",
+        "page": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "message": "blah blah blah this is a note", 
-          "id": 1, 
+          "message": "blah blah blah this is a note",
+          "id": 1,
           "created": "2011-09-23 09:07:39"
-        }, 
+        },
         {
-          "message": "this is another note!", 
-          "id": 2, 
+          "message": "this is another note!",
+          "id": 2,
           "created": "2011-09-23 09:07:54"
         }
       ]
@@ -329,7 +329,7 @@ messages using the API.  If you try and make a POST right now, you will get a
 .. code-block:: console
 
     $ curl -i -d '' http://127.0.0.1:5000/api/note/
-    
+
     HTTP/1.0 401 UNAUTHORIZED
     WWW-Authenticate: Basic realm="Login Required"
     Content-Type: text/html; charset=utf-8
@@ -366,10 +366,10 @@ Now we can post new notes using a command-line tool like curl:
 .. code-block:: console
 
     $ curl -u admin:admin -d data='{"message": "hello api"}' http://127.0.0.1:5000/api/note/
-    
+
     {
-      "message": "hello api", 
-      "id": 3, 
+      "message": "hello api",
+      "id": 3,
       "created": "2011-09-23 13:14:56"
     }
 
@@ -378,7 +378,7 @@ You can see that it returns a serialized copy of the new ``Note`` object.
 .. note::
     This is just a small example of what you can do with the Rest API -- refer to
     the :ref:`Rest API docs <rest-api>` for more detailed information, including
-    
+
     * limiting access on a per-model basis
     * customizing which fields are returned by the API
     * filtering and querying using GET parameters
