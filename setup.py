@@ -15,13 +15,6 @@ setup(
     description='Peewee integration for flask',
     packages=find_packages(),
     package_data = {
-        'example': [
-            'example.db',
-            'requirements.txt',
-            'static/*.css',
-            'templates/*.html',
-            'templates/*/*.html',
-        ],
         'flask_peewee': [
             'static/*/*.css',
             'static/*/*.js',
