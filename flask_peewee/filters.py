@@ -283,7 +283,7 @@ class FilterForm(object):
         elif isinstance(field, DateField):
             return datetime.date.today()
         elif isinstance(field, TimeField):
-            return '00:00:00'
+            return datetime.time(0, 0)
         return field.default
 
     def get_value_field(self, field):
