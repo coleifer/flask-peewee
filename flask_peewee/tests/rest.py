@@ -1105,6 +1105,16 @@ class RestApiKeyAuthTestCase(RestApiTestCase):
             ])
             self.assertAPIMeta(resp_json, {'model': 'testmodel', 'next': '', 'page': 1, 'previous': ''})
 
+    def test_auth_headers(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/testmodel/', headers={'key': 'k', 'secret': 'foo'})
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+
+            resp = c.get('/api/testmodel/', headers={'key': 'k', 'secret': 's'})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.api_key, self.k1)
+
     def test_create(self):
         with self.flask_app.test_client() as c:
             test_data = {'data': 't3'}

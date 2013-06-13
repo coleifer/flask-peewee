@@ -31,7 +31,7 @@ class Authentication(object):
 class APIKeyAuthentication(Authentication):
     """
     Requires a model that has at least two fields, "key" and "secret", which will
-    be searched for when authing a request
+    be searched for when authing a request.
     """
     key_field = 'key'
     secret_field = 'secret'
@@ -54,14 +54,21 @@ class APIKeyAuthentication(Authentication):
         except self.model.DoesNotExist:
             pass
 
+    def get_key_secret(self):
+        for search in [request.args, request.headers, request.form]:
+            if 'key' in search and 'secret' in search:
+                return search['key'], search['secret']
+        return None, None
+
     def authorize(self):
         g.api_key = None
 
         if request.method not in self.protected_methods:
             return True
 
-        if 'key' in request.args and 'secret' in request.args:
-            g.api_key = self.get_key(request.args['key'], request.args['secret'])
+        key, secret = self.get_key_secret()
+        if key or secret:
+            g.api_key = self.get_key(key, secret)
 
         return g.api_key
 
