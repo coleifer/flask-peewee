@@ -2,12 +2,26 @@ from __future__ import with_statement
 
 import datetime
 
-from flask import request, session, url_for, g
+from flask import g
+from flask import request
+from flask import session
+from flask import url_for
 
-from flask_peewee.admin import ModelAdmin, AdminPanel
+from flask_peewee.admin import AdminPanel
+from flask_peewee.admin import ModelAdmin
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, Message, Note, admin, AModel, BModel, CModel, DModel, BDetails
-from flask_peewee.utils import get_next, make_password, check_password
+from flask_peewee.tests.test_app import AModel
+from flask_peewee.tests.test_app import BDetails
+from flask_peewee.tests.test_app import BModel
+from flask_peewee.tests.test_app import CModel
+from flask_peewee.tests.test_app import DModel
+from flask_peewee.tests.test_app import Message
+from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import User
+from flask_peewee.tests.test_app import admin
+from flask_peewee.utils import check_password
+from flask_peewee.utils import get_next
+from flask_peewee.utils import make_password
 
 from wtfpeewee.orm import model_form
 

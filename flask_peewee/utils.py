@@ -4,8 +4,13 @@ import re
 import sys
 from hashlib import sha1
 
-from flask import abort, request, render_template
-from peewee import Model, DoesNotExist, SelectQuery, ForeignKeyField
+from flask import abort
+from flask import render_template
+from flask import request
+from peewee import DoesNotExist
+from peewee import ForeignKeyField
+from peewee import Model
+from peewee import SelectQuery
 
 
 def get_object_or_404(query_or_model, *query):

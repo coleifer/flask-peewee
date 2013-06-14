@@ -1,8 +1,11 @@
 import datetime
 
-from flask_peewee.serializer import Serializer, Deserializer
+from flask_peewee.serializer import Deserializer
+from flask_peewee.serializer import Serializer
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, Message, Note
+from flask_peewee.tests.test_app import Message
+from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import User
 
 
 class SerializerTestCase(FlaskPeeweeTestCase):

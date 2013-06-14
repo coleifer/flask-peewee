@@ -1,16 +1,34 @@
 import datetime
 
-from flask import Flask, request, redirect, url_for, render_template, flash, g, Response
+from flask import Flask
+from flask import Response
+from flask import flash
+from flask import g
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import url_for
 
 from peewee import *
 
 # flask-peewee bindings
-from flask_peewee.admin import Admin, ModelAdmin, AdminPanel
-from flask_peewee.auth import Auth, BaseUser
+from flask_peewee.admin import Admin
+from flask_peewee.admin import AdminPanel
+from flask_peewee.admin import ModelAdmin
+from flask_peewee.auth import Auth
+from flask_peewee.auth import BaseUser
 from flask_peewee.db import Database
 from flask_peewee.filters import QueryFilter
-from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource, UserAuthentication, AdminAuthentication, APIKeyAuthentication, Authentication
-from flask_peewee.utils import get_object_or_404, object_list, make_password
+from flask_peewee.rest import APIKeyAuthentication
+from flask_peewee.rest import AdminAuthentication
+from flask_peewee.rest import Authentication
+from flask_peewee.rest import RestAPI
+from flask_peewee.rest import RestResource
+from flask_peewee.rest import RestrictOwnerResource
+from flask_peewee.rest import UserAuthentication
+from flask_peewee.utils import get_object_or_404
+from flask_peewee.utils import make_password
+from flask_peewee.utils import object_list
 
 
 class TestFlask(Flask):

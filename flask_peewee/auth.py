@@ -1,11 +1,24 @@
 import functools
 import os
 
-from flask import Blueprint, render_template, abort, request, session, flash, redirect, url_for, g
+from flask import Blueprint
+from flask import abort
+from flask import flash
+from flask import g
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import session
+from flask import url_for
 from peewee import *
-from wtforms import Form, TextField, PasswordField, validators
+from wtforms import Form
+from wtforms import PasswordField
+from wtforms import TextField
+from wtforms import validators
 
-from flask_peewee.utils import get_next, make_password, check_password
+from flask_peewee.utils import check_password
+from flask_peewee.utils import get_next
+from flask_peewee.utils import make_password
 
 
 current_dir = os.path.dirname(__file__)

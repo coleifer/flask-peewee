@@ -2,7 +2,8 @@ import datetime
 import sys
 
 from peewee import Model
-from flask_peewee.utils import get_dictionary_from_model, get_model_from_dictionary
+from flask_peewee.utils import get_dictionary_from_model
+from flask_peewee.utils import get_model_from_dictionary
 
 
 class Serializer(object):

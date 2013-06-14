@@ -1,7 +1,8 @@
 from peewee import BooleanField
 
 from wtforms import widgets
-from wtfpeewee.fields import BooleanSelectField, ModelSelectField
+from wtfpeewee.fields import BooleanSelectField
+from wtfpeewee.fields import ModelSelectField
 from wtfpeewee.orm import ModelConverter
 
 

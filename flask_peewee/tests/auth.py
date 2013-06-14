@@ -2,11 +2,18 @@ from __future__ import with_statement
 
 import datetime
 
-from flask import request, session, url_for, get_flashed_messages
+from flask import get_flashed_messages
+from flask import request
+from flask import session
+from flask import url_for
 
-from flask_peewee.auth import Auth, LoginForm
+from flask_peewee.auth import Auth
+from flask_peewee.auth import LoginForm
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import User, app, db, auth
+from flask_peewee.tests.test_app import User
+from flask_peewee.tests.test_app import app
+from flask_peewee.tests.test_app import auth
+from flask_peewee.tests.test_app import db
 
 
 class TestAuth(Auth):

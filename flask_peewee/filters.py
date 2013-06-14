@@ -4,7 +4,10 @@ import operator
 from flask import request
 from flask_peewee.forms import BaseModelConverter
 from peewee import *
-from wtforms import fields, form, validators, widgets
+from wtforms import fields
+from wtforms import form
+from wtforms import validators
+from wtforms import widgets
 
 
 class QueryFilter(object):

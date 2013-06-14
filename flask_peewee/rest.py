@@ -5,13 +5,23 @@ try:
 except ImportError:
     import json
 
-from flask import Blueprint, abort, request, Response, session, redirect, url_for, g
+from flask import Blueprint
+from flask import Response
+from flask import abort
+from flask import g
+from flask import redirect
+from flask import request
+from flask import session
+from flask import url_for
 from peewee import *
 from peewee import DJANGO_MAP
 
 from flask_peewee.filters import make_field_tree
-from flask_peewee.serializer import Serializer, Deserializer
-from flask_peewee.utils import PaginatedQuery, slugify, get_object_or_404
+from flask_peewee.serializer import Deserializer
+from flask_peewee.serializer import Serializer
+from flask_peewee.utils import PaginatedQuery
+from flask_peewee.utils import get_object_or_404
+from flask_peewee.utils import slugify
 
 
 class Authentication(object):
