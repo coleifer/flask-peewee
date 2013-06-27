@@ -406,7 +406,7 @@ class ModelAdmin(object):
 
             # if the field is nullable, include the "None" option at the top of the list
             if field.null:
-                data.append({'id': 'None', 'repr': 'None'})
+                data.append({'id': '__None', 'repr': 'None'})
 
             data.extend([{'id': obj.get_id(), 'repr': unicode(obj)} for obj in pq.get_list()])
 
