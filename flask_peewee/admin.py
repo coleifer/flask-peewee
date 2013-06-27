@@ -378,17 +378,18 @@ class ModelAdmin(object):
         )
 
     def ajax_list(self):
-        field = request.args.get('field')
+        field_name = request.args.get('field')
         prev_page = 0
         next_page = 0
 
         try:
-            models = path_to_models(self.model, field)
+            models = path_to_models(self.model, field_name)
         except AttributeError:
             data = []
         else:
+            field = self.model._meta.fields[field_name]
             rel_model = models.pop()
-            rel_field = rel_model._meta.fields[self.foreign_key_lookups[field]]
+            rel_field = rel_model._meta.fields[self.foreign_key_lookups[field_name]]
             query = rel_model.select().order_by(rel_field)
             query_string = request.args.get('query')
             if query_string:
@@ -401,10 +402,13 @@ class ModelAdmin(object):
             if current_page < pq.get_pages():
                 next_page = current_page + 1
 
-            data = [
-                {'id': obj.get_id(), 'repr': unicode(obj)} \
-                    for obj in pq.get_list()
-            ]
+            data = []
+
+            # if the field is nullable, include the "None" option at the top of the list
+            if field.null:
+                data.append({'id': 'None', 'repr': 'None'})
+
+            data.extend([{'id': obj.get_id(), 'repr': unicode(obj)} for obj in pq.get_list()])
 
         json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
