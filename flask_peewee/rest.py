@@ -15,6 +15,7 @@ from flask import session
 from flask import url_for
 from peewee import *
 from peewee import DJANGO_MAP
+from six.moves import reduce
 
 from flask_peewee.filters import make_field_tree
 from flask_peewee.serializer import Deserializer
@@ -406,7 +407,7 @@ class RestResource(object):
         data = request.data or request.form.get('data') or ''
 
         try:
-            data = json.loads(data)
+            data = json.loads(data.decode('utf8'))
         except ValueError:
             return self.response_bad_request()
 
@@ -420,7 +421,7 @@ class RestResource(object):
     def edit(self, obj):
         data = request.data or request.form.get('data') or ''
         try:
-            data = json.loads(data)
+            data = json.loads(data.decode('utf8'))
         except ValueError:
             return self.response_bad_request()
 

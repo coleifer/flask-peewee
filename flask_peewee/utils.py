@@ -11,6 +11,7 @@ from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
 from peewee import SelectQuery
+import six
 
 
 def get_object_or_404(query_or_model, *query):
@@ -132,10 +133,11 @@ def path_to_models(model, path):
 
 # borrowing these methods, slightly modified, from django.contrib.auth
 def get_hexdigest(salt, raw_password):
-    return sha1(salt + raw_password).hexdigest()
+    data = salt + raw_password
+    return sha1(data.encode('utf8')).hexdigest()
 
 def make_password(raw_password):
-    salt = get_hexdigest(str(random.random()), str(random.random()))[:5]
+    salt = get_hexdigest(six.text_type(random.random()), six.text_type(random.random()))[:5]
     hsh = get_hexdigest(salt, raw_password)
     return '%s$%s' % (salt, hsh)
 

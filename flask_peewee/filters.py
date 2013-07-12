@@ -4,6 +4,7 @@ import operator
 from flask import request
 from flask_peewee.forms import BaseModelConverter
 from peewee import *
+from six.moves import reduce
 from wtforms import fields
 from wtforms import form
 from wtforms import validators

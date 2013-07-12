@@ -466,7 +466,7 @@ class AdminTemplateHelper(object):
         if not querystring:
             return '%s=%s' % (key, val)
         else:
-            querystring = re.sub('%s(?:[^&]+)?&?' % key, '', querystring).rstrip('&')
+            querystring = re.sub('%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
             return ('%s&%s=%s' % (querystring, key, val)).lstrip('&')
 
     def get_verbose_name(self, model, column_name):

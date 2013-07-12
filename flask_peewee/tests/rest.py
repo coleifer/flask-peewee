@@ -40,10 +40,11 @@ class RestApiTestCase(FlaskPeeweeTestCase):
         TestModel.create_table()
 
     def response_json(self, response):
-        return json.loads(response.data)
+        return json.loads(response.data.decode('utf8'))
 
     def auth_headers(self, username, password):
-        return {'Authorization': 'Basic %s' % base64.b64encode('%s:%s' % (username, password))}
+        data = '%s:%s' % (username, password)
+        return {'Authorization': 'Basic %s' % base64.b64encode(data.encode('utf8')).decode('utf8')}
 
     def conv_date(self, dt):
         return dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -208,7 +209,7 @@ class RestApiResourceTestCase(RestApiTestCase):
 
         self.assertEqual(AModel.select().count(), 1)
         a_obj = AModel.get(a_field='ax')
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': a_obj.id,
             'a_field': 'ax',
         })
@@ -223,7 +224,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         a_obj = AModel.get(a_field='ay')
 
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': b_obj.id,
             'b_field': 'by',
             'a': {
@@ -245,7 +246,7 @@ class RestApiResourceTestCase(RestApiTestCase):
 
         self.assertEqual(c_obj.b, b_obj)
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': c_obj.id,
             'c_field': 'cz',
             'b': {
@@ -268,7 +269,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         e_obj = EModel.get(e_field='ey')
 
         self.assertEqual(f_obj.e, e_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'fy',
             'e': {
@@ -285,7 +286,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         f_obj = FModel.get(f_field='fz')
 
         self.assertEqual(f_obj.e, None)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'fz',
             'e': None,
@@ -300,7 +301,7 @@ class RestApiResourceTestCase(RestApiTestCase):
 
         self.assertEqual(AModel.select().count(), 2)
         a_obj = AModel.get(id=self.a2.id)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': self.a2.id,
             'a_field': 'a2-xxx',
         })
@@ -315,7 +316,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         a_obj = AModel.get(id=self.a2.id)
 
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': b_obj.id,
             'b_field': 'b2-yyy',
             'a': {
@@ -337,7 +338,7 @@ class RestApiResourceTestCase(RestApiTestCase):
 
         self.assertEqual(c_obj.b, b_obj)
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': c_obj.id,
             'c_field': 'c2-zzz',
             'b': {
@@ -360,7 +361,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         e_obj = EModel.get(id=self.e1.id)
 
         self.assertEqual(f_obj.e, e_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'f1-yyy',
             'e': {
@@ -377,7 +378,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         f_obj = FModel.get(id=self.f2.id)
 
         self.assertEqual(f_obj.e, None)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'f2-yyy',
             'e': None,
@@ -397,7 +398,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         a_obj = AModel.get(id=self.a2.id)
 
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': b_obj.id,
             'b_field': 'b2-yyy',
             'a': {
@@ -416,7 +417,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         e_obj = EModel.get(id=self.e1.id)
 
         self.assertEqual(f_obj.e, e_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'f1-zzz',
             'e': {
@@ -438,7 +439,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         a_obj = AModel.get(id=self.a1.id)
 
         self.assertEqual(b_obj.a, a_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': b_obj.id,
             'b_field': 'b2',
             'a': {
@@ -457,7 +458,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         e_obj = EModel.get(id=self.e2.id)
 
         self.assertEqual(f_obj.e, e_obj)
-        self.assertEqual(json.loads(resp.data), {
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {
             'id': f_obj.id,
             'f_field': 'f2',
             'e': {
@@ -470,21 +471,21 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.create_test_models()
 
         resp = self.post_to('/api/cmodel/%s/delete/' % self.c2.id, {})
-        self.assertEqual(json.loads(resp.data), {'deleted': 1})
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 1)
         self.assertEqual(BModel.select().count(), 2)
         self.assertEqual(AModel.select().count(), 2)
 
         resp = self.post_to('/api/amodel/%s/delete/' % self.a1.id, {})
-        self.assertEqual(json.loads(resp.data), {'deleted': 1})
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 0)
         self.assertEqual(BModel.select().count(), 1)
         self.assertEqual(AModel.select().count(), 1)
 
         resp = self.post_to('/api/emodel/%s/delete/' % self.e1.id, {})
-        self.assertEqual(json.loads(resp.data), {'deleted': 1})
+        self.assertEqual(json.loads(resp.data.decode('utf8')), {'deleted': 1})
 
         self.assertEqual(EModel.select().count(), 1)
         self.assertEqual(FModel.select().count(), 2)
