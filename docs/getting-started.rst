@@ -210,8 +210,8 @@ the following:
 
 .. code-block:: python
 
-    from auth import User
-    admin = User(username='admin', admin=True, active=True)
+    from auth import auth
+    admin = auth.User(username='admin', admin=True, active=True)
     admin.set_password('admin')
     admin.save()
 
