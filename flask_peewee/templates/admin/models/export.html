@@ -27,6 +27,7 @@ PARAMS:
 
   <form action="./?{{ request.query_string }}" class="form-horizontal" method="post">
     <fieldset>
+      {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Select fields to export</legend>
       <div class="control-group">
         <label class="control-label">Fields on {{ model.__name__ }}</label>

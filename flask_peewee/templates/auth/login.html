@@ -7,6 +7,7 @@
 {% block content %}
   <form method="post" action="">
     <input type="hidden" name="next" value="{{ next }}" />
+    {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
     {% for field in form %}
       <div class="clearfix{% if field.errors %} error{% endif %}">
         {{ field.label }}

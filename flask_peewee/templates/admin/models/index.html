@@ -17,6 +17,7 @@
   {% include "admin/includes/filter_widgets.html" %}
 
   <form action="." class="form-horizontal" id="model-list" method="post"><input type="hidden" name="action" value="" />
+  {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
   <table class="table table-bordered table-striped">
     <thead>
       <tr>
