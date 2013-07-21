@@ -191,6 +191,12 @@ class RestResource(object):
 
         # clean and normalize the request parameters
         for key in request.args:
+            orig_key = key
+            if key.startswith('-'):
+                negated = True
+                key = key[1:]
+            else:
+                negated = False
             if '__' in key:
                 expr, op = key.rsplit('__', 1)
                 if op not in DJANGO_MAP:
@@ -200,7 +206,7 @@ class RestResource(object):
                 expr = key
                 op = 'eq'
             raw_filters.setdefault(expr, [])
-            raw_filters[expr].append((op, request.args.getlist(key)))
+            raw_filters[expr].append((op, request.args.getlist(orig_key), negated))
 
         # do a breadth first search across the field tree created by filter_fields,
         # searching for matching keys in the request parameters -- when found,
@@ -211,22 +217,24 @@ class RestResource(object):
             for field in node.fields:
                 filter_expr = '%s%s' % (prefix, field.name)
                 if filter_expr in raw_filters:
-                    for op, arg_list in raw_filters[filter_expr]:
-                        query = self.apply_filter(query, filter_expr, op, arg_list)
+                    for op, arg_list, negated in raw_filters[filter_expr]:
+                        query = self.apply_filter(query, filter_expr, op, arg_list, negated)
 
             for child_prefix, child_node in node.children.items():
                 queue.append((child_node, prefix + child_prefix + '__'))
 
         return query
 
-    def apply_filter(self, query, expr, op, arg_list):
+    def apply_filter(self, query, expr, op, arg_list, negated):
         query_expr = '%s__%s' % (expr, op)
+        constructor = lambda kwargs: negated and ~DQ(**kwargs) or DQ(**kwargs)
         if op == 'in':
-            return query.filter(**{query_expr: arg_list})
+            return query.filter(constructor({query_expr: arg_list}))
         elif len(arg_list) == 1:
-            return query.filter(**{query_expr: arg_list[0]})
+            return query.filter(constructor({query_expr: arg_list[0]}))
         else:
-            query_clauses = [DQ(**{query_expr: val}) for val in arg_list]
+            query_clauses = [
+                constructor({query_expr: val}) for val in arg_list]
             return query.filter(reduce(operator.or_, query_clauses))
 
     def get_serializer(self):

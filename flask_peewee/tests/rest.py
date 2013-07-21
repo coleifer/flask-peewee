@@ -610,6 +610,12 @@ class RestApiBasicTestCase(RestApiTestCase):
         })
         self.assertAPINotes(resp_json, Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
 
+        # do a filter with a negation
+        resp = self.app.get('/api/note/?-user__username=admin&ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertAPINotes(resp_json, Note.filter(user__in=[
+            self.normal, self.inactive]).order_by(Note.id))
+
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
         notes = list(self.admin.note_set.order_by(Note.id))
