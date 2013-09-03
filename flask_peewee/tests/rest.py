@@ -509,6 +509,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         # do a simple list of the first 20 items
         resp = self.app.get('/api/note/?ordering=id')
+        print("{}".format(resp.data))
         resp_json = self.response_json(resp)
 
         # verify we have page and link to next page

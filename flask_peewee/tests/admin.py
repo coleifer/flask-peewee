@@ -22,7 +22,7 @@ from flask_peewee.tests.test_app import admin
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
-import six
+from flask_peewee._compat import text_type
 
 from wtfpeewee.orm import model_form
 
@@ -703,7 +703,7 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
         self.assertEqual(self.th.fix_underscores('test'), 'Test')
 
     def test_update_querystring(self):
-        qs = lambda t: six.text_type(t).encode('utf8')
+        qs = lambda t: text_type(t).encode('utf8')
         self.assertEqual(self.th.update_querystring(qs(''), 'page', 1), 'page=1')
         self.assertEqual(self.th.update_querystring(qs('page=1'), 'page', 2), 'page=2')
         self.assertEqual(self.th.update_querystring(qs('session=3&page=1'), 'page', 2), 'session=3&page=2')
