@@ -76,9 +76,7 @@ class Auth(object):
             model_admin = ModelAdmin
 
         class UserAdmin(model_admin):
-            columns = getattr(model_admin, 'columns')
-            if columns is None:
-                    columns = ('username', 'email', 'active', 'admin')
+            columns = ['username', 'email', 'active', 'admin']
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
@@ -150,7 +148,7 @@ class Auth(object):
         session['user_pk'] = user.get_id()
         session.permanent = True
         g.user = user
-        flash('You are logged in as %s' % user.username, 'success')
+        flash('You are logged in as %s' % user, 'success')
 
     def logout_user(self, user):
         if self.clear_session:
