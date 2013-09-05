@@ -148,7 +148,7 @@ class Auth(object):
         session['user_pk'] = user.get_id()
         session.permanent = True
         g.user = user
-        flash('You are logged in as %s' % user.username, 'success')
+        flash('You are logged in as %s' % user, 'success')
 
     def logout_user(self, user):
         if self.clear_session:
