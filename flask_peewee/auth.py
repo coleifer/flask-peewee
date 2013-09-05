@@ -76,7 +76,9 @@ class Auth(object):
             model_admin = ModelAdmin
 
         class UserAdmin(model_admin):
-            columns = ['username', 'email', 'active', 'admin']
+            columns = getattr(model_admin, 'columns')
+            if columns is None:
+                    columns = ('username', 'email', 'active', 'admin')
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
@@ -117,7 +119,7 @@ class Auth(object):
             @functools.wraps(fn)
             def inner(*args, **kwargs):
                 user = self.get_logged_in_user()
-                
+
                 if not user or not test_fn(user):
                     login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
                     return redirect(login_url)
@@ -127,7 +129,7 @@ class Auth(object):
 
     def login_required(self, func):
         return self.test_user(lambda u: True)(func)
-    
+
     def admin_required(self, func):
         return self.test_user(lambda u: u.admin)(func)
 
@@ -165,7 +167,7 @@ class Auth(object):
 
             try:
                 return self.User.select().where(
-                    self.User.active==True, 
+                    self.User.active==True,
                     self.User.id==session.get('user_pk')
                 ).get()
             except self.User.DoesNotExist:
