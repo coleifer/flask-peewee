@@ -76,7 +76,8 @@ class Auth(object):
             model_admin = ModelAdmin
 
         class UserAdmin(model_admin):
-            columns = ['username', 'email', 'active', 'admin']
+            columns = getattr(model_admin, 'columns') or (
+                    ['username', 'email', 'active', 'admin'])
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
