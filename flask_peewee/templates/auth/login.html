@@ -5,7 +5,7 @@
 {% block content_title %}Log in{% endblock %}
 
 {% block content %}
-  <form method="post" action="">
+  <form method="post" action="{{ login_url }}">
     <input type="hidden" name="next" value="{{ next }}" />
     {% for field in form %}
       <div class="clearfix{% if field.errors %} error{% endif %}">

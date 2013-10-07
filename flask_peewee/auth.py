@@ -118,7 +118,7 @@ class Auth(object):
             @functools.wraps(fn)
             def inner(*args, **kwargs):
                 user = self.get_logged_in_user()
-                
+
                 if not user or not test_fn(user):
                     login_url = url_for('%s.login' % self.blueprint.name, next=get_next())
                     return redirect(login_url)
@@ -128,7 +128,7 @@ class Auth(object):
 
     def login_required(self, func):
         return self.test_user(lambda u: True)(func)
-    
+
     def admin_required(self, func):
         return self.test_user(lambda u: u.admin)(func)
 
@@ -166,7 +166,7 @@ class Auth(object):
 
             try:
                 return self.User.select().where(
-                    self.User.active==True, 
+                    self.User.active==True,
                     self.User.id==session.get('user_pk')
                 ).get()
             except self.User.DoesNotExist:
@@ -194,7 +194,11 @@ class Auth(object):
         else:
             form = Form()
 
-        return render_template('auth/login.html', error=error, form=form)
+        return render_template(
+            'auth/login.html',
+            error=error,
+            form=form,
+            login_url=url_for('%s.login' % self.blueprint.name))
 
     def logout(self):
         self.logout_user(self.get_logged_in_user())
