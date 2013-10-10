@@ -410,25 +410,26 @@ class RestResource(object):
                 rel_resource.save_related_objects(rel_obj, v)
                 setattr(instance, k, rel_resource.save_object(rel_obj, v))
 
-    def create(self):
+    def read_request_data(self):
         data = request.data or request.form.get('data') or ''
+        return json.loads(data)
 
+    def create(self):
         try:
-            data = json.loads(data)
+            data = self.read_request_data()
         except ValueError:
             return self.response_bad_request()
 
-        instance, models = self.deserialize_object(data, self.model())
+        obj, models = self.deserialize_object(data, self.model())
 
-        self.save_related_objects(instance, data)
-        instance = self.save_object(instance, data)
+        self.save_related_objects(obj, data)
+        obj = self.save_object(obj, data)
 
-        return self.response(self.serialize_object(instance))
+        return self.response(self.serialize_object(obj))
 
     def edit(self, obj):
-        data = request.data or request.form.get('data') or ''
         try:
-            data = json.loads(data)
+            data = self.read_request_data()
         except ValueError:
             return self.response_bad_request()
 
