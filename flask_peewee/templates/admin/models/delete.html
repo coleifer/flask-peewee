@@ -13,6 +13,7 @@
   <form action="." class="form-horizontal" method="post">
     {% for object in query %}<input type="hidden" name="id" value="{{ object.get_id() }}" />{% endfor %}
     <fieldset>
+      {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Confirm delete</legend>
       <ul>
         {% for object in query %}
