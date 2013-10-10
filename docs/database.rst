@@ -24,26 +24,49 @@ be passed to the database driver when connecting:
 `engine`
     The database driver to use, must be a subclass of ``peewee.Database``.
 
-
 .. code-block:: python
 
     from flask import Flask
     from peewee import *
-    
+
     from flask_peewee.db import Database
-    
+
     DATABASE = {
         'name': 'example.db',
         'engine': 'peewee.SqliteDatabase',
     }
-    
+
     app = Flask(__name__)
     app.config.from_object(__name__) # load database configuration from this module
-    
+
     # instantiate the db wrapper
     db = Database(app)
-    
+
     # start creating models
     class Blog(db.Model):
         name = CharField()
         # .. etc
+
+Other examples
+--------------
+
+To connect to MySQL using authentication:
+
+.. code-block:: python
+
+    DATABASE = {
+        'name': 'my_database',
+        'engine': 'peewee.MySQLDatabase',
+        'user': 'db_user',
+        'passwd': 'secret password',
+    }
+
+If using a multi-threaded WSGI server:
+
+.. code-block:: python
+
+    DATABASE = {
+        'name': 'foo.db',
+        'engine': 'peewee.SqliteDatabase',
+        'threadlocals': True,
+    }
