@@ -291,7 +291,6 @@ class ModelAdmin(object):
         )
 
     def collect_objects(self, obj):
-        deps = obj.dependencies()
         objects = []
 
         for query, fk in obj.dependencies():
