@@ -147,10 +147,10 @@ var Admin = window.Admin || {};
         select_clone = select_elem.clone(),
         input_clone = input_elem.clone(),
         row = [
-          , '<div class="clearfix control-group">'
-          , '<a class="btn btn-close btn-danger" href="#" title="click to remove">'
-          , field_label
-          , '</a> </div>'
+          '<div class="form-group">',
+          '<a class="btn btn-sm btn-close btn-danger" href="#" title="click to remove">',
+          field_label,
+          '</a> </div>'
         ].join('\n'),
         row_elem = $(row).append(select_clone).append(input_clone);
 

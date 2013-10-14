@@ -6,14 +6,14 @@
 
 {% block content %}
   {% if panels %}
-    <div class="row-fluid">
+    <div class="row">
     {% for panel in panels %}
       {{ panel.render()|safe() }}
     {% endfor %}
     </div>
   {% endif %}
 
-  <table class="table table-bordered table-striped">
+  <table class="table table-condensed table-striped">
     <thead>
       <tr>
         <th class="shrink model-name">Model name</th>
