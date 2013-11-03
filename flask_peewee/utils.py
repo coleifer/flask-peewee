@@ -11,6 +11,7 @@ from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
 from peewee import SelectQuery
+from peewee import BooleanField
 
 
 def get_object_or_404(query_or_model, *query):
@@ -111,6 +112,8 @@ def get_model_from_dictionary(model, field_dict):
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)
         else:
+            if isinstance(model_instance._meta.fields[field_name], BooleanField):
+                value = value == "True"
             setattr(model_instance, field_name, field_obj.python_value(value))
     return model_instance, models
 
