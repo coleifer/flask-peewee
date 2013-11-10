@@ -151,7 +151,7 @@ class Auth(object):
         g.user = user
         flash('You are logged in as %s' % user, 'success')
 
-    def logout_user(self, user):
+    def logout_user(self):
         if self.clear_session:
             session.clear()
         else:
@@ -201,7 +201,7 @@ class Auth(object):
             login_url=url_for('%s.login' % self.blueprint.name))
 
     def logout(self):
-        self.logout_user(self.get_logged_in_user())
+        self.logout_user()
         return redirect(
             request.args.get('next') or \
             self.default_next_url
