@@ -3,8 +3,6 @@ import os
 import sys
 import unittest
 
-from os.path import dirname, abspath
-
 from flask_peewee import tests
 
 def runtests(*test_args):
