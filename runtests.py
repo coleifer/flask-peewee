@@ -5,8 +5,6 @@ import unittest
 
 from os.path import dirname, abspath
 
-from flask_peewee import tests
-
 def runtests(*test_args):
     suite = unittest.TestLoader().loadTestsFromModule(tests)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
