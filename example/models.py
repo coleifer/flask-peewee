@@ -1,4 +1,4 @@
-from hashlib import md5, sha1
+from hashlib import md5
 import datetime
 
 from flask_peewee.auth import BaseUser
