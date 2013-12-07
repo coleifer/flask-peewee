@@ -3,13 +3,17 @@
 {% block tab_index_class %}active{% endblock %}
 
 {% block extra_tabs %}
+    {% set model_admin_actions = model_admin.get_actions() %}
+    {% if model_admin_actions %}
     <li class="dropdown" style="float:right">
       <a class="dropdown-toggle" data-toggle="dropdown" href="#">With selected... <span class="caret" /></a>
       <ul class="dropdown-menu pull-right">
-        <li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>
-        <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
+        {% for action, info in model_admin_actions %}
+        <li><a href="#" onclick="Admin.index_submit('{{ action }}');">{{ info.title }}</a></li>
+        {% endfor %}
       </ul>
     </li>
+    {% endif %}
     {% include "admin/includes/filter_dropdown.html" %}
 {% endblock %}
 
