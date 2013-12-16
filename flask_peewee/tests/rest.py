@@ -616,6 +616,12 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertAPINotes(resp_json, Note.filter(user__in=[
             self.normal, self.inactive]).order_by(Note.id))
 
+        # do a filter with an IN operator and multiple IDs
+        # https://github.com/coleifer/flask-peewee/issues/112
+        resp = self.app.get('/api/note/?id__in=1,2,5')
+        resp_json = self.response_json(resp)
+        self.assertAPINotes(resp_json, Note.filter(id__in=[1,2,5]).order_by(Note.id))
+
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
         notes = list(self.admin.note_set.order_by(Note.id))
