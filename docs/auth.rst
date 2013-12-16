@@ -40,6 +40,8 @@ an :py:class:`Auth` backend for your project:
     # needed for authentication
     auth = Auth(app, db)
 
+.. note::
+    ``user`` is reserverd keyword in Postgres. Pass db_table to Auth to override db table.
 
 Marking areas of the site as login required
 -------------------------------------------

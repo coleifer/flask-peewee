@@ -40,10 +40,11 @@ class BaseUser(object):
 
 class Auth(object):
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
-                 clear_session=False, default_next_url='/'):
+                 clear_session=False, default_next_url='/', db_table='user'):
         self.app = app
         self.db = db
 
+        self.db_table = db_table
         self.User = user_model or self.get_user_model()
 
         self.blueprint = self.get_blueprint(name)
@@ -67,6 +68,9 @@ class Auth(object):
 
             def __unicode__(self):
                 return self.username
+
+            class Meta:
+                db_table = self.db_table  # Postgres reserves user as a keyword
 
         return User
 
