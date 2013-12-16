@@ -622,6 +622,12 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPINotes(resp_json, Note.filter(id__in=[1,2,5]).order_by(Note.id))
 
+        # also test that the IN operator works with list of strings
+        resp = self.app.get('/api/user/?username__in=admin,normal')
+        resp_json = self.response_json(resp)
+        self.assertAPIUsers(resp_json, User.filter(username__in=['admin', 'normal']).order_by(User.id))
+
+
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
         notes = list(self.admin.note_set.order_by(Note.id))
