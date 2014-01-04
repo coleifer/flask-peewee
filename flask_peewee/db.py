@@ -7,6 +7,7 @@ from flask_peewee.utils import load_class
 
 class Database(object):
     def __init__(self, app=None):
+    	self.database = None
         if app is not None:
             self.init_app(app)
 
@@ -16,7 +17,7 @@ class Database(object):
         self.load_database()
         self.register_handlers()
 
-        self.Model = self.get_model_class()    	
+        self.Model = self.get_model_class()
 
     def load_database(self):
         self.database_config = dict(self.app.config['DATABASE'])
