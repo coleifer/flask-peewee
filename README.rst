@@ -14,7 +14,7 @@ requirements:
 
 * `flask <https://github.com/mitsuhiko/flask>`_
 * `peewee <https://github.com/coleifer/peewee>`_
-* `wtforms <https://bitbucket.org/simplecodes/wtforms>`_
+* `wtforms <https://github.com/wtforms/wtforms>`_
 * `wtf-peewee <https://github.com/coleifer/wtf-peewee>`_
 * python 2.5 or greater
 
