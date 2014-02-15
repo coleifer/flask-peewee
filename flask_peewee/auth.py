@@ -202,7 +202,7 @@ class Auth(object):
             'auth/login.html',
             error=error,
             form=form,
-            login_url=url_for('%s.login' % self.blueprint.name))
+            login_url=url_for('%s.login' % self.blueprint.name, next=request.args.get('next')))
 
     def logout(self):
         self.logout_user()
