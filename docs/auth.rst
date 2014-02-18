@@ -117,9 +117,9 @@ Here's a simple example of extending the auth system to use a custom user model:
     app = Flask(__name__)
     db = Database(app)
     
-    # create our custom user model note that we're mixing in the BaseModel in order to
+    # create our custom user model. note that we're mixing in BaseUser in order to
     # use the default auth methods it implements, "set_password" and "check_password"
-    class User(db.Model, BaseModel):
+    class User(db.Model, BaseUser):
         username = CharField()
         password = CharField()
         email = CharField()
