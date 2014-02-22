@@ -131,6 +131,20 @@ Here's a simple example of extending the auth system to use a custom user model:
     # create a modeladmin for it
     class UserAdmin(ModelAdmin):
         columns = ('username', 'email', 'is_superuser',)
+
+        # Make sure the user's password is hashed, after it's been changed in
+        # the admin interface. If we don't do this, the password will be saved
+        # in clear text inside the database and login will be impossible.
+        def save_model(self, instance, form, adding=False):
+            orig_password = instance.password
+
+            user = super(UserAdmin, self).save_model(instance, form, adding)
+
+            if orig_password != form.password.data:
+                user.set_password(form.password.data)
+                user.save()
+
+            return user
     
     
     # subclass Auth so we can return our custom classes
