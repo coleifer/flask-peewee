@@ -1,6 +1,7 @@
 from __future__ import with_statement
 
 import datetime
+import urlparse
 
 from flask import get_flashed_messages
 from flask import request
@@ -117,13 +118,58 @@ class AuthTestCase(FlaskPeeweeTestCase):
             # check that we now have a logged-in user
             self.assertEqual(auth.get_logged_in_user(), self.normal)
 
+    def test_login_redirect_in_depth(self):
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            resp = c.get('/admin/')
+            location = resp.location
+            parsed = urlparse.urlparse(location)
+            querystring = urlparse.parse_qs(parsed.query)
+            self.assertEqual(querystring, {'next': ['/admin/']})
+
+            # Following the redirect, the next url is passed to context.
+            location = location.replace('http://localhost', '')
+            resp = c.get(location)
+            self.assertEqual(self.get_context('next'), '/admin/')
+
+            # Simulate incorrect password.
+            resp = c.post('/accounts/login/', data={
+                'username': 'normal',
+                'password': 'incorrect-password',
+                'next': '/admin/',
+            })
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(self.get_context('next'), '/admin/')
+
+            resp = c.post('/accounts/login/', data={
+                'username': 'normal',
+                'password': 'normal',
+                'next': '/admin/',
+            })
+            self.assertEqual(resp.status_code, 302)
+            self.assertTrue(resp.headers['location'].endswith('/admin/'))
+
+    def test_login_default_redirect(self):
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            resp = c.post('/accounts/login/', data={
+                'username': 'normal',
+                'password': 'normal',
+            })
+            self.assertEqual(resp.status_code, 302)
+            location = resp.location.replace('http://localhost', '')
+            self.assertTrue(location, '/')
+
     def test_login_redirect(self):
         self.create_users()
 
         with self.flask_app.test_client() as c:
-            resp = c.post('/accounts/login/?next=/foo-baz/', data={
+            resp = c.post('/accounts/login/', data={
                 'username': 'normal',
                 'password': 'normal',
+                'next': '/foo-baz/',
             })
             self.assertEqual(resp.status_code, 302)
             self.assertTrue(resp.headers['location'].endswith('/foo-baz/'))

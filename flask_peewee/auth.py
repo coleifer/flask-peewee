@@ -182,6 +182,7 @@ class Auth(object):
 
         if request.method == 'POST':
             form = Form(request.form)
+            next_url = request.form.get('next') or self.default_next_url
             if form.validate():
                 authenticated_user = self.authenticate(
                     form.username.data,
@@ -189,27 +190,23 @@ class Auth(object):
                 )
                 if authenticated_user:
                     self.login_user(authenticated_user)
-                    return redirect(
-                        request.args.get('next') or \
-                        self.default_next_url
-                    )
+                    return redirect(next_url)
                 else:
                     flash('Incorrect username or password')
         else:
             form = Form()
+            next_url = request.args.get('next')
 
         return render_template(
             'auth/login.html',
             error=error,
             form=form,
-            login_url=url_for('%s.login' % self.blueprint.name))
+            login_url=url_for('%s.login' % self.blueprint.name),
+            next=next_url)
 
     def logout(self):
         self.logout_user()
-        return redirect(
-            request.args.get('next') or \
-            self.default_next_url
-        )
+        return redirect(request.args.get('next') or self.default_next_url)
 
     def configure_routes(self):
         for url, callback in self.get_urls():
