@@ -171,13 +171,14 @@ class ModelAdmin(object):
 
     def get_actions(self):
         return (
-            ('delete', {'url': '/delete/', 'title': 'Delete'}),
-            ('export', {'url': '/export/', 'title': 'Export'}),
+            (self.delete, {'name': 'delete', 'url': '/delete/', 'title': 'Delete'}),
+            (self.export, {'name': 'export', 'url': '/export/', 'title': 'Export'}),
         )
 
     def get_urls(self):
-        actions_urls = [(v['url'], getattr(self, k))
-                        for k, v in self.get_actions()]
+        actions_urls = [(info['url'], method)
+                        for method, info in self.get_actions()]
+
         return (
             ('/', self.index),
             ('/add/', self.add),
@@ -229,9 +230,11 @@ class ModelAdmin(object):
         # actions
         if request.method == 'POST':
             action = request.form['action']
-            if action in [k for k, v in self.get_actions()]:
+            if action in [info['name'] for method, info in self.get_actions()]:
                 id_list = request.form.getlist('id')
                 return redirect(url_for(self.get_url_name(action), id=id_list))
+            else:
+                abort(404)
 
         return render_template(self.templates['index'],
             model_admin=self,
