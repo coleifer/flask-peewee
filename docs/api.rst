@@ -366,6 +366,37 @@ Exposing Models with the ModelAdmin
 
         :rtype: A tuple as described above
 
+    .. py:method:: get_actions()
+
+        Defines mass actions, e.g. delete, export.
+
+        Returns a tuple containing:
+
+        * method responsible for action handling
+        * a dictionary with action configuration: name, url and title
+
+        Here's an example showing how to add block action:
+
+        .. code-block:: python
+
+            class UserModelAdmin(ModelAdmin):
+                def get_actions(self):
+                    return super().get_actions() + (
+                        (self.block, {'name': 'block', 'url': '/block/', 'title': "Block"}),
+                    )
+
+                def block(self):
+                    if request.method == 'GET':
+                        id_list = request.args.getlist('id')
+                    else:
+                        id_list = request.form.getlist('id')
+
+                    query = self.model.select().where(self.pk << id_list)
+
+                    # block selected users and return a response
+                    # ...
+
+        :rtype: A tuple as described above
 
 Extending admin functionality using AdminPanel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
