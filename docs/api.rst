@@ -437,7 +437,7 @@ Extending admin functionality using AdminPanel
 Auth
 ----
 
-.. py:class:: Auth(app, db[, user_model=None[, prefix='/accounts']])
+.. py:class:: Auth(app, db[, user_model=None[, prefix='/accounts']], db_table='user')
 
     The class that provides methods for authenticating users and tracking
     users across requests.  It also provides a model for persisting users to
@@ -485,6 +485,7 @@ Auth
     :param db: :py:class:`Database` database wrapper for flask app
     :param user_model: ``User`` model to use
     :param prefix: url to bind authentication views to, defaults to /accounts/
+    :param db_table: Create db table using db_table name. ``user`` is reserved keyword in postgres.
 
     .. py:attribute:: default_next_url = 'homepage'
 

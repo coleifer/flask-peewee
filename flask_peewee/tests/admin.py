@@ -49,9 +49,10 @@ class AdminTestCase(BaseAdminTestCase):
         self.assertEqual(resp.headers['location'], 'http://localhost/accounts/login/?next=%2Fadmin%2F')
 
         # try logging in as a normal user, get a 403 forbidden
-        resp = self.app.post('/accounts/login/?next=%2Fadmin%2F', data={
+        resp = self.app.post('/accounts/login/', data={
             'username': 'normal',
             'password': 'normal',
+            'next': '/admin/',
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.headers['location'], 'http://localhost/admin/')
@@ -63,9 +64,10 @@ class AdminTestCase(BaseAdminTestCase):
         resp = self.app.get('/accounts/logout/')
 
         # try logging in as an admin and get a 200
-        resp = self.app.post('/accounts/login/?next=%2Fadmin%2F', data={
+        resp = self.app.post('/accounts/login/', data={
             'username': 'admin',
             'password': 'admin',
+            'next': '/admin/',
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp.headers['location'], 'http://localhost/admin/')

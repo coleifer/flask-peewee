@@ -229,6 +229,10 @@ class RestResource(object):
         query_expr = '%s__%s' % (expr, op)
         constructor = lambda kwargs: negated and ~DQ(**kwargs) or DQ(**kwargs)
         if op == 'in':
+            # in gives us a string format list '1,2,3,4'
+            # we have to turn it into a list before passing to
+            # the filter.
+            arg_list = [i.strip() for i in arg_list[0].split(',')]
             return query.filter(constructor({query_expr: arg_list}))
         elif len(arg_list) == 1:
             return query.filter(constructor({query_expr: arg_list[0]}))

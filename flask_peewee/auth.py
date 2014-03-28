@@ -40,10 +40,11 @@ class BaseUser(object):
 
 class Auth(object):
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
-                 clear_session=False, default_next_url='/'):
+                 clear_session=False, default_next_url='/', db_table='user'):
         self.app = app
         self.db = db
 
+        self.db_table = db_table
         self.User = user_model or self.get_user_model()
 
         self.blueprint = self.get_blueprint(name)
@@ -67,6 +68,9 @@ class Auth(object):
 
             def __unicode__(self):
                 return self.username
+
+            class Meta:
+                db_table = self.db_table  # Postgres reserves user as a keyword
 
         return User
 
@@ -178,6 +182,7 @@ class Auth(object):
 
         if request.method == 'POST':
             form = Form(request.form)
+            next_url = request.form.get('next') or self.default_next_url
             if form.validate():
                 authenticated_user = self.authenticate(
                     form.username.data,
@@ -185,27 +190,23 @@ class Auth(object):
                 )
                 if authenticated_user:
                     self.login_user(authenticated_user)
-                    return redirect(
-                        request.args.get('next') or \
-                        self.default_next_url
-                    )
+                    return redirect(next_url)
                 else:
                     flash('Incorrect username or password')
         else:
             form = Form()
+            next_url = request.args.get('next')
 
         return render_template(
             'auth/login.html',
             error=error,
             form=form,
-            login_url=url_for('%s.login' % self.blueprint.name))
+            login_url=url_for('%s.login' % self.blueprint.name),
+            next=next_url)
 
     def logout(self):
         self.logout_user()
-        return redirect(
-            request.args.get('next') or \
-            self.default_next_url
-        )
+        return redirect(request.args.get('next') or self.default_next_url)
 
     def configure_routes(self):
         for url, callback in self.get_urls():

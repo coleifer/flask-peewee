@@ -40,6 +40,8 @@ an :py:class:`Auth` backend for your project:
     # needed for authentication
     auth = Auth(app, db)
 
+.. note::
+    ``user`` is reserverd keyword in Postgres. Pass db_table to Auth to override db table.
 
 Marking areas of the site as login required
 -------------------------------------------
@@ -115,9 +117,9 @@ Here's a simple example of extending the auth system to use a custom user model:
     app = Flask(__name__)
     db = Database(app)
     
-    # create our custom user model note that we're mixing in the BaseModel in order to
+    # create our custom user model. note that we're mixing in BaseUser in order to
     # use the default auth methods it implements, "set_password" and "check_password"
-    class User(db.Model, BaseModel):
+    class User(db.Model, BaseUser):
         username = CharField()
         password = CharField()
         email = CharField()
@@ -129,6 +131,20 @@ Here's a simple example of extending the auth system to use a custom user model:
     # create a modeladmin for it
     class UserAdmin(ModelAdmin):
         columns = ('username', 'email', 'is_superuser',)
+
+        # Make sure the user's password is hashed, after it's been changed in
+        # the admin interface. If we don't do this, the password will be saved
+        # in clear text inside the database and login will be impossible.
+        def save_model(self, instance, form, adding=False):
+            orig_password = instance.password
+
+            user = super(UserAdmin, self).save_model(instance, form, adding)
+
+            if orig_password != form.password.data:
+                user.set_password(form.password.data)
+                user.save()
+
+            return user
     
     
     # subclass Auth so we can return our custom classes
