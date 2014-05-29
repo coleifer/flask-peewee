@@ -509,16 +509,13 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         # do a simple list of the first 20 items
         resp = self.app.get('/api/note/?ordering=id')
-        print("{}".format(resp.data))
         resp_json = self.response_json(resp)
 
         # verify we have page and link to next page
-        self.assertAPIMeta(resp_json, {
-            'model': 'note',
-            'previous': '',
-            'next': '/api/note/?ordering=id&page=2',
-            'page': 1,
-        })
+        self.assertEqual(resp_json['meta']['model'], 'note')
+        self.assertEqual(resp_json['meta']['previous'], '')
+        self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertTrue('page=2' in resp_json['meta']['next'])
 
         # verify response objects are paginated properly
         self.assertAPINotes(resp_json, notes[:20])
@@ -527,12 +524,10 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp = self.app.get('/api/note/?ordering=id&limit=10')
         resp_json = self.response_json(resp)
 
-        self.assertAPIMeta(resp_json, {
-            'model': 'note',
-            'previous': '',
-            'next': '/api/note/?ordering=id&limit=10&page=2',
-            'page': 1,
-        })
+        self.assertEqual(resp_json['meta']['model'], 'note')
+        self.assertEqual(resp_json['meta']['previous'], '')
+        self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertTrue('page=2' in resp_json['meta']['next'])
 
         # verify response objects are paginated properly
         self.assertAPINotes(resp_json, notes[:10])
@@ -541,12 +536,10 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp = self.app.get(resp_json['meta']['next'])
         resp_json = self.response_json(resp)
 
-        self.assertAPIMeta(resp_json, {
-            'model': 'note',
-            'previous': '/api/note/?ordering=id&limit=10&page=1',
-            'next': '/api/note/?ordering=id&limit=10&page=3',
-            'page': 2,
-        })
+        self.assertEqual(resp_json['meta']['model'], 'note')
+        self.assertEqual(resp_json['meta']['page'], 2)
+        self.assertTrue('page=1' in resp_json['meta']['previous'])
+        self.assertTrue('page=3' in resp_json['meta']['next'])
 
         # verify response objects are paginated properly
         self.assertAPINotes(resp_json, notes[10:20])
@@ -555,12 +548,10 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp = self.app.get(resp_json['meta']['next'])
         resp_json = self.response_json(resp)
 
-        self.assertAPIMeta(resp_json, {
-            'model': 'note',
-            'previous': '/api/note/?ordering=id&limit=10&page=2',
-            'next': '',
-            'page': 3,
-        })
+        self.assertEqual(resp_json['meta']['model'], 'note')
+        self.assertEqual(resp_json['meta']['next'], '')
+        self.assertEqual(resp_json['meta']['page'], 3)
+        self.assertTrue('page=2' in resp_json['meta']['previous'])
 
         # verify response objects are paginated properly
         self.assertAPINotes(resp_json, notes[20:])
