@@ -58,7 +58,10 @@ class User(db.Model, BaseUser):
 
     def __unicode__(self):
         return self.username
-    
+
+    def __hash__(self):
+        return hash(self.username)
+
     def message_count(self):
         return self.message_set.count()
 

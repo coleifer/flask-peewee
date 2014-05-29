@@ -22,6 +22,7 @@ from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import slugify
+from flask_peewee._compat import reduce
 
 
 class Authentication(object):
@@ -416,7 +417,7 @@ class RestResource(object):
 
     def read_request_data(self):
         data = request.data or request.form.get('data') or ''
-        return json.loads(data)
+        return json.loads(data.decode('utf8'))
 
     def create(self):
         try:
