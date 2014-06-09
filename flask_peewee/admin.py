@@ -106,6 +106,9 @@ class ModelAdmin(object):
     filter_mapping = FilterMapping
     filter_converter = AdminFilterModelConverter
 
+    # the default ordering of the index
+    ordering = ''
+
     # templates, to override see get_template_overrides()
     base_templates = {
         'index': 'admin/models/index.html',
@@ -210,7 +213,7 @@ class ModelAdmin(object):
     def index(self):
         query = self.get_query()
 
-        ordering = request.args.get('ordering') or ''
+        ordering = request.args.get('ordering') or self.ordering
         query = self.apply_ordering(query, ordering)
 
         # process the filters from the request
