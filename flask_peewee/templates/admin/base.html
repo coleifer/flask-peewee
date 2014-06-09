@@ -13,18 +13,18 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.responsive.css') }}">
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/chosen.css') }}">
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/datepicker.css') }}">
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('.static', filename='css/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('.static', filename='css/bootstrap.min.responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('.static', filename='css/chosen.css') }}">
+  <link rel="stylesheet" href="{{ url_for('.static', filename='css/datepicker.css') }}">
+  <link rel="stylesheet" href="{{ url_for('.static', filename='css/admin.css') }}">
 
-  <script src="{{ url_for('admin.static', filename='js/jquery.min.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/bootstrap.min.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/bootstrap-datepicker.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/chosen.jquery.min.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/ajax-chosen.min.js') }}"></script>
-  <script src="{{ url_for('admin.static', filename='js/admin.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/jquery.min.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/bootstrap.min.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/bootstrap-datepicker.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/chosen.jquery.min.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/ajax-chosen.min.js') }}"></script>
+  <script src="{{ url_for('.static', filename='js/admin.js') }}"></script>
 
   {% block extra_script %}{% endblock %}
 </head>
@@ -33,9 +33,9 @@
   <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
       <div class="container-fluid">
-        <a class="brand" href="{{ url_for('admin.index') }}">{{ branding }}</a>
+        <a class="brand" href="{{ url_for('.index') }}">{{ branding }}</a>
         <ul class="nav">
-          <li class="active"><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+          <li class="active"><a href="{{ url_for('.index') }}">Dashboard</a></li>
           <li><a href="/">View site</a></li>
         </ul>
 
@@ -67,7 +67,7 @@
             <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
           </div>
           <ul class="breadcrumb">
-            <li><a href="{{ url_for('admin.index') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('.index') }}">Dashboard</a></li>
             {% block breadcrumbs %}{% endblock %}
           </ul>
           {% for category, message in get_flashed_messages(with_categories=true) %}
