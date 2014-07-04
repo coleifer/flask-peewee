@@ -485,6 +485,9 @@ class AdminTemplateHelper(object):
         if model_admin:
             return url_for(model_admin.get_url_name('edit'), pk=obj.get_id())
 
+    def get_logout_url(self):
+        return url_for('%s.logout' % self.admin.auth.blueprint.name)
+
     def get_model_name(self, model_class):
         model_admin = self.admin.get_admin_for(model_class)
         if model_admin:
@@ -508,7 +511,7 @@ class AdminTemplateHelper(object):
         self.app.jinja_env.globals['update_querystring'] = self.update_querystring
         self.app.jinja_env.globals['get_admin_url'] = self.get_admin_url
         self.app.jinja_env.globals['get_model_name'] = self.get_model_name
-
+        self.app.jinja_env.globals['get_logout_url'] = self.get_logout_url
         self.app.jinja_env.filters['apply_prefix'] = self.apply_prefix
 
 
