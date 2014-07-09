@@ -12,6 +12,7 @@ class Database(object):
         self.load_database()
         self.register_handlers()
 
+        self.model_singleton = None
         self.Model = self.get_model_class()
 
     def load_database(self):
@@ -35,11 +36,12 @@ class Database(object):
         self.database = self.database_class(self.database_name, **self.database_config)
 
     def get_model_class(self):
-        class BaseModel(Model):
-            class Meta:
-                database = self.database
-
-        return BaseModel
+        if not self.model_singleton:
+            class BaseModel(Model):
+                class Meta:
+                    database = self.database
+            self.model_singleton = BaseModel
+        return self.model_singleton
 
     def connect_db(self):
         self.database.connect()
