@@ -28,7 +28,7 @@ class Serializer(object):
             if isinstance(value, dict):
                 self.clean_data(value)
             elif isinstance(value, (list, tuple)):
-                data[key] = map(self.clean_data, value)
+                data[key] = map(self.convert_value, value)
             else:
                 data[key] = self.convert_value(value)
         return data
