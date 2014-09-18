@@ -6,13 +6,19 @@ from flask_peewee.utils import load_class
 
 
 class Database(object):
-    def __init__(self, app):
+    def __init__(self, app=None):
+        self.proxy = Proxy()
+        self.Model = self.get_model_class()
+        self.init_app(app)
+
+    def init_app(self, app):
         self.app = app
 
-        self.load_database()
-        self.register_handlers()
-
-        self.Model = self.get_model_class()
+        if app is not None:
+            self.load_database()
+            self.proxy.initialize(self.database)
+            self.database = self.proxy
+            self.register_handlers()
 
     def load_database(self):
         self.database_config = dict(self.app.config['DATABASE'])
@@ -37,7 +43,7 @@ class Database(object):
     def get_model_class(self):
         class BaseModel(Model):
             class Meta:
-                database = self.database
+                database = self.proxy
 
         return BaseModel
 
