@@ -567,6 +567,8 @@ class RestApiBasicTestCase(RestApiTestCase):
             'model': 'note',
             'previous': '',
             'next': '',
+            'num_pages': 1,
+            'num_results': 10,
             'page': 1,
         })
         self.assertAPINotes(resp_json, self.normal.note_set.order_by(Note.id))
@@ -579,6 +581,8 @@ class RestApiBasicTestCase(RestApiTestCase):
             'model': 'note',
             'previous': '',
             'next': '',
+            'num_pages': 1,
+            'num_results': 10,
             'page': 1,
         })
         self.assertAPINotes(resp_json, self.admin.note_set.order_by(Note.id))
@@ -599,6 +603,8 @@ class RestApiBasicTestCase(RestApiTestCase):
             'model': 'note',
             'previous': '',
             'next': '',
+            'num_pages': 1,
+            'num_results': 20,
             'page': 1,
         })
         self.assertAPINotes(resp_json, Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
@@ -676,7 +682,7 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'note', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {'model': 'note', 'next': '', 'page': 1, 'previous': '', 'num_pages': 0, 'num_results': 0})
 
         self.create_notes()
 
@@ -816,7 +822,7 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'message', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {'model': 'message', 'next': '', 'page': 1, 'previous': '', 'num_pages': 0, 'num_results': 0})
 
         self.create_messages()
 
@@ -955,7 +961,7 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'user', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {'model': 'user', 'next': '', 'page': 1, 'previous': '', 'num_pages': 0, 'num_results': 0})
 
         self.create_users()
 
@@ -1128,7 +1134,7 @@ class RestApiKeyAuthTestCase(RestApiTestCase):
                 self.tm1,
                 self.tm2,
             ])
-            self.assertAPIMeta(resp_json, {'model': 'testmodel', 'next': '', 'page': 1, 'previous': ''})
+            self.assertAPIMeta(resp_json, {'model': 'testmodel', 'next': '', 'page': 1, 'previous': '', 'num_pages': 1, 'num_results': 2})
 
     def test_auth_headers(self):
         with self.flask_app.test_client() as c:
