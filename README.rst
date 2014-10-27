@@ -1,7 +1,18 @@
+This package is in maintenance-only mode!
+=========================================
+
+I'm sorry to announce that flask-peewee will now be in maintenance-only mode. This decision is motivated by a number of factors:
+
+* `Flask-Admin <http://flask-admin.readthedocs.org/en/latest/>`_ provides a superior admin interface and has support for peewee models.
+* `Flask-Security <https://pythonhosted.org/Flask-Security/>`_ and `Flask-Login <https://flask-login.readthedocs.org/en/latest/>`_ both provide authentication functionality, and work well with Peewee.
+* Most importantly, though, I do not find myself wanting to work on flask-peewee.
+
+I plan on rewriting the ``Database`` and ``REST API`` portions of flask-peewee and repackaging them as a new library, but flask-peewee as it stands currently will be in maintenance-only mode.
+
 flask-peewee
 ============
 
-provides a layer of integration between the `flask <http://flask.pocoo.org/>`_ 
+provides a layer of integration between the `flask <http://flask.pocoo.org/>`_
 web framework and the `peewee orm <http://peewee.readthedocs.org/>`_.
 
 batteries included:
@@ -42,26 +53,26 @@ a way to expose a RESTful interface for your project's models.
     curl localhost:5000/api/user/
     {
       "meta": {
-        "model": "user", 
-        "next": "", 
-        "page": 1, 
+        "model": "user",
+        "next": "",
+        "page": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "username": "admin", 
-          "admin": true, 
-          "email": "", 
-          "join_date": "2011-09-16 18:34:49", 
-          "active": true, 
+          "username": "admin",
+          "admin": true,
+          "email": "",
+          "join_date": "2011-09-16 18:34:49",
+          "active": true,
           "id": 1
-        }, 
+        },
         {
-          "username": "coleifer", 
-          "admin": false, 
-          "email": "coleifer@gmail.com", 
-          "join_date": "2011-09-16 18:35:56", 
-          "active": true, 
+          "username": "coleifer",
+          "admin": false,
+          "email": "coleifer@gmail.com",
+          "join_date": "2011-09-16 18:35:56",
+          "active": true,
           "id": 2
         }
       ]

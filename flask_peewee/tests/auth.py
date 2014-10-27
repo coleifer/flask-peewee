@@ -1,7 +1,10 @@
 from __future__ import with_statement
 
 import datetime
-import urlparse
+try:
+    import urlparse
+except ImportError:
+    from urllib import parse as urlparse
 
 from flask import get_flashed_messages
 from flask import request
