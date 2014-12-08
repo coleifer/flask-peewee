@@ -11,8 +11,8 @@
         {% endfor %}
       {% endif %}
 
+      $('.date-widget').datetimepicker({pickDate: true, pickTime: false});
       $('form select[data-role="chosen"]').chosen();
-      $('.date-widget').datepicker({format: 'yyyy-mm-dd'});
     });
   </script>
 {% endblock %}
