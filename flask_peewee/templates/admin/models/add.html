@@ -15,7 +15,7 @@
       <p>There were errors with your form submission</p>
     </div>
   {% endif %}
-  <form method="post" action="." class="add form-horizontal" enctype="multipart/form-data">
+  <form role="form" method="post" action="." class="add form-horizontal" enctype="multipart/form-data">
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Add a new {{ model_admin.get_display_name() }}</legend>
