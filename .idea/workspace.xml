@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2cf03d96-032a-4e3b-bda7-9357870ed356" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" afterPath="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/delete.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/delete.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/export.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/export.html" />
     </list>
     <ignored path="flask-peewee.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -31,30 +32,38 @@
       <file leaf-file-name="edit.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-11.565217" vertical-offset="0" max-vertical-offset="602">
-              <caret line="19" column="20" selection-start-line="19" selection-start-column="20" selection-end-line="19" selection-end-column="20" />
+            <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="602">
+              <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="admin.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/flask_peewee/admin.py">
+      <file leaf-file-name="delete.html" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/delete.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-9.12" vertical-offset="6534" max-vertical-offset="9912">
-              <caret line="483" column="44" selection-start-line="483" selection-start-column="37" selection-end-line="483" selection-end-column="44" />
-              <folding>
-                <element signature="e#0#16#0" expanded="true" />
-              </folding>
+            <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="798">
+              <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
+              <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="forms.html" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/macros/forms.html">
+      <file leaf-file-name="export.html" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/export.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-9.130435" vertical-offset="0" max-vertical-offset="420">
-              <caret line="15" column="45" selection-start-line="15" selection-start-column="45" selection-end-line="15" selection-end-column="45" />
+            <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="966">
+              <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="index.html" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/index.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-0.0" vertical-offset="0" max-vertical-offset="1022">
+              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -92,20 +101,20 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="jquery.min.js" pinned="false" current-in-tab="true">
+      <file leaf-file-name="jquery.min.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.08549618" vertical-offset="0" max-vertical-offset="655">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="140">
               <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="base_forms.html" pinned="false" current-in-tab="false">
+      <file leaf-file-name="base_forms.html" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base_forms.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-10.956522" vertical-offset="0" max-vertical-offset="336">
+            <state vertical-scroll-proportion="0.39873418" vertical-offset="0" max-vertical-offset="632">
               <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="18" selection-end-column="0" />
               <folding />
             </state>
@@ -114,16 +123,6 @@
       </file>
       <file leaf-file-name="base_filters.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base_filters.html">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.0" vertical-offset="0" max-vertical-offset="350">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="form_raw_id.html" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/includes/form_raw_id.html">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="-0.0" vertical-offset="0" max-vertical-offset="350">
               <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
@@ -142,11 +141,13 @@
       <list>
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/panels/base.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/base.html" />
-        <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/macros/forms.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/add.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" />
         <option value="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" />
+        <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" />
+        <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/delete.html" />
+        <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/export.html" />
       </list>
     </option>
   </component>
@@ -544,14 +545,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-11.565217" vertical-offset="0" max-vertical-offset="602">
-          <caret line="19" column="20" selection-start-line="19" selection-start-column="20" selection-end-line="19" selection-end-column="20" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/flask_peewee/admin.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-9.12" vertical-offset="6534" max-vertical-offset="9912">
@@ -586,14 +579,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base_forms.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-10.956522" vertical-offset="0" max-vertical-offset="336">
-          <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="18" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-6.695652" vertical-offset="0" max-vertical-offset="392">
@@ -614,8 +599,48 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.08549618" vertical-offset="0" max-vertical-offset="655">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="140">
           <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="602">
+          <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/delete.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="798">
+          <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/export.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-2.4347825" vertical-offset="0" max-vertical-offset="966">
+          <caret line="4" column="5" selection-start-line="4" selection-start-column="5" selection-end-line="4" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/index.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1022">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base_forms.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.39873418" vertical-offset="0" max-vertical-offset="632">
+          <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="18" selection-end-column="0" />
           <folding />
         </state>
       </provider>
