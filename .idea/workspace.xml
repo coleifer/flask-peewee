@@ -2,12 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2cf03d96-032a-4e3b-bda7-9357870ed356" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/add.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/add.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/base.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/base.html" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/panels/base.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/panels/base.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/templates/macros/forms.html" afterPath="$PROJECT_DIR$/flask_peewee/templates/macros/forms.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" afterPath="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" />
     </list>
     <ignored path="flask-peewee.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -32,16 +28,6 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="base.html" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/base.html">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-3.652174" vertical-offset="378" max-vertical-offset="1526">
-              <caret line="33" column="52" selection-start-line="33" selection-start-column="52" selection-end-line="33" selection-end-column="52" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="edit.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/edit.html">
           <provider selected="true" editor-type-id="text-editor">
@@ -84,11 +70,33 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="base.html" pinned="false" current-in-tab="true">
+      <file leaf-file-name="base.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.24367088" vertical-offset="0" max-vertical-offset="632">
-              <caret line="11" column="28" selection-start-line="11" selection-start-column="28" selection-end-line="11" selection-end-column="28" />
+            <state vertical-scroll-proportion="-6.695652" vertical-offset="0" max-vertical-offset="392">
+              <caret line="11" column="6" selection-start-line="11" selection-start-column="6" selection-end-line="11" selection-end-column="6" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="filter_dropdown.html" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/includes/filter_dropdown.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-8.521739" vertical-offset="0" max-vertical-offset="364">
+              <caret line="14" column="32" selection-start-line="14" selection-start-column="32" selection-end-line="14" selection-end-column="32" />
+              <folding>
+                <element signature="n#style#0;n#li#1;n#!!top" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="jquery.min.js" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.08549618" vertical-offset="0" max-vertical-offset="655">
+              <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -124,16 +132,6 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="index.html" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/index.html">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.0" vertical-offset="0" max-vertical-offset="630">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
     </leaf>
   </component>
   <component name="Git.Settings">
@@ -148,6 +146,7 @@
         <option value="$PROJECT_DIR$/flask_peewee/templates/macros/forms.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/add.html" />
         <option value="$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html" />
+        <option value="$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js" />
       </list>
     </option>
   </component>
@@ -330,6 +329,28 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="includes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="flask-peewee" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="flask-peewee" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="flask_peewee" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="static" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="js" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -575,8 +596,26 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/models/base.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.24367088" vertical-offset="0" max-vertical-offset="632">
-          <caret line="11" column="28" selection-start-line="11" selection-start-column="28" selection-end-line="11" selection-end-column="28" />
+        <state vertical-scroll-proportion="-6.695652" vertical-offset="0" max-vertical-offset="392">
+          <caret line="11" column="6" selection-start-line="11" selection-start-column="6" selection-end-line="11" selection-end-column="6" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/templates/admin/includes/filter_dropdown.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-8.521739" vertical-offset="0" max-vertical-offset="364">
+          <caret line="14" column="32" selection-start-line="14" selection-start-column="32" selection-end-line="14" selection-end-column="32" />
+          <folding>
+            <element signature="n#style#0;n#li#1;n#!!top" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flask_peewee/static/js/jquery.min.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.08549618" vertical-offset="0" max-vertical-offset="655">
+          <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
           <folding />
         </state>
       </provider>
