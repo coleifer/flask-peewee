@@ -14,7 +14,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap.min.responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/bootstrap-theme.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/chosen.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/datepicker.css') }}">
   <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin.css') }}">
@@ -48,7 +48,7 @@
 
   <div class="container-fluid">
     <div class="row-fluid">
-      <div class="span3">
+      <div class="col-lg-3">
         <div class="well sidebar-nav">
           <h3>Navigation</h3>
           {% block sidebar %}
@@ -61,7 +61,7 @@
         </div>
       </div><!-- /sidebar -->
 
-      <div class="span9">
+      <div class="col-lg-9">
         <div class="content">
           <div class="page-header">
             <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
