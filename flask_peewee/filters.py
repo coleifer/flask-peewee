@@ -241,7 +241,7 @@ def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
 
 class SmallSelectWidget(widgets.Select):
     def __call__(self, field, **kwargs):
-        kwargs['class'] = 'span2'
+        kwargs['class'] = ''
         return super(SmallSelectWidget, self).__call__(field, **kwargs)
 
 

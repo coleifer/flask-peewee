@@ -147,8 +147,8 @@ var Admin = window.Admin || {};
         select_clone = select_elem.clone(),
         input_clone = input_elem.clone(),
         row = [
-          , '<div class="clearfix control-group">'
-          , '<a class="btn btn-close btn-danger" href="#" title="click to remove">'
+          , '<div class="clearfix form-group">'
+          , '<a class="btn btn-close btn-danger btn-sm" href="#" title="click to remove">'
           , field_label
           , '</a> </div>'
         ].join('\n'),
@@ -213,5 +213,5 @@ var Admin = window.Admin || {};
 })(Admin, jQuery);
 
 jQuery(function() {
-  jQuery(".alert").alert()
+  jQuery(".alert").alert();
 });
