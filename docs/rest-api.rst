@@ -466,11 +466,11 @@ Sorting results
 Results can be sorted by specifying an ``ordering`` as a GET argument.  The ordering
 must be a column on the model.
 
-`/api/messages/?ordering=pub_date`
+`/api/message/?ordering=pub_date`
 
 If you would like to order objects "descending", place a "-" (hyphen character) before the column name:
 
-`/api/messages/?ordering=-pub_date`
+`/api/message/?ordering=-pub_date`
 
 
 Limiting results and pagination
@@ -479,7 +479,7 @@ Limiting results and pagination
 By default, resources are paginated 20 per-page.  If you want to return less, you
 can specify a ``limit`` in the querystring.
 
-`/api/messages/?limit=2`
+`/api/message/?limit=2`
 
 In the "meta" section of the response, URIs for the "next" and "previous" sets
 of results are available:
