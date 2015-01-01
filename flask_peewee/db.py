@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import peewee
 from peewee import *
 
@@ -6,13 +9,18 @@ from flask_peewee.utils import load_class
 
 
 class Database(object):
-    def __init__(self, app):
+    def __init__(self, app=None):
+        if app:
+            self.init_db(app)
+
+    def init_app(self, app):
         self.app = app
 
         self.load_database()
         self.register_handlers()
 
         self.Model = self.get_model_class()
+
 
     def load_database(self):
         self.database_config = dict(self.app.config['DATABASE'])
