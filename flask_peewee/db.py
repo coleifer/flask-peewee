@@ -6,10 +6,13 @@ from flask_peewee.utils import load_class
 
 
 class Database(object):
-    def __init__(self, app):
+    def __init__(self, app, database=None):
         self.app = app
+        self.database = database
 
-        self.load_database()
+        if self.database is None:
+            self.load_database()
+
         self.register_handlers()
 
         self.Model = self.get_model_class()
