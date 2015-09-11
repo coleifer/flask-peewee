@@ -14,12 +14,15 @@ setup(
     author_email='coleifer@gmail.com',
     description='Peewee integration for flask',
     packages=find_packages(),
-    package_data = {
+    package_data={
         'flask_peewee': [
             'static/*/*.css',
             'static/*/*.js',
             'static/*/*.gif',
             'static/*/*.png',
+            'static/*/*.eot',
+            'static/*/*.ttf',
+            'static/*/*.woff',
             'templates/*.html',
             'templates/*/*.html',
             'templates/*/*/*.html',

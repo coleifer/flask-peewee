@@ -2,7 +2,7 @@
 
 {% block breadcrumbs %}
  {{ super() }}
- <li><span class="divider">/</span> <a href=".">Editing</a></li>
+ <li><a href=".">Editing</a></li>
 {% endblock %}
 
 {% block extra_tabs %}
@@ -12,12 +12,12 @@
 {% block content %}
   {% include "admin/includes/form_raw_id.html" %}
   {% if form.errors %}
-    <div class="alert alert-block alert-error">
+    <div class="alert alert-block alert-danger">
       <a class="close" data-dismiss="alert" href="#">×</a>
       <p>There were errors with your form submission</p>
     </div>
   {% endif %}
-  <form method="post" action="." class="edit form-horizontal" enctype="multipart/form-data">
+  <form method="post" action="." class="edit" enctype="multipart/form-data">
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Edit {{ model_admin.get_display_name() }}</legend>
@@ -25,11 +25,11 @@
         {{ admin_field(field) }}
       {% endfor %}
       {% block extra_form %}{% endblock %}
-      <div class="form-actions">
+      <div class="form-group">
         <button class="btn btn-primary" name="save" type="submit">Save</button>
-        <button class="btn" name="save_add" type="submit">Save and add new</button>
-        <button class="btn" name="save_edit" type="submit">Save and edit</button>
-        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+        <button class="btn btn-default" name="save_add" type="submit">Save and add new</button>
+        <button class="btn btn-default" name="save_edit" type="submit">Save and edit</button>
+        <a class="btn btn-default" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
         <a class="btn btn-danger pull-right" href="{{ url_for(model_admin.get_url_name('delete'), id=instance.get_id()) }}">Delete</a>
       </div>
     </fieldset>

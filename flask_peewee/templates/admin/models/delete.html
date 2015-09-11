@@ -2,7 +2,7 @@
 
 {% block breadcrumbs %}
  {{ super() }}
- <li><span class="divider">/</span> <a href=".">Delete</a></li>
+ <li><a href=".">Delete</a></li>
 {% endblock %}
 
 {% block extra_tabs %}
@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-  <form action="." class="form-horizontal" method="post">
+  <form action="." method="post">
     {% for object in query %}<input type="hidden" name="id" value="{{ object.get_id() }}" />{% endfor %}
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
@@ -42,9 +42,9 @@
         {% endfor %}
       </ul>
       
-      <div class="form-actions">
+      <div class="form-control">
         <button class="btn btn-danger" type="submit">Confirm Delete</button>
-        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+        <a class="btn btn-default" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
       </div>
     </fieldset>
   </form>

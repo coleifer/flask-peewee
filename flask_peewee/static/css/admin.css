@@ -38,5 +38,6 @@ table.table-striped td.links .inline li:last-child a {
   border-right: medium none;
 }
 
-/* helpers */
-.hidden { display: none; }
+.navigation {
+  margin-top: 45px;
+}
