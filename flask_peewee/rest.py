@@ -373,7 +373,7 @@ class RestResource(object):
             'next': next,
         }
 
-    def paginated_object_list(self, filtered_query):
+    def get_paginate_by(self):
         try:
             paginate_by = int(request.args.get('limit', self.paginate_by))
         except ValueError:
@@ -381,7 +381,10 @@ class RestResource(object):
         else:
             if self.paginate_by:
                 paginate_by = min(paginate_by, self.paginate_by) # restrict
+        return paginate_by
 
+    def paginated_object_list(self, filtered_query):
+        paginate_by = self.get_paginate_by()
         pq = PaginatedQuery(filtered_query, paginate_by)
         meta_data = self.get_request_metadata(pq)
 
