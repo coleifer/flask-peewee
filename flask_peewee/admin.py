@@ -451,10 +451,20 @@ class AdminTemplateHelper(object):
         self.app = self.admin.app
 
     def get_model_field(self, model, field):
-        attr = getattr(model, field)
-        if callable(attr):
-            return attr()
-        return attr
+        try:
+            attr = getattr(model, field)
+        except AttributeError:
+            model_admin = self.admin[type(model)]
+            try:
+                attr = getattr(model_admin, field)
+            except AttributeError:
+                raise AttributeError('Could not find attribute or method '
+                                     'named "%s".' % field)
+                return attr(model)
+        else:
+            if callable(attr):
+                attr = attr()
+            return attr
 
     def get_form_field(self, form, field_name):
         return getattr(form, field_name)
