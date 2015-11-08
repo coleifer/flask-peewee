@@ -460,6 +460,7 @@ class AdminTemplateHelper(object):
             except AttributeError:
                 raise AttributeError('Could not find attribute or method '
                                      'named "%s".' % field)
+            else:
                 return attr(model)
         else:
             if callable(attr):
