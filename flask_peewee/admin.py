@@ -14,6 +14,7 @@ from flask import flash
 from flask import redirect
 from flask import render_template
 from flask import request
+from flask import session
 from flask import url_for
 from flask_peewee.filters import FilterForm
 from flask_peewee.filters import FilterMapping
@@ -208,6 +209,7 @@ class ModelAdmin(object):
         return {}
 
     def index(self):
+        session['%s.index' % self.get_admin_name()] = request.url
         query = self.get_query()
 
         ordering = request.args.get('ordering') or ''
@@ -238,7 +240,9 @@ class ModelAdmin(object):
 
     def dispatch_save_redirect(self, instance):
         if 'save' in request.form:
-            return redirect(url_for(self.get_url_name('index')))
+            url = (session.get('%s.index' % self.get_admin_name()) or
+                   url_for(self.get_url_name('index')))
+            return redirect(url)
         elif 'save_add' in request.form:
             return redirect(url_for(self.get_url_name('add')))
         else:
@@ -323,7 +327,9 @@ class ModelAdmin(object):
                 obj.delete_instance(recursive=self.delete_recursive)
 
             flash('Successfully deleted %s %ss' % (count, self.get_display_name()), 'success')
-            return redirect(url_for(self.get_url_name('index')))
+            url = (session.get('%s.index' % self.get_admin_name()) or
+                   url_for(self.get_url_name('index')))
+            return redirect(url)
 
         return render_template(self.templates['delete'], **dict(
             model_admin=self,
