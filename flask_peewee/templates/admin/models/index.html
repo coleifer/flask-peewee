@@ -54,7 +54,7 @@
         {% endif %}
         <td class="last links">
           <ul class="inline">
-            {% block object_action_links %}
+            {% block object_action_links scoped %}
             <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">Edit</a></li>
             <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object.get_id()) }}">Delete</a></li>
             {% endblock %}
