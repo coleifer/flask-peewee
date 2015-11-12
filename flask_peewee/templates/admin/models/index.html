@@ -53,12 +53,13 @@
           <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">{{ object }}</a></td>
         {% endif %}
         <td class="last links">
+          {% block object_actions scoped %}
           <ul class="inline">
-            {% block object_action_links scoped %}
+            {% block object_action_links %}{% endblock %}
             <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">Edit</a></li>
             <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object.get_id()) }}">Delete</a></li>
-            {% endblock %}
           </ul>
+          {% endblock %}
         </td>
       </tr>
     {% endfor %}
