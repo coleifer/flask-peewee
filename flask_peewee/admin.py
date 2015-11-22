@@ -181,7 +181,7 @@ class ModelAdmin(object):
         )
 
     def get_columns(self):
-        return self.model._meta.get_field_names()
+        return self.model._meta.sorted_field_names
 
     def column_is_sortable(self, col):
         return col in self.model._meta.fields
@@ -341,7 +341,7 @@ class ModelAdmin(object):
     def collect_related_fields(self, model, accum, path, seen=None):
         seen = seen or set()
         path_str = '__'.join(path)
-        for field in model._meta.get_fields():
+        for field in model._meta.sorted_fields:
             if isinstance(field, ForeignKeyField) and field not in seen:
                 seen.add(field)
                 self.collect_related_fields(field.rel_model, accum, path + [field.name], seen)

@@ -204,14 +204,14 @@ class FieldTreeNode(object):
 def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
     no_explicit_fields = fields is None # assume we want all of them
     if no_explicit_fields:
-        fields = model._meta.get_field_names()
+        fields = model._meta.sorted_field_names
     exclude = exclude or []
     seen = seen or set()
 
     model_fields = []
     children = {}
 
-    for field_obj in model._meta.get_fields():
+    for field_obj in model._meta.sorted_fields:
         if field_obj.name in exclude or field_obj in seen:
             continue
 

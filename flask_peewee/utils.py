@@ -76,7 +76,7 @@ def get_dictionary_from_model(model, fields=None, exclude=None):
     fields = fields or {}
     exclude = exclude or {}
     curr_exclude = exclude.get(model_class, [])
-    curr_fields = fields.get(model_class, model._meta.get_field_names())
+    curr_fields = fields.get(model_class, model._meta.sorted_field_names)
 
     for field_name in curr_fields:
         if field_name in curr_exclude:

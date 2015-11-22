@@ -142,13 +142,13 @@ class RestResource(object):
         self.authentication = authentication
         self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
 
-        self._fields = {self.model: self.fields or self.model._meta.get_field_names()}
+        self._fields = {self.model: self.fields or self.model._meta.sorted_field_names}
         if self.exclude:
             self._exclude = {self.model: self.exclude}
         else:
             self._exclude = {}
 
-        self._filter_fields = self.filter_fields or self.model._meta.get_field_names()
+        self._filter_fields = self.filter_fields or list(self.model._meta.sorted_field_names)
         self._filter_exclude = self.filter_exclude or []
 
         self._resources = {}

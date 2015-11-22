@@ -32,7 +32,7 @@ PARAMS:
       <div class="control-group">
         <label class="control-label">Fields on {{ model.__name__ }}</label>
         <div class="controls">
-          {% for field in model._meta.get_fields() %}
+          {% for field in model._meta.sorted_fields %}
             <label class="checkbox">
               <input type="checkbox" name="fields" value="{{ field.name }}" checked="checked" /> {{ field.name }}
             </label>
