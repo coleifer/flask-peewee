@@ -170,12 +170,20 @@ class ModelAdmin(object):
     def get_object(self, pk):
         return self.get_query().where(self.pk==pk).get()
 
+    def get_actions(self):
+        return (
+            (self.delete, {'name': 'delete', 'url': '/delete/', 'title': 'Delete'}),
+            (self.export, {'name': 'export', 'url': '/export/', 'title': 'Export'}),
+        )
+
     def get_urls(self):
+        actions_urls = [(info['url'], method)
+                        for method, info in self.get_actions()]
+
         return (
             ('/', self.index),
             ('/add/', self.add),
-            ('/delete/', self.delete),
-            ('/export/', self.export),
+        ) + tuple(actions_urls) + (
             ('/<pk>/', self.edit),
             ('/_ajax/', self.ajax_list),
         )
@@ -221,12 +229,14 @@ class ModelAdmin(object):
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
 
+        # actions
         if request.method == 'POST':
-            id_list = request.form.getlist('id')
-            if request.form['action'] == 'delete':
-                return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            action = request.form['action']
+            if action in [info['name'] for method, info in self.get_actions()]:
+                id_list = request.form.getlist('id')
+                return redirect(url_for(self.get_url_name(action), id=id_list))
             else:
-                return redirect(url_for(self.get_url_name('export'), id=id_list))
+                abort(404)
 
         return render_template(self.templates['index'],
             model_admin=self,
