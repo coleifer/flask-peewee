@@ -231,11 +231,12 @@ class ModelAdmin(object):
     def index(self):
         if request.method == 'POST':
             id_list = request.form.getlist('id')
-            if request.form['action'] == 'delete':
+            action = request.form['action']
+            if action == 'delete':
                 return redirect(url_for(self.get_url_name('delete'), id=id_list))
-            elif request.form['action'] == 'export':
+            elif action == 'export':
                 return redirect(url_for(self.get_url_name('export'), id=id_list))
-            elif name not in self.action_map:
+            elif action not in self.action_map:
                 id_list = request.form.getlist('id')
                 if not id_list:
                     flash('Please select one or more rows.', 'warning')
@@ -244,9 +245,7 @@ class ModelAdmin(object):
                     if isinstance(maybe_response, Response):
                         return maybe_response
             else:
-                msg = ('Unknown action: "%s". Supported actions are: %s.' %
-                       (name, ', '.join(self.action_map)))
-                flash(msg, 'danger')
+                flash('Unknown action: "%s".' % action, 'danger')
             return self._index_redirect()
 
         session['%s.index' % self.get_admin_name()] = request.url
