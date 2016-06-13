@@ -78,7 +78,7 @@ class AdminFilterModelConverter(FilterModelConverter):
 class Action(object):
     def __init__(self, name=None, description=None):
         self.name = name or (type(self).__name__.replace('Action', ''))
-        self.description = description or re.sub('[\-_]', ' ', name).title()
+        self.description = description or re.sub('[\-_]', ' ', self.name).title()
 
     def callback(self, id_list):
         """
@@ -236,12 +236,13 @@ class ModelAdmin(object):
                 return redirect(url_for(self.get_url_name('delete'), id=id_list))
             elif action == 'export':
                 return redirect(url_for(self.get_url_name('export'), id=id_list))
-            elif action not in self.action_map:
+            elif action in self.action_map:
                 id_list = request.form.getlist('id')
                 if not id_list:
                     flash('Please select one or more rows.', 'warning')
                 else:
-                    maybe_response = action.callback(id_list)
+                    action_obj = self.action_map[action]
+                    maybe_response = action_obj.callback(id_list)
                     if isinstance(maybe_response, Response):
                         return maybe_response
             else:
