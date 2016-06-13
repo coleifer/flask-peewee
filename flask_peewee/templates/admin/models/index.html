@@ -9,7 +9,7 @@
         <li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>
         <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
         {% if model_admin.actions %}{% for action in model_admin.actions %}
-          <li><a href="#" onclick="Admin.index_submit('{{ action.callback }}');">{{ action.name }}</a></li>
+          <li><a href="#" onclick="Admin.index_submit('{{ action.name }}');">{{ action.name }}</a></li>
         {% endfor %}{% endif %}
       </ul>
     </li>

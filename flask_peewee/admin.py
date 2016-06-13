@@ -78,9 +78,6 @@ class AdminFilterModelConverter(FilterModelConverter):
 class Action(object):
     def __init__(self, name=None, description=None):
         self.name = name or (type(self).__name__.replace('Action', ''))
-        if not re.match('^[\w\-]+$', self.name):
-            raise ValueError('Action.name must contain only alphanumerics, '
-                             'underscores, and dashes.')
         self.description = description or re.sub('[\-_]', ' ', name).title()
 
     def callback(self, id_list):
@@ -199,7 +196,6 @@ class ModelAdmin(object):
             ('/add/', self.add),
             ('/delete/', self.delete),
             ('/export/', self.export),
-            ('/action/<name>/', self.action_handler),
             ('/<pk>/', self.edit),
             ('/_ajax/', self.ajax_list),
         )
@@ -233,9 +229,28 @@ class ModelAdmin(object):
         return {}
 
     def index(self):
+        if request.method == 'POST':
+            id_list = request.form.getlist('id')
+            if request.form['action'] == 'delete':
+                return redirect(url_for(self.get_url_name('delete'), id=id_list))
+            elif request.form['action'] == 'export':
+                return redirect(url_for(self.get_url_name('export'), id=id_list))
+            elif name not in self.action_map:
+                id_list = request.form.getlist('id')
+                if not id_list:
+                    flash('Please select one or more rows.', 'warning')
+                else:
+                    maybe_response = action.callback(id_list)
+                    if isinstance(maybe_response, Response):
+                        return maybe_response
+            else:
+                msg = ('Unknown action: "%s". Supported actions are: %s.' %
+                       (name, ', '.join(self.action_map)))
+                flash(msg, 'danger')
+            return self._index_redirect()
+
         session['%s.index' % self.get_admin_name()] = request.url
         query = self.get_query()
-
         ordering = request.args.get('ordering') or ''
         query = self.apply_ordering(query, ordering)
 
@@ -244,13 +259,6 @@ class ModelAdmin(object):
 
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
-
-        if request.method == 'POST':
-            id_list = request.form.getlist('id')
-            if request.form['action'] == 'delete':
-                return redirect(url_for(self.get_url_name('delete'), id=id_list))
-            else:
-                return redirect(url_for(self.get_url_name('export'), id=id_list))
 
         return render_template(self.templates['index'],
             model_admin=self,
@@ -375,26 +383,6 @@ class ModelAdmin(object):
                 accum[(model, path_str)].append(field)
 
         return accum
-
-    def action_handler(self, name):
-        if request.method != 'POST':
-            return Response('Unsupported method "%s"' % (request.method), 405)
-
-        if name not in self.action_map:
-            msg = ('Unknown action: "%s". Supported actions are: %s.' %
-                   (name, ', '.join(self.action_map)))
-            flash(msg, 'danger')
-            return self._index_redirect()
-
-        id_list = request.form.getlist('id')
-        if not id_list:
-            flash('Please select one or more rows.', 'warning')
-        else:
-            maybe_response = action.callback(id_list)
-            if isinstance(maybe_response, Response):
-                return maybe_response
-
-        return self._index_redirect()
 
     def export(self):
         query = self.get_query()
