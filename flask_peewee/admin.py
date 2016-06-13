@@ -75,6 +75,23 @@ class AdminFilterModelConverter(FilterModelConverter):
         return field.name, form_field
 
 
+class Action(object):
+    def __init__(self, name=None, description=None):
+        self.name = name or (type(self).__name__.replace('Action', ''))
+        if not re.match('^[\w\-]+$', self.name):
+            raise ValueError('Action.name must contain only alphanumerics, '
+                             'underscores, and dashes.')
+        self.description = description or re.sub('[\-_]', ' ', name).title()
+
+    def callback(self, id_list):
+        """
+        Perform an action on the list of IDs specified. If the return value is
+        a Response object, then that will be returned to the user. Otherwise,
+        the return value is ignored and the user is redirected to the index.
+        """
+        raise NotImplementedError
+
+
 class ModelAdmin(object):
     """
     ModelAdmin provides create/edit/delete functionality for a peewee Model.
@@ -96,6 +113,9 @@ class ModelAdmin(object):
     fields = None
 
     form_converter = AdminModelConverter
+
+    # User-defined bulk actions. List or tuple of Action instances.
+    actions = None
 
     # foreign_key_field --> related field to search on, e.g. {'user': 'username'}
     foreign_key_lookups = None
@@ -124,6 +144,9 @@ class ModelAdmin(object):
 
         self.templates = dict(self.base_templates)
         self.templates.update(self.get_template_overrides())
+
+        self.action_map = dict((action.name, action)
+                               for action in (self.actions or ()))
 
     def get_template_overrides(self):
         return {}
@@ -176,6 +199,7 @@ class ModelAdmin(object):
             ('/add/', self.add),
             ('/delete/', self.delete),
             ('/export/', self.export),
+            ('/action/<name>/', self.action_handler),
             ('/<pk>/', self.edit),
             ('/_ajax/', self.ajax_list),
         )
@@ -238,11 +262,14 @@ class ModelAdmin(object):
             **self.get_extra_context()
         )
 
+    def _index_redirect(self):
+        url = (session.get('%s.index' % self.get_admin_name()) or
+               url_for(self.get_url_name('index')))
+        return redirect(url)
+
     def dispatch_save_redirect(self, instance):
         if 'save' in request.form:
-            url = (session.get('%s.index' % self.get_admin_name()) or
-                   url_for(self.get_url_name('index')))
-            return redirect(url)
+            return self._index_redirect()
         elif 'save_add' in request.form:
             return redirect(url_for(self.get_url_name('add')))
         else:
@@ -327,9 +354,7 @@ class ModelAdmin(object):
                 obj.delete_instance(recursive=self.delete_recursive)
 
             flash('Successfully deleted %s %ss' % (count, self.get_display_name()), 'success')
-            url = (session.get('%s.index' % self.get_admin_name()) or
-                   url_for(self.get_url_name('index')))
-            return redirect(url)
+            return self._index_redirect()
 
         return render_template(self.templates['delete'], **dict(
             model_admin=self,
@@ -350,6 +375,26 @@ class ModelAdmin(object):
                 accum[(model, path_str)].append(field)
 
         return accum
+
+    def action_handler(self, name):
+        if request.method != 'POST':
+            return Response('Unsupported method "%s"' % (request.method), 405)
+
+        if name not in self.action_map:
+            msg = ('Unknown action: "%s". Supported actions are: %s.' %
+                   (name, ', '.join(self.action_map)))
+            flash(msg, 'danger')
+            return self._index_redirect()
+
+        id_list = request.form.getlist('id')
+        if not id_list:
+            flash('Please select one or more rows.', 'warning')
+        else:
+            maybe_response = action.callback(id_list)
+            if isinstance(maybe_response, Response):
+                return maybe_response
+
+        return self._index_redirect()
 
     def export(self):
         query = self.get_query()
