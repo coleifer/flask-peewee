@@ -36,6 +36,9 @@ class Database(object):
             raise ImproperlyConfigured('Database engine not a subclass of peewee.Database: "%s"' % self.database_engine)
 
         self.database = self.database_class(self.database_name, **self.database_config)
+        # restore values back into config
+        self.database_config['name'] = self.database_name
+        self.database_config['engine'] = self.database_engine
 
     def get_model_class(self):
         class BaseModel(Model):
