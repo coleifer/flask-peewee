@@ -147,8 +147,8 @@ var Admin = window.Admin || {};
         select_clone = select_elem.clone(),
         input_clone = input_elem.clone(),
         row = [
-          , '<div class="clearfix control-group">'
-          , '<a class="btn btn-close btn-danger" href="#" title="click to remove">'
+          , '<div class="clearfix form-group">'
+          , '<a class="btn btn-close btn-danger btn-sm" href="#" title="click to remove">'
           , field_label
           , '</a> </div>'
         ].join('\n'),
@@ -167,9 +167,11 @@ var Admin = window.Admin || {};
 
     /* reload our jquery plugin stuff */
     if (input_clone.hasClass('datetime-widget')) {
-      $(input_clone[0]).datepicker({format: 'yyyy-mm-dd'});
+      $(input_clone[0]).attr('data-date-format', 'YYYY-MM-DD');
+      $(input_clone[0]).datetimepicker({pickDate: true, pickTime: false});
     } else if (input_clone.hasClass('date-widget')) {
-      input_clone.datepicker({format: 'yyyy-mm-dd'});
+      input_clone.attr('data-date-format', 'YYYY-MM-DD');
+      input_clone.datetimepicker({pickDate: true, pickTime: false});
     } else if (input_clone.data('role') === 'chosen') {
       input_clone.chosen();
     } else if (input_clone.data('role') === 'ajax-chosen') {
@@ -213,5 +215,5 @@ var Admin = window.Admin || {};
 })(Admin, jQuery);
 
 jQuery(function() {
-  jQuery(".alert").alert()
+  jQuery(".alert").alert();
 });

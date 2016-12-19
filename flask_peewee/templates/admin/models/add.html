@@ -2,7 +2,7 @@
 
 {% block breadcrumbs %}
  {{ super() }}
- <li><span class="divider">/</span> <a href=".">Add new</a></li>
+ <li><a href=".">Add new</a></li>
 {% endblock %}
 
 {% block tab_add_class %}active{% endblock %}
@@ -15,7 +15,7 @@
       <p>There were errors with your form submission</p>
     </div>
   {% endif %}
-  <form method="post" action="." class="add form-horizontal" enctype="multipart/form-data">
+  <form role="form" method="post" action="." class="add form-horizontal" enctype="multipart/form-data">
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Add a new {{ model_admin.get_display_name() }}</legend>
@@ -23,7 +23,7 @@
         {{ admin_field(field) }}
       {% endfor %}
       {% block extra_form %}{% endblock %}
-      <div class="form-actions">
+      <div class="form-actions col-lg-12 col-md-12 col-sm-12">
         <button class="btn btn-primary" name="save" type="submit">Save</button>
         <button class="btn" name="save_add" type="submit">Save and add new</button>
         <button class="btn" name="save_edit" type="submit">Save and edit</button>

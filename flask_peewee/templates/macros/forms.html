@@ -11,10 +11,10 @@
 {% endmacro %}
 
 {% macro admin_field(field) %}
-  <div class="control-group{% if field.errors %} error{% endif %}">
-    {{ field.label(class="control-label") }}
-    <div class="controls">
-      {% set css_class = 'span8 ' + kwargs.pop('class', '') %}
+  <div class="col-lg-12 col-md-6 col-sm-6">
+    <div class="form-group{% if field.errors %} error{% endif %}">
+      {{ field.label(class="control-label") }}
+      {% set css_class = 'col-lg-8 form-control' + kwargs.pop('class', '') %}
       {% if field.errors %}
         {% set css_class = 'error ' + css_class %}
       {% endif %}
