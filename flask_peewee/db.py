@@ -45,7 +45,7 @@ class Database(object):
         return BaseModel
 
     def connect_db(self):
-        self.database.connect()
+        self.database.get_conn()
 
     def close_db(self, exc):
         if not self.database.is_closed():
