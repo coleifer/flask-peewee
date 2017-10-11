@@ -43,10 +43,10 @@ class AuthTestCase(FlaskPeeweeTestCase):
         return context.post('/accounts/logout/')
 
     def test_table(self):
-        self.assertEqual(self.test_auth.User._meta.db_table, 'user')
+        self.assertEqual(self.test_auth.User._meta.table_name, 'user')
 
         fake_auth = TestAuth(app, db, db_table='peewee_users')
-        self.assertEqual(fake_auth.User._meta.db_table, 'peewee_users')
+        self.assertEqual(fake_auth.User._meta.table_name, 'peewee_users')
 
     def test_login_view(self):
         self.create_users()

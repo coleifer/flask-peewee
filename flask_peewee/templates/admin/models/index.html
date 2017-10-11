@@ -43,24 +43,24 @@
     <tbody>
     {% for object in query.get_list() %}
       <tr>
-        <td class="check"><input type="checkbox" name="id" value="{{ object.get_id() }}" /></td>
+        <td class="check"><input type="checkbox" name="id" value="{{ object._pk }}" /></td>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
             {% if loop.index == 1 %}
-              <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">{{ get_model_field(object, column) }}</a></td>
+              <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">{{ get_model_field(object, column) }}</a></td>
             {% else %}
               <td>{{ get_model_field(object, column) }}</td>
             {% endif %}
           {% endfor %}
         {% else %}
-          <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">{{ object }}</a></td>
+          <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">{{ object }}</a></td>
         {% endif %}
         <td class="last links">
           {% block object_actions scoped %}
           <ul class="inline">
             {% block object_action_links %}{% endblock %}
-            <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object.get_id()) }}">Edit</a></li>
-            <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object.get_id()) }}">Delete</a></li>
+            <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">Edit</a></li>
+            <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object._pk) }}">Delete</a></li>
           </ul>
           {% endblock %}
         </td>

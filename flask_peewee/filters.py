@@ -162,7 +162,7 @@ class FilterMapping(object):
             DoubleField: 'numeric',
             DecimalField: 'numeric',
             BooleanField: 'boolean',
-            PrimaryKeyField: 'numeric',
+            AutoField: 'numeric',
             ForeignKeyField: 'foreign_key',
         }
 
@@ -291,7 +291,7 @@ class FilterForm(object):
         return field.default
 
     def get_value_field(self, field):
-        field_name, form_field = self.model_converter.convert(field.model_class, field, None)
+        field_name, form_field = self.model_converter.convert(field.model, field, None)
 
         form_field.kwargs['default'] = self.get_field_default(field)
         form_field.kwargs['validators'] = [validators.Optional()]
@@ -350,7 +350,7 @@ class FilterForm(object):
             for child_prefix, child in node.children.items():
                 new_prefix = prefix + self.field_relation_prefix + child_prefix + self.separator
                 model_copy = list(models) + [child.model]
-                join_copy = list(join_columns) + [child_prefix]
+                join_copy = list(join_columns) + [node.model._meta.fields[child_prefix]]
                 _dfs(child, new_prefix, model_copy, join_copy)
 
         _dfs(self._field_tree, '', [], [])
