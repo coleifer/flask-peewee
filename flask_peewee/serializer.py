@@ -1,5 +1,6 @@
 import datetime
 import sys
+import uuid
 
 from peewee import Model
 from flask_peewee.utils import get_dictionary_from_model
@@ -20,6 +21,8 @@ class Serializer(object):
             return value.strftime(self.time_format)
         elif isinstance(value, Model):
             return value._pk
+        elif isinstance(value, uuid.UUID):
+            return str(value)
         else:
             return value
 
