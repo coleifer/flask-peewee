@@ -36,4 +36,4 @@ class ChosenAjaxSelectWidget(widgets.Select):
 class LimitedModelSelectField(ModelSelectField):
     def iter_choices(self):
         for obj in self.query.limit(20):
-            yield (obj.get_id(), self.get_label(obj), obj == self.data)
+            yield (obj._pk, self.get_label(obj), obj == self.data)

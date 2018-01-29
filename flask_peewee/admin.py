@@ -282,7 +282,7 @@ class ModelAdmin(object):
             return redirect(url_for(self.get_url_name('add')))
         else:
             return redirect(
-                url_for(self.get_url_name('edit'), pk=instance.get_id())
+                url_for(self.get_url_name('edit'), pk=instance._pk)
             )
 
     def add(self):
@@ -335,10 +335,10 @@ class ModelAdmin(object):
 
         for query, fk in obj.dependencies():
             if not fk.null:
-                sq = fk.model_class.select().where(query)
+                sq = fk.model.select().where(query)
                 collected = [rel_obj for rel_obj in sq.execute().iterator()]
                 if collected:
-                    objects.append((0, fk.model_class, collected))
+                    objects.append((0, fk.model, collected))
 
         return sorted(objects, key=lambda i: (i[0], i[1].__name__))
 
@@ -354,7 +354,7 @@ class ModelAdmin(object):
             collected = {}
             if self.delete_collect_objects:
                 for obj in query:
-                    collected[obj.get_id()] = self.collect_objects(obj)
+                    collected[obj._pk] = self.collect_objects(obj)
 
         elif request.method == 'POST':
             count = query.count()
@@ -406,7 +406,7 @@ class ModelAdmin(object):
 
         return render_template(self.templates['export'],
             model_admin=self,
-            model=query.model_class,
+            model=query.model,
             query=query,
             filter_form=filter_form,
             field_tree=field_tree,
@@ -447,7 +447,7 @@ class ModelAdmin(object):
             if field.null:
                 data.append({'id': '__None', 'repr': 'None'})
 
-            data.extend([{'id': obj.get_id(), 'repr': unicode(obj)} for obj in pq.get_list()])
+            data.extend([{'id': obj._pk, 'repr': unicode(obj)} for obj in pq.get_list()])
 
         json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
@@ -525,7 +525,7 @@ class AdminTemplateHelper(object):
         except KeyError:
             return self.fix_underscores(column_name)
         else:
-            return field.verbose_name
+            return field.verbose_name or self.fix_underscores(field.name)
 
     def get_model_admins(self):
         return {'model_admins': self.admin.get_model_admins(), 'branding': self.admin.branding}
@@ -533,7 +533,7 @@ class AdminTemplateHelper(object):
     def get_admin_url(self, obj):
         model_admin = self.admin.get_admin_for(type(obj))
         if model_admin:
-            return url_for(model_admin.get_url_name('edit'), pk=obj.get_id())
+            return url_for(model_admin.get_url_name('edit'), pk=obj._pk)
 
     def get_model_name(self, model_class):
         model_admin = self.admin.get_admin_for(model_class)
@@ -702,7 +702,7 @@ class Export(object):
         def ensure_join(query, m, p):
             if m not in joined:
                 if '__' not in p:
-                    next_model = query.model_class
+                    next_model = query.model
                 else:
                     next, _ = p.rsplit('__', 1)
                     next_model = self.alias_to_model[next]
@@ -720,7 +720,7 @@ class Export(object):
                 model = self.alias_to_model[path]
                 clone = ensure_join(clone, model, path)
             else:
-                model = self.query.model_class
+                model = self.query.model
                 column = lookup
 
             field = model._meta.fields[column]
@@ -734,8 +734,8 @@ class Export(object):
         prepared_query = self.prepare_query()
         field_dict = {}
         for field in prepared_query._select:
-            field_dict.setdefault(field.model_class, [])
-            field_dict[field.model_class].append(field.name)
+            field_dict.setdefault(field.model, [])
+            field_dict[field.model].append(field.name)
 
         def generate():
             i = prepared_query.count()

@@ -70,7 +70,7 @@ class Auth(object):
                 return self.username
 
             class Meta:
-                db_table = self.db_table  # Postgres reserves user as a keyword
+                table_name = self.db_table
 
         return User
 
@@ -150,7 +150,7 @@ class Auth(object):
 
     def login_user(self, user):
         session['logged_in'] = True
-        session['user_pk'] = user.get_id()
+        session['user_pk'] = user._pk
         session.permanent = True
         g.user = user
         flash('You are logged in as %s' % user, 'success')
@@ -219,7 +219,8 @@ class Auth(object):
         g.user = self.get_logged_in_user()
 
     def register_handlers(self):
-        self.app.before_request(self.load_user)
+        self.app.before_request_funcs.setdefault(None, [])
+        self.app.before_request_funcs[None].append(self.load_user)
 
     def register_context_processors(self):
         self.app.template_context_processors[None].append(self.get_context_user)

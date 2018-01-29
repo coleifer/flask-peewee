@@ -30,7 +30,7 @@
         <button class="btn" name="save_add" type="submit">Save and add new</button>
         <button class="btn" name="save_edit" type="submit">Save and edit</button>
         <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
-        <a class="btn btn-danger pull-right" href="{{ url_for(model_admin.get_url_name('delete'), id=instance.get_id()) }}">Delete</a>
+        <a class="btn btn-danger pull-right" href="{{ url_for(model_admin.get_url_name('delete'), id=instance._pk) }}">Delete</a>
       </div>
     </fieldset>
   </form>

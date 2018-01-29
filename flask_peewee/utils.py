@@ -37,7 +37,7 @@ class PaginatedQuery(object):
 
         if isinstance(query_or_model, SelectQuery):
             self.query = query_or_model
-            self.model = self.query.model_class
+            self.model = self.query.model
         else:
             self.model = query_or_model
             self.query = self.model.select()
@@ -85,7 +85,7 @@ def get_dictionary_from_model(model, fields=None, exclude=None):
         if field_name in curr_exclude:
             continue
         field_obj = model_class._meta.fields[field_name]
-        field_data = model._data.get(field_name)
+        field_data = model.__data__.get(field_name)
         if isinstance(field_obj, ForeignKeyField) and field_data and field_obj.rel_model in fields:
             rel_obj = getattr(model, field_name)
             data[field_name] = get_dictionary_from_model(rel_obj, fields, exclude)

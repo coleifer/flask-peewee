@@ -11,7 +11,7 @@
 
 {% block content %}
   <form action="." class="form-horizontal" method="post">
-    {% for object in query %}<input type="hidden" name="id" value="{{ object.get_id() }}" />{% endfor %}
+    {% for object in query %}<input type="hidden" name="id" value="{{ object._pk }}" />{% endfor %}
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Confirm delete</legend>
@@ -23,9 +23,9 @@
             {% else %}
               <span>{{ object }}</span>
             {% endif %}
-            {% if collected and object.get_id() in collected %}
+            {% if collected and object._pk in collected %}
               <ul>
-                {% for depth, model, collected_objects in collected[object.get_id()] %}
+                {% for depth, model, collected_objects in collected[object._pk] %}
                   {% for sub_object in collected_objects %}
                     <li><span>{{ get_model_name(model) }}:</span>
                       {% if get_admin_url(sub_object) %}
@@ -41,7 +41,7 @@
           </li>
         {% endfor %}
       </ul>
-      
+
       <div class="form-actions">
         <button class="btn btn-danger" type="submit">Confirm Delete</button>
         <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
