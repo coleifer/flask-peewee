@@ -967,6 +967,12 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
             self.normal,
         ])
 
+        resp = self.app.get('/api/user/?admin=True')
+        self.assertAPIUsers(self.response_json(resp), [self.admin])
+
+        resp = self.app.get('/api/user/?admin=False')
+        self.assertAPIUsers(self.response_json(resp), [self.normal])
+
     def test_detail_get(self):
         resp = self.app.get('/api/user/1/')
         self.assertEqual(resp.status_code, 404)

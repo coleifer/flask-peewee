@@ -117,6 +117,9 @@ class AdminAuthentication(UserAuthentication):
 
 class RestResource(object):
     paginate_by = 20
+    value_transforms = {'False': False, 'false': False,
+                        'True': True, 'true': True,
+                        'None': None, 'none': None}
 
     # serializing: dictionary of model -> field names to restrict output
     fields = None
@@ -219,12 +222,16 @@ class RestResource(object):
                 filter_expr = '%s%s' % (prefix, field.name)
                 if filter_expr in raw_filters:
                     for op, arg_list, negated in raw_filters[filter_expr]:
-                        query = self.apply_filter(query, filter_expr, op, arg_list, negated)
+                        clean_args = self.clean_arg_list(arg_list)
+                        query = self.apply_filter(query, filter_expr, op, clean_args, negated)
 
             for child_prefix, child_node in node.children.items():
                 queue.append((child_node, prefix + child_prefix + '__'))
 
         return query
+
+    def clean_arg_list(self, arg_list):
+        return [self.value_transforms.get(arg, arg) for arg in arg_list]
 
     def apply_filter(self, query, expr, op, arg_list, negated):
         query_expr = '%s__%s' % (expr, op)
