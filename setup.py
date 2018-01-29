@@ -7,7 +7,7 @@ if sys.version_info[:2] < (2, 6):
 
 setup(
     name='flask-peewee',
-    version='0.6.7',
+    version='3.0.0',
     url='http://github.com/coleifer/flask-peewee/',
     license='BSD',
     author='Charles Leifer',
