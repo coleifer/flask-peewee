@@ -426,8 +426,12 @@ class RestResource(object):
                 setattr(instance, k, rel_resource.save_object(rel_obj, v))
 
     def read_request_data(self):
-        data = request.data or request.form.get('data') or ''
-        return json.loads(data.decode('utf8'))
+        if request.data:
+            return json.loads(request.data.decode('utf-8'))
+        elif request.form.get('data'):
+            return json.loads(request.form['data'])
+        else:
+            return dict(request.form)
 
     def create(self):
         try:
