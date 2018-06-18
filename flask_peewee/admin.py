@@ -739,13 +739,14 @@ class Export(object):
 
         def generate():
             i = prepared_query.count()
-            yield '[\n'
+            yield b'[\n'
             for obj in prepared_query:
                 i -= 1
-                yield json.dumps(serializer.serialize_object(obj, field_dict))
+                obj_data = serializer.serialize_object(obj, field_dict)
+                yield json.dumps(obj_data).encode('utf-8')
                 if i > 0:
-                    yield ',\n'
-            yield '\n]'
+                    yield b',\n'
+            yield b'\n]'
         headers = Headers()
         headers.add('Content-Type', 'application/javascript')
         headers.add('Content-Disposition', 'attachment; filename=%s' % filename)
