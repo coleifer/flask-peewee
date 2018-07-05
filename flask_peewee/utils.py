@@ -122,14 +122,14 @@ def get_model_from_dictionary(model, field_dict):
 def path_to_models(model, path):
     accum = []
     if '__' in path:
-        next, path = path.split('__')
+        attr, path = path.split('__', 1)
     else:
-        next, path = path, ''
-    if next in model._meta.rel:
-        field = model._meta.rel[next]
+        attr, path = path, ''
+    if attr in model._meta.fields:
+        field = model._meta.fields[next]
         accum.append(field.rel_model)
     else:
-        raise AttributeError('%s has no related field named "%s"' % (model, next))
+        raise AttributeError('%s has no related field named "%s"' % (model, attr))
     if path:
         accum.extend(path_to_models(model, path))
     return accum
