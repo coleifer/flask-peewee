@@ -126,7 +126,7 @@ def path_to_models(model, path):
     else:
         attr, path = path, ''
     if attr in model._meta.fields:
-        field = model._meta.fields[next]
+        field = model._meta.fields[attr]
         accum.append(field.rel_model)
     else:
         raise AttributeError('%s has no related field named "%s"' % (model, attr))
