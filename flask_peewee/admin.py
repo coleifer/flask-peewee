@@ -447,7 +447,7 @@ class ModelAdmin(object):
             if field.null:
                 data.append({'id': '__None', 'repr': 'None'})
 
-            data.extend([{'id': obj._pk, 'repr': unicode(obj)} for obj in pq.get_list()])
+            data.extend([{'id': obj._pk, 'repr': str(obj)} for obj in pq.get_list()])
 
         json_data = json.dumps({'prev_page': prev_page, 'next_page': next_page, 'object_list': data})
         return Response(json_data, mimetype='application/json')
