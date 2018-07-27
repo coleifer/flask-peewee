@@ -15,7 +15,7 @@ class User(db.Model, BaseUser):
     active = BooleanField(default=True)
     admin = BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.username
 
     def following(self):
@@ -43,7 +43,7 @@ class Relationship(db.Model):
     from_user = ForeignKeyField(User, related_name='relationships')
     to_user = ForeignKeyField(User, related_name='related_to')
 
-    def __unicode__(self):
+    def __str__(self):
         return 'Relationship from %s to %s' % (self.from_user, self.to_user)
 
 
@@ -52,7 +52,7 @@ class Message(db.Model):
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s: %s' % (self.user, self.content)
 
 
