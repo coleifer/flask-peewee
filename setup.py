@@ -9,7 +9,7 @@ setup(
     name='flask-peewee',
     version='3.0.3',
     url='http://github.com/coleifer/flask-peewee/',
-    license='BSD',
+    license='MIT',
     author='Charles Leifer',
     author_email='coleifer@gmail.com',
     description='Peewee integration for flask',
