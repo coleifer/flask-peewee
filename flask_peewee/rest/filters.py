@@ -1,8 +1,6 @@
 import math
-import random
 import re
 import sys
-from hashlib import sha1
 
 from flask import abort
 from flask import render_template
@@ -12,7 +10,52 @@ from peewee import ForeignKeyField
 from peewee import Model
 from peewee import SelectQuery
 
-from flask_peewee._compat import text_type
+
+class FieldTreeNode(object):
+
+    def __init__(self, model, fields, children=None):
+        self.model = model
+        self.fields = fields
+        self.children = children or {}
+
+
+def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
+    no_explicit_fields = fields is None  # assume we want all of them
+    if no_explicit_fields:
+        fields = model._meta.sorted_field_names
+    exclude = exclude or []
+    seen = seen or set()
+
+    model_fields = []
+    children = {}
+
+    for field_obj in model._meta.sorted_fields:
+        if field_obj.name in exclude or field_obj in seen:
+            continue
+
+        if field_obj.name in fields:
+            model_fields.append(field_obj)
+
+        if isinstance(field_obj, ForeignKeyField):
+            seen.add(field_obj)
+            if no_explicit_fields:
+                rel_fields = None
+            else:
+                rel_fields = [
+                    rf.replace('%s__' % field_obj.name, '')
+                    for rf in fields if rf.startswith('%s__' % field_obj.name)
+                ]
+                if not rel_fields and force_recursion:
+                    rel_fields = None
+
+            rel_exclude = [
+                rx.replace('%s__' % field_obj.name, '')
+                for rx in exclude if rx.startswith('%s__' % field_obj.name)
+            ]
+            children[field_obj.name] = make_field_tree(
+                field_obj.rel_model, rel_fields, rel_exclude, force_recursion, seen)
+
+    return FieldTreeNode(model, model_fields, children)
 
 
 def get_object_or_404(query_or_model, *query):
@@ -22,6 +65,7 @@ def get_object_or_404(query_or_model, *query):
         return query_or_model.where(*query).get()
     except DoesNotExist:
         abort(404)
+
 
 def object_list(template_name, qr, var_name='object_list', **kwargs):
     pq = PaginatedQuery(qr, kwargs.pop('paginate_by', 20))
@@ -49,10 +93,7 @@ class PaginatedQuery(object):
         return 1
 
     def get_pages(self):
-        if not hasattr(self, '_get_pages'):
-            self._get_pages = int(math.ceil(
-                float(self.query.count()) / self.paginate_by))
-        return self._get_pages
+        return int(math.ceil(float(self.query.count()) / self.paginate_by))
 
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
@@ -63,14 +104,17 @@ def get_next():
         return request.path
     return '%s?%s' % (request.path, request.query_string)
 
+
 def slugify(s):
-    return re.sub('[^a-z0-9_\-]+', '-', s.lower())
+    return re.sub(r'[^a-z0-9_\-]+', '-', s.lower())
+
 
 def load_class(s):
     path, klass = s.rsplit('.', 1)
     __import__(path)
     mod = sys.modules[path]
     return getattr(mod, klass)
+
 
 def get_dictionary_from_model(model, fields=None, exclude=None):
     model_class = type(model)
@@ -93,6 +137,7 @@ def get_dictionary_from_model(model, fields=None, exclude=None):
             data[field_name] = field_data
     return data
 
+
 def get_model_from_dictionary(model, field_dict):
     if isinstance(model, Model):
         model_instance = model
@@ -102,8 +147,9 @@ def get_model_from_dictionary(model, field_dict):
         check_fks = False
     models = [model_instance]
     for field_name, value in field_dict.items():
-        field_obj = model._meta.fields[field_name]
-        if isinstance(value, dict):
+        field_obj = model._meta.fields.get(field_name, None)
+        prop = getattr(type(model), field_name, None)
+        if isinstance(value, dict) and hasattr(field_obj, "rel_model"):
             rel_obj = field_obj.rel_model
             if check_fks:
                 try:
@@ -115,36 +161,24 @@ def get_model_from_dictionary(model, field_dict):
             rel_inst, rel_models = get_model_from_dictionary(rel_obj, value)
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)
-        else:
+        elif field_obj is not None:
             setattr(model_instance, field_name, field_obj.python_value(value))
+        elif isinstance(prop, property) and prop.fset is not None:
+            setattr(model_instance, field_name, value)
     return model_instance, models
+
 
 def path_to_models(model, path):
     accum = []
     if '__' in path:
-        attr, path = path.split('__', 1)
+        next, path = path.split('__')
     else:
-        attr, path = path, ''
-    if attr in model._meta.fields:
-        field = model._meta.fields[attr]
+        next, path = path, ''
+    if next in model._meta.rel:
+        field = model._meta.rel[next]
         accum.append(field.rel_model)
     else:
-        raise AttributeError('%s has no related field named "%s"' % (model, attr))
+        raise AttributeError('%s has no related field named "%s"' % (model, next))
     if path:
         accum.extend(path_to_models(model, path))
     return accum
-
-
-# borrowing these methods, slightly modified, from django.contrib.auth
-def get_hexdigest(salt, raw_password):
-    data = salt + raw_password
-    return sha1(data.encode('utf8')).hexdigest()
-
-def make_password(raw_password):
-    salt = get_hexdigest(text_type(random.random()), text_type(random.random()))[:5]
-    hsh = get_hexdigest(salt, raw_password)
-    return '%s$%s' % (salt, hsh)
-
-def check_password(raw_password, enc_password):
-    salt, hsh = enc_password.split('$', 1)
-    return hsh == get_hexdigest(salt, raw_password)

@@ -1,19 +1,26 @@
 import datetime
-import sys
+import time
 import uuid
 
 from peewee import Model
-from flask_peewee.utils import get_dictionary_from_model
-from flask_peewee.utils import get_model_from_dictionary
+
+from .filters import get_dictionary_from_model
+from .filters import get_model_from_dictionary
 
 
 class Serializer(object):
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
     datetime_format = ' '.join([date_format, time_format])
+    response_format = "json"
+
+    def __init__(self, date_formatter="javascript"):
+        self.date_formatter = date_formatter
 
     def convert_value(self, value):
         if isinstance(value, datetime.datetime):
+            if self.date_formatter == "javascript":
+                return int(datetime.datetime.timestamp(value) * 1000)
             return value.strftime(self.datetime_format)
         elif isinstance(value, datetime.date):
             return value.strftime(self.date_format)
@@ -27,14 +34,13 @@ class Serializer(object):
             return value
 
     def clean_data(self, data):
-        for key, value in data.items():
-            if isinstance(value, dict):
-                self.clean_data(value)
-            elif isinstance(value, (list, tuple)):
-                data[key] = map(self.clean_data, value)
-            else:
-                data[key] = self.convert_value(value)
-        return data
+        if isinstance(data, (list, tuple)):
+            return list(map(self.clean_data, data))
+        if isinstance(data, dict):
+            for key, value in data.items():
+                data[key] = self.clean_data(value)
+            return data
+        return self.convert_value(data)
 
     def serialize_object(self, obj, fields=None, exclude=None):
         data = get_dictionary_from_model(obj, fields, exclude)

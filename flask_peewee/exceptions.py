@@ -1,2 +1,0 @@
-class ImproperlyConfigured(Exception):
-    pass

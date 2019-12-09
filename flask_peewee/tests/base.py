@@ -29,14 +29,23 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         
         self.flask_app = test_app.app
         self.flask_app._template_context = {}
-        
-        self.app = test_app.app.test_client() 
+        self.app = test_app.app.test_client()
+
+    def login(self, user):
+        return self.app.get("/login/%d" % user.id)
+
+    def logout(self):
+        return self.app.get("/logout")
+
+    def tearDown(self):
+        self.logout()
     
     def create_user(self, username, password, **kwargs):
-        user = User(username=username, email=kwargs.pop('email', ''), **kwargs)
-        user.set_password(password)
-        user.save()
-        return user
+        return User.create(
+            username=username,
+            password=password,
+            email=kwargs.pop('email', ''),
+            **kwargs)
     
     def create_message(self, user, content, **kwargs):
         return Message.create(user=user, content=content, **kwargs)

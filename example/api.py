@@ -1,12 +1,11 @@
-from flask_peewee.rest import RestAPI, RestResource, UserAuthentication, AdminAuthentication, RestrictOwnerResource
+from flask_peewee.rest import RestAPI, RestResource, RestrictOwnerResource
 
 from app import app
 from auth import auth
 from models import User, Message, Relationship
 
 
-user_auth = UserAuthentication(auth)
-admin_auth = AdminAuthentication(auth)
+admin_auth = AdminAuthentication()
 
 # instantiate our api wrapper
 api = RestAPI(app, default_auth=user_auth)

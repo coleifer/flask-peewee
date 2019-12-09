@@ -1054,33 +1054,6 @@ Authenticating requests to the API
         :rtype: Boolean indicating whether the user is an administrator
 
 
-.. py:class:: APIKeyAuthentication(model, protected_methods=None)
-
-    Subclass that allows you to provide an API Key model to authenticate requests
-    with.
-
-    .. note:: Must provide an API key model with at least the following two
-        fields:
-
-        * key
-        * secret
-
-
-    .. code-block:: python
-
-        # example API key model
-        class APIKey(db.Model):
-            key = CharField()
-            secret = CharField()
-            user = ForeignKeyField(User)
-
-        # instantiating the auth
-        api_key_auth = APIKeyAuthentication(model=APIKey)
-
-    :param model: a :py:class:`Database.Model` subclass to persist API keys.
-    :param protected_methods: A list or tuple of HTTP verbs to require auth for
-
-
 Utilities
 ---------
 

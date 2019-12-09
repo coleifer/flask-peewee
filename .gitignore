@@ -1,0 +1,24 @@
+# Annoying Mac OSX file
+.DS_Store
+
+# Editor
+.vscode
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+dev/
+dist/
+*.egg-info/
+.python-version
+test.db
+
+# Sphinx documentation
+docs/_build/

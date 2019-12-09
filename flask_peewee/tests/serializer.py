@@ -1,7 +1,7 @@
 import datetime
 
-from flask_peewee.serializer import Deserializer
-from flask_peewee.serializer import Serializer
+from flask_peewee.rest.serializer import Deserializer
+from flask_peewee.rest.serializer import Serializer
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
@@ -17,11 +17,12 @@ class SerializerTestCase(FlaskPeeweeTestCase):
     def test_serializer(self):
         users = self.create_users()
         serialized = self.s.serialize_object(self.admin)
+        join_ts = int(datetime.datetime.timestamp(self.admin.join_date) * 1000)
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
-            'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'join_date': join_ts,
             'active': True,
             'admin': True,
             'email': '',
