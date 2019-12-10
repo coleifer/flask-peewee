@@ -1,17 +1,7 @@
 import datetime
 
-from flask import Flask
-from flask import Response
-from flask import flash
-from flask import g
-from flask import redirect
-from flask import render_template
-from flask import request
-from flask import url_for
-from flask_login import (
-    current_user, login_user, logout_user,
-    LoginManager, UserMixin,
-)
+from flask import Flask, Response
+from flask_login import login_user, logout_user, LoginManager, UserMixin
 
 from peewee import (
     BooleanField, CharField, DateTimeField,
@@ -27,14 +17,14 @@ from flask_peewee.rest import RestResource
 from flask_peewee.rest import RestrictOwnerResource
 
 
-class TestFlask(Flask):
+class FlaskApp(Flask):
     def update_template_context(self, context):
-        ret = super(TestFlask, self).update_template_context(context)
+        ret = super(FlaskApp, self).update_template_context(context)
         self._template_context.update(context)
         return ret
 
 
-app = TestFlask(__name__)
+app = FlaskApp(__name__)
 app.config.from_object('flask_peewee.tests.test_config.Configuration')
 
 login_manager = LoginManager()
@@ -47,9 +37,11 @@ class BaseModel(Model):
     class Meta:
         database = db
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(User.id == user_id)
+
 
 @app.before_request
 def clear_context():
@@ -78,7 +70,7 @@ class Message(BaseModel):
     user = ForeignKeyField(User)
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
-    
+
     def __unicode__(self):
         return '%s: %s' % (self.user, self.content)
 
@@ -92,17 +84,21 @@ class Note(BaseModel):
 class AModel(BaseModel):
     a_field = CharField()
 
+
 class BModel(BaseModel):
     a = ForeignKeyField(AModel)
     b_field = CharField()
 
+
 class CModel(BaseModel):
     b = ForeignKeyField(BModel)
     c_field = CharField()
-    
+
+
 class DModel(BaseModel):
     c = ForeignKeyField(CModel)
     d_field = CharField()
+
 
 class BDetails(BaseModel):
     b = ForeignKeyField(BModel)
@@ -110,6 +106,7 @@ class BDetails(BaseModel):
 
 class EModel(BaseModel):
     e_field = CharField()
+
 
 class FModel(BaseModel):
     e = ForeignKeyField(EModel, null=True)
@@ -124,24 +121,30 @@ class DeletableResource(RestResource):
 
 class UserResource(DeletableResource):
     exclude = ('password', 'email',)
-    
+
     def get_query(self):
-        return User.select().where(User.active==True)
+        return User.select().where(User.active >> True)
+
 
 class AResource(DeletableResource):
     pass
 
+
 class BResource(DeletableResource):
     include_resources = {'a': AResource}
+
 
 class CResource(DeletableResource):
     include_resources = {'b': BResource}
 
+
 class EResource(DeletableResource):
     pass
 
+
 class FResource(DeletableResource):
     include_resources = {'e': EResource}
+
 
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
@@ -176,5 +179,6 @@ def login(pk):
 def logout():
     logout_user()
     return "ok"
+
 
 api.setup()

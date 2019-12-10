@@ -1,10 +1,6 @@
-import sys
 from setuptools import setup, find_packages
 
 requirements = ['Flask', 'werkzeug', 'jinja2', 'peewee>=3.0.0', 'wtforms', 'wtf-peewee']
-if sys.version_info[:2] < (2, 6):
-    requirements.append('simplejson')
-
 setup(
     name='flask-peewee',
     version='3.0.3',
@@ -14,7 +10,7 @@ setup(
     author_email='coleifer@gmail.com',
     description='Peewee integration for flask',
     packages=find_packages(),
-    package_data = {
+    package_data={
         'flask_peewee': [
             'static/*/*.css',
             'static/*/*.js',

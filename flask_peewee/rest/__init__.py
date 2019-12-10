@@ -13,7 +13,7 @@ from functools import reduce
 from peewee import fn, DQ, DJANGO_MAP, OP, Expression, ModelAlias, Node
 from peewee import DateField, DateTimeField, DoesNotExist, ForeignKeyField
 from playhouse.postgres_ext import ArrayField, TSVectorField, JSONField
-from werkzeug import MultiDict
+from werkzeug.datastructures import MultiDict
 
 from .filters import make_field_tree
 from .filters import PaginatedQuery
@@ -329,22 +329,24 @@ class RestResource(object):
             json_lookup = json_lookup[lookup]
 
         if op in ('in', 'notin'):
-            constructor = lambda *args: negated and ~Expression(*args) or Expression(*args)
-            return query.where(constructor(json_lookup, op, arg_list))
+            abs_expression = Expression(json_lookup, op, arg_list)
+            expression = ~abs_expression if negated else abs_expression
+            return query.where(expression)
 
         clauses = [self.construct_json_filter(json_lookup, op, v, negated) for v in arg_list]
         return query.where(reduce(operator.or_, clauses))
 
+    def constructor(self, negated, kwargs):
+        return ~DQ(**kwargs) if negated else DQ(**kwargs)
+
     def apply_filter(self, query, expr, op, arg_list, negated):
         query_expr = '%s__%s' % (expr, op)
-        constructor = lambda kwargs: negated and ~DQ(**kwargs) or DQ(**kwargs)
         if op in ('in', 'notin'):
-            return query.filter(constructor({query_expr: arg_list}))
+            return query.filter(self.constructor(negated, {query_expr: arg_list}))
         elif len(arg_list) == 1:
-            return query.filter(constructor({query_expr: arg_list[0]}))
+            return query.filter(self.constructor(negated, {query_expr: arg_list[0]}))
         else:
-            query_clauses = [
-                constructor({query_expr: val}) for val in arg_list]
+            query_clauses = [self.constructor(negated, {query_expr: val}) for val in arg_list]
             return query.filter(reduce(operator.or_, query_clauses))
 
     def get_serializer(self):

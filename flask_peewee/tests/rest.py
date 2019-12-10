@@ -1,25 +1,15 @@
-from __future__ import with_statement
-
-import base64
 import datetime
 import json
-import unittest
 
-from flask_peewee.rest import Authentication
-from flask_peewee.rest import RestAPI
-from flask_peewee.rest import RestResource
 from flask_peewee.tests.base import FlaskPeeweeTestCase
-from flask_peewee.tests.test_app import db
-from flask_peewee.tests.test_app import AModel, BModel, BDetails, CModel
-from flask_peewee.tests.test_app import DModel, EModel, FModel, Message
-from flask_peewee.tests.test_app import Note, User
+from flask_peewee.tests.test_app import (
+    db, AModel, BModel, BDetails, CModel,
+    DModel, EModel, FModel, Message,
+    Note, User,
+)
 
 
 class RestApiTestCase(FlaskPeeweeTestCase):
-
-    def auth_headers(self, username, password):
-        data = '%s:%s' % (username, password)
-        return {'Authorization': 'Basic %s' % base64.b64encode(data.encode('utf8')).decode('utf8')}
 
     def conv_date(self, dt):
         return int(datetime.datetime.timestamp(dt) * 1000)
@@ -134,8 +124,8 @@ class RestApiResourceTestCase(RestApiTestCase):
         # cmodel
         resp = self.app.get('/api/cmodel?ordering=id')
         self.assertEqual(resp.get_json()['objects'], [
-            {'id': self.c1.id, 'c_field': 'c1', 'b': {'id': self.b1.id, 'b_field': 'b1', 'a': {'id': self.a1.id, 'a_field': 'a1'}}},
-            {'id': self.c2.id, 'c_field': 'c2', 'b': {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}}},
+            {'id': self.c1.id, 'c_field': 'c1', 'b': {'id': self.b1.id, 'b_field': 'b1', 'a': {'id': self.a1.id, 'a_field': 'a1'}}},  # NOQA
+            {'id': self.c2.id, 'c_field': 'c2', 'b': {'id': self.b2.id, 'b_field': 'b2', 'a': {'id': self.a2.id, 'a_field': 'a2'}}},  # NOQA
         ])
 
         resp = self.app.get('/api/cmodel/%s' % self.c2.id)
@@ -201,7 +191,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         })
 
         # c model
-        resp = self.post_to('/api/cmodel', {'c_field': 'cz', 'b': {'b_field': 'bz', 'a': {'a_field': 'az'}}})
+        resp = self.post_to('/api/cmodel', {'c_field': 'cz', 'b': {'b_field': 'bz', 'a': {'a_field': 'az'}}})  # NOQA
         self.assertEqual(resp.status_code, 200)
 
         self.assertEqual(CModel.select().count(), 1)
@@ -274,7 +264,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         })
 
         # b
-        resp = self.post_to('/api/bmodel/%s' % self.b2.id, {'b_field': 'b2-yyy', 'a': {'a_field': 'a2-yyy'}})
+        resp = self.post_to('/api/bmodel/%s' % self.b2.id, {'b_field': 'b2-yyy', 'a': {'a_field': 'a2-yyy'}})  # NOQA
         self.assertEqual(resp.status_code, 200)
 
         self.assertEqual(BModel.select().count(), 2)
@@ -293,7 +283,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         })
 
         # c
-        resp = self.post_to('/api/cmodel/%s' % self.c2.id, {'c_field': 'c2-zzz', 'b': {'b_field': 'b2-zzz', 'a': {'a_field': 'a2-zzz'}}})
+        resp = self.post_to('/api/cmodel/%s' % self.c2.id, {'c_field': 'c2-zzz', 'b': {'b_field': 'b2-zzz', 'a': {'a_field': 'a2-zzz'}}})  # NOQA
         self.assertEqual(resp.status_code, 200)
 
         self.assertEqual(CModel.select().count(), 2)
@@ -319,7 +309,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         })
 
         # f
-        resp = self.post_to('/api/fmodel/%s' % self.f1.id, {'f_field': 'f1-yyy', 'e': {'e_field': 'e1-yyy'}})
+        resp = self.post_to('/api/fmodel/%s' % self.f1.id, {'f_field': 'f1-yyy', 'e': {'e_field': 'e1-yyy'}})  # NOQA
         self.assertEqual(resp.status_code, 200)
 
         self.assertEqual(FModel.select().count(), 2)
@@ -350,7 +340,6 @@ class RestApiResourceTestCase(RestApiTestCase):
             'f_field': 'f2-yyy',
             'e': None,
         })
-
 
     def test_resource_edit_partial(self):
         self.create_test_models()
@@ -545,13 +534,10 @@ class RestApiBasicTestCase(RestApiTestCase):
         third_id = notes[3].id
 
         resp = self.app.get('/api/note?user__username=admin&id__lt=%s&ordering=id' % third_id)
-        
         self.assertAPINotes(resp.get_json(), notes[:3])
 
         # do a filter using multiple values
         resp = self.app.get('/api/note?user__username=admin&user__username=inactive&ordering=id')
-        
-
         self.assertAPIMeta(resp.get_json(), {
             'count': 20,
             'model': 'note',
@@ -559,25 +545,28 @@ class RestApiBasicTestCase(RestApiTestCase):
             'next': '',
             'page': 1,
         })
-        self.assertAPINotes(resp.get_json(), Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
+        self.assertAPINotes(
+            resp.get_json(),
+            Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
 
         # do a filter with a negation
         resp = self.app.get('/api/note?-user__username=admin&ordering=id')
-        
         self.assertAPINotes(resp.get_json(), Note.filter(user__in=[
             self.normal, self.inactive]).order_by(Note.id))
 
         # do a filter with an IN operator and multiple IDs
         # https://github.com/coleifer/flask-peewee/issues/112
         resp = self.app.get('/api/note?id__in=1,2,5')
-        
-        self.assertAPINotes(resp.get_json(), Note.filter(id__in=[1,2,5]).order_by(Note.id))
+        self.assertAPINotes(
+            resp.get_json(),
+            Note.filter(id__in=[1, 2, 5]).order_by(Note.id))
 
         # also test that the IN operator works with list of strings
         self.login(self.admin)
         resp = self.app.get('/api/user?username__in=admin,normal')
-        
-        self.assertAPIUsers(resp.get_json(), User.filter(username__in=['admin', 'normal']).order_by(User.id))
+        self.assertAPIUsers(
+            resp.get_json(),
+            User.filter(username__in=['admin', 'normal']).order_by(User.id))
 
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
@@ -696,7 +685,7 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
 
         # authorized, user in database, is owner
         self.login(self.normal)
-        resp = self.app.put(url, data=serialized, headers=self.auth_headers('normal', 'normal'))
+        resp = self.app.put(url, data=serialized)
         self.assertEqual(resp.status_code, 200)
 
         obj = Message.get(id=self.normal_message.id)
@@ -717,8 +706,6 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
 
         message = Message.get(id=self.normal_message.id)
         self.assertEqual(message.content, 'edited')
-
-        
         self.assertAPIMessage(resp.get_json(), message)
 
     def test_auth_delete(self):
@@ -833,7 +820,7 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         # authorized, user in database, but not an administrator
         self.login(self.normal)
         resp = self.app.put(url, data=serialized)
-        self.assertEqual(resp.status_code, 401  )
+        self.assertEqual(resp.status_code, 401)
 
         # authorized as an admin
         self.login(self.admin)

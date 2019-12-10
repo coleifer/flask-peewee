@@ -1,5 +1,6 @@
 # config
 
+
 class Configuration(object):
     DATABASE = {
         'name': 'test.db',

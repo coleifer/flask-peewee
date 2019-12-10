@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import os
 import sys
 import unittest
 
 from flask_peewee import tests
+
 
 def runtests(*test_args):
     suite = unittest.TestLoader().loadTestsFromModule(tests)
@@ -13,6 +13,7 @@ def runtests(*test_args):
     elif result.errors:
         sys.exit(2)
     sys.exit(0)
+
 
 if __name__ == '__main__':
     runtests(*sys.argv[1:])
