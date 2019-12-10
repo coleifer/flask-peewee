@@ -422,11 +422,11 @@ class RestResource(object):
 
     def get_urls(self):
         return (
-            ('/', self.require_method(self.api_list, ['GET', 'POST'])),
-            ('/<pk>/', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
-            ('/<pk>/delete/', self.require_method(self.post_delete, ['POST', 'DELETE'])),
-            ('/count/', self.require_method(self.api_count, ['GET'])),
-            ('/exportable/', self.require_method(self.api_exportable, ['GET'])),
+            ('', self.require_method(self.api_list, ['GET', 'POST'])),
+            ('/<pk>', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
+            ('/<pk>/delete', self.require_method(self.post_delete, ['POST', 'DELETE'])),
+            ('/count', self.require_method(self.api_count, ['GET'])),
+            ('/exportable', self.require_method(self.api_exportable, ['GET'])),
         )
 
     def check_get(self, obj=None):
@@ -740,6 +740,7 @@ class RestAPI(object):
                     '%s_%s' % (api_name, callback.__name__),
                     self.auth_wrapper(callback, provider),
                     methods=provider.allowed_methods,
+                    strict_slashes=True,
                 )
 
     def register_blueprint(self, **kwargs):
