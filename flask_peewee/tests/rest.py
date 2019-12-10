@@ -358,7 +358,6 @@ class RestApiResourceTestCase(RestApiTestCase):
         # b model
         resp = self.post_to('/api/bmodel/%s' % self.b2.id, {'b_field': 'b2-yyy'})
         self.assertEqual(resp.status_code, 200)
-
         self.assertEqual(BModel.select().count(), 2)
         self.assertEqual(AModel.select().count(), 2)
         b_obj = BModel.get(id=self.b2.id)
@@ -676,8 +675,6 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
 
         new_message = Message.get(content='test')
         self.assertEqual(new_message.user, self.normal)
-
-        
         self.assertAPIMessage(resp.get_json(), new_message)
 
     def test_auth_edit(self):

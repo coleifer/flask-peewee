@@ -164,6 +164,13 @@ class RestResource(object):
         except (ValueError, TypeError):
             return arg
 
+    def remove_dupes(self, lst):
+        seen = set()
+        for i in lst:
+            if i not in seen:
+                seen.add(i)
+                yield i
+
     def filter_query(self, query, *args, **kwargs):
         # normalize args and kwargs into a new expression
         dq_node = Node()
@@ -193,13 +200,9 @@ class RestResource(object):
 
         dq_node = dq_node.rhs
 
-        seen = set()
-        remove_dupes = lambda lst: seen.clear() or [
-            i for i in lst if i not in seen and not seen.add(i)]
-
         selected = list()
         query = query.clone()
-        for field, rm in remove_dupes(dq_joins):
+        for field, rm in self.remove_dupes(dq_joins):
             selected.append(rm)
             if isinstance(field, ForeignKeyField):
                 lm = field.model
@@ -208,7 +211,7 @@ class RestResource(object):
                 on = (rm == getattr(rm, rm._meta.primary_key.name))
             query = query.ensure_join(lm, rm, on)
 
-        selected = remove_dupes(selected)
+        selected = self.remove_dupes(selected)
         if query._explicit_selection:
             query._select += query._model_shorthand(selected)
         else:

@@ -1,5 +1,4 @@
 import datetime
-import time
 import uuid
 
 from peewee import Model
