@@ -1,0 +1,8 @@
+blinker==1.4
+Flask==1.1.1
+Flask-Login==0.4.1
+Jinja2==2.10.3
+peewee==3.13.1
+wtf-peewee==3.0.0
+WTForms==2.2.1
+flake8

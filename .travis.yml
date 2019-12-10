@@ -1,14 +1,11 @@
 language: python
+sudo: false
 python:
   - 2.7
-  - 3.4
   - 3.5
   - 3.6
-dist: trusty
-matrix:
-  include:
-    - python: 3.7
-      dist: xenial
-      sudo: true
-install: "pip install peewee flask wtforms wtf-peewee"
-script: "python runtests.py"
+  - 3.7
+install:
+  - pip install -r flask_peewee/tests/requirements.txt
+  - pip install .
+script: flake8 . && python runtests.py
