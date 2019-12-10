@@ -1,6 +1,12 @@
 flask-peewee
 ============
 
+.. image:: https://img.shields.io/badge/License-MIT%20License-blue.svg
+  :target: https://raw.githubusercontent.com/rammie/flask-peewee/master/LICENSE
+
+.. image:: https://api.travis-ci.org/rammie/flask-peewee.png?branch=master
+  :target: https://travis-ci.org/rammie/flask-peewee
+
 This fork is different in the following ways:
 
 * Strips out the admin and auth components.
