@@ -70,7 +70,7 @@ class Message(db.Model):
     user = ForeignKeyField(User)
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
-    
+
     def __unicode__(self):
         return '%s: %s' % (self.user, self.content)
 
@@ -83,7 +83,7 @@ class Note(db.Model):
 
 class TestModel(db.Model):
     data = TextField()
-    
+
     class Meta:
         order_by = ('id',)
 
@@ -98,7 +98,7 @@ class BModel(db.Model):
 class CModel(db.Model):
     b = ForeignKeyField(BModel)
     c_field = CharField()
-    
+
 class DModel(db.Model):
     c = ForeignKeyField(CModel)
     d_field = CharField()
@@ -122,12 +122,12 @@ class APIKey(db.Model):
 
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
-    
+
     def get_urls(self):
         return (
             ('/create/', self.create),
         )
-    
+
     def create(self):
         if request.method == 'POST':
             if request.form.get('message'):
@@ -137,7 +137,7 @@ class NotePanel(AdminPanel):
                 )
         next = request.form.get('next') or self.dashboard_url()
         return redirect(next)
-    
+
     def get_context(self):
         return {
             'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
@@ -183,7 +183,7 @@ admin.register_panel('Notes', NotePanel)
 
 class UserResource(RestResource):
     exclude = ('password', 'email',)
-    
+
     def get_query(self):
         return User.select().where(User.active==True)
 

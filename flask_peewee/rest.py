@@ -288,8 +288,7 @@ class RestResource(object):
         return Response('Bad request', 400)
 
     def response(self, data):
-        kwargs = {} if request.is_xhr else {'indent': 2}
-        return Response(json.dumps(data, **kwargs), mimetype='application/json')
+        return Response(json.dumps(data), mimetype='application/json')
 
     def require_method(self, func, methods):
         @functools.wraps(func)

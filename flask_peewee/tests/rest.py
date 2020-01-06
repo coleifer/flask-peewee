@@ -18,8 +18,10 @@ from flask_peewee.rest import UserAuthentication
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import APIKey
+from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import CModel
+from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import Message
@@ -106,11 +108,8 @@ class RestApiTestCase(FlaskPeeweeTestCase):
 class RestApiResourceTestCase(RestApiTestCase):
     def setUp(self):
         super(RestApiResourceTestCase, self).setUp()
-        FModel.delete().execute()
-        EModel.delete().execute()
-        CModel.delete().execute()
-        BModel.delete().execute()
-        AModel.delete().execute()
+        for M in (FModel, EModel, DModel, CModel, BDetails, BModel, AModel):
+            M.delete().execute()
 
     def create_test_models(self):
         self.a1 = AModel.create(a_field='a1')

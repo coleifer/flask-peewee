@@ -32,7 +32,7 @@ from peewee import DateField
 from peewee import DateTimeField
 from peewee import ForeignKeyField
 from peewee import TextField
-from werkzeug import Headers
+from werkzeug.datastructures import Headers
 from wtforms import fields
 from wtforms import widgets
 from wtfpeewee.fields import ModelHiddenField
