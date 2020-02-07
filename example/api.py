@@ -2,7 +2,7 @@ from flask_peewee.rest import RestAPI, RestResource, UserAuthentication, AdminAu
 
 from app import app
 from auth import auth
-from models import User, Message, Relationship
+from models import User, Message, Note, Relationship
 
 
 user_auth = UserAuthentication(auth)
@@ -30,7 +30,19 @@ class RelationshipResource(RestrictOwnerResource):
     paginate_by = None
 
 
+class NoteResource(RestrictOwnerResource):
+    owner_field = 'user'
+    include_resources = {
+        'user': UserResource,
+    }
+
+    def get_query(self):
+        query = super(NoteResource, self).get_query()
+        return query.where(Note.status == 1)
+
+
 # register our models so they are exposed via /api/<model>/
 api.register(User, UserResource, auth=admin_auth)
 api.register(Relationship, RelationshipResource)
 api.register(Message, MessageResource)
+api.register(Note, NoteResource)
