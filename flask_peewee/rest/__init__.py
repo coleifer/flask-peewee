@@ -247,7 +247,7 @@ class RestResource(object):
     def process_query(self, query, args=None):
         raw_filters = {}
         if args is None:
-            args = request.json if request.data else request.args.copy()
+            args = MultiDict(request.json) if request.data else request.args.copy()
 
         # clean and normalize the request parameters
         for key in args:
