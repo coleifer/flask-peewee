@@ -88,8 +88,8 @@ class StatsQueryBuilder(object):
             self.selected_fields.insert(0, fn.unnest(model_attr).alias(piece))
             self.group_by_fields.insert(0, fn.unnest(model_attr))
         elif isinstance(model_attr, JSONField):
-            for l in lookups:
-                model_attr = model_attr[l]
+            for lookup in lookups:
+                model_attr = model_attr[lookup]
             alias = '.'.join([piece] + lookups)
             self.selected_fields.insert(0, model_attr.alias('"%s"' % alias))
             self.group_by_fields.insert(0, model_attr)
@@ -142,8 +142,8 @@ class StatsMixin(object):
         field, lookups = StatsQueryBuilder.parse_json_field(field)
         model_attr = getattr(self.model, field)
 
-        for l in lookups:
-            model_attr = model_attr[l]
+        for lookup in lookups:
+            model_attr = model_attr[lookup]
 
         if hasattr(model_attr, "as_json"):
             json_lookup = model_attr.as_json()
