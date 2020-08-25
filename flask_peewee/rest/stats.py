@@ -64,8 +64,8 @@ class StatsQueryBuilder(object):
         agg = self.aggregator_map[aggregator.lower()]
 
         if isinstance(model_attr, JSONField):
-            for l in lookups:
-                model_attr = model_attr[l]
+            for lookup in lookups:
+                model_attr = model_attr[lookup]
             if aggregator in ("Sum", "Max", "Min", "Avg"):
                 model_attr = model_attr.cast("int")
 
