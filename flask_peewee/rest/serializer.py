@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import uuid
 
 from peewee import Model
@@ -29,6 +30,8 @@ class Serializer(object):
             return value._pk
         elif isinstance(value, uuid.UUID):
             return str(value)
+        elif isinstance(value, decimal.Decimal):
+            return f"{value:.2f}"
         else:
             return value
 
