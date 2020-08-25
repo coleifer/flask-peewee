@@ -388,9 +388,7 @@ class RestResource(object):
         return Response('Bad request', 400)
 
     def response_api_exception(self, data, status=400):
-        kwargs = {} if request.is_xhr else {'indent': 2}
-        mimetype = 'application/json; charset=utf-8'
-        return Response(json.dumps(data, **kwargs), status, mimetype=mimetype)
+        return Response(json.dumps(data), status, mimetype='application/json')
 
     def response_export(self, data, filename, mimetype):
         response = Response(data, mimetype=mimetype, content_type='application/octet-stream')
@@ -398,10 +396,9 @@ class RestResource(object):
         return response
 
     def response(self, data):
-        mimetype = request.args.get('mimetype') or 'application/json; charset=utf-8'
-        kwargs = {} if request.is_xhr else {'indent': 2}
+        mimetype = request.args.get('mimetype') or 'application/json'
         data = {'status': 'OK'} if mimetype == 'text/html' else data
-        res = Response(json.dumps(data, **kwargs), mimetype=mimetype)
+        res = Response(json.dumps(data), mimetype=mimetype)
         res.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         res.headers['Pragma'] = 'no-cache'
         res.headers['Expires'] = 0
