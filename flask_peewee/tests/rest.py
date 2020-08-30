@@ -12,7 +12,7 @@ from flask_peewee.tests.test_app import (
 class RestApiTestCase(FlaskPeeweeTestCase):
 
     def conv_date(self, dt):
-        return int(datetime.datetime.timestamp(dt) * 1000)
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
 
     def assertAPIResponse(self, resp_json, body):
         self.assertEqual(body, resp_json['objects'])

@@ -12,16 +12,12 @@ class Serializer(object):
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
     datetime_format = ' '.join([date_format, time_format])
-    response_format = "json"
-
-    def __init__(self, date_formatter="javascript"):
-        self.date_formatter = date_formatter
+    response_format = 'json'
+    datetime_formatter = 'python'  # Can be 'python', timestamp, timestamp_ms
 
     def convert_value(self, value):
         if isinstance(value, datetime.datetime):
-            if self.date_formatter == "javascript":
-                return int(datetime.datetime.timestamp(value) * 1000)
-            return value.strftime(self.datetime_format)
+            return self.format_datetime(value)
         elif isinstance(value, datetime.date):
             return value.strftime(self.date_format)
         elif isinstance(value, datetime.time):
@@ -34,6 +30,13 @@ class Serializer(object):
             return f"{value:.2f}"
         else:
             return value
+
+    def format_datetime(self, value):
+        if self.datetime_formatter == 'timestamp_ms':
+            return int(datetime.datetime.timestamp(value) * 1000)
+        if self.datetime_formatter == 'timestamp':
+            return int(datetime.datetime.timestamp(value))
+        return value.strftime(self.datetime_format)
 
     def clean_data(self, data):
         if isinstance(data, (list, tuple)):

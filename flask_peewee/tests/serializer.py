@@ -15,12 +15,11 @@ class SerializerTestCase(FlaskPeeweeTestCase):
     def test_serializer(self):
         self.create_users()
         serialized = self.s.serialize_object(self.admin)
-        join_ts = int(datetime.datetime.timestamp(self.admin.join_date) * 1000)
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
-            'join_date': join_ts,
+            'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
             'active': True,
             'admin': True,
             'email': '',
