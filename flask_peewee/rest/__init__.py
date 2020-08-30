@@ -644,7 +644,7 @@ class RestResource(object):
 
         if fields is not None:
             fields = fields.split(',')
-            columns = [r for r in self.export_columns if k in fields]
+            columns = [(h, k, v) for (h, k, v) in self.export_columns if k in fields]
         else:
             columns = self.export_columns
 
