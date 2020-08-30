@@ -84,6 +84,9 @@ class RestResource(object):
     # delete behavior
     delete_recursive = True
 
+    # whether to allow access to the registry
+    expose_registry = False
+
     @classmethod
     def timestamp(cls, dt):
         return dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -426,8 +429,9 @@ class RestResource(object):
             ('', self.require_method(self.api_list, ['GET', 'POST'])),
             ('/<pk>', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
             ('/<pk>/delete', self.require_method(self.post_delete, ['POST', 'DELETE'])),
-            ('/count', self.require_method(self.api_count, ['GET'])),
-            ('/exportable', self.require_method(self.api_exportable, ['GET'])),
+            ('/_registry', self.require_method(self.api_registry, ['GET'])),
+            ('/_count', self.require_method(self.api_count, ['GET'])),
+            ('/_exportable', self.require_method(self.api_exportable, ['GET'])),
         )
 
     def check_get(self, obj=None):
@@ -459,7 +463,6 @@ class RestResource(object):
         obj = get_object_or_404(self.get_query(), self.pk == pk)
 
         method = method or request.method
-
         if not getattr(self, 'check_%s' % method.lower())(obj):
             return self.response_forbidden()
 
@@ -472,6 +475,29 @@ class RestResource(object):
 
     def post_delete(self, pk):
         return self.api_detail(pk, 'DELETE')
+
+    def get_fields(self, node, prefix=[]):
+        result = [{
+            "name": "__".join(prefix + [f.name]),
+            "type": f.__class__.__name__
+        } for f in node.fields]
+        for child_prefix, child in node.children.items():
+            result += self.get_fields(child, prefix + [child_prefix])
+        return result
+
+    def api_registry(self):
+        if not getattr(self, 'check_%s' % request.method.lower())():
+            return self.response_forbidden()
+        if not self.expose_registry:
+            return self.response_forbidden()
+        return {
+            "name": self.get_api_name(),
+            "fields": self.get_fields(self._field_tree),
+            "groups": [{
+                "name": f.name,
+                "type": f.__class__.__name__,
+            } for f in self.model._meta.fields.values()]
+        }
 
     def api_count(self):
         if not getattr(self, 'check_%s' % request.method.lower())():
@@ -567,7 +593,7 @@ class RestResource(object):
 
         if fields is not None:
             fields = fields.split(',')
-            columns = [(h, k, v) for (h, k, v) in self.export_columns if k in fields]
+            columns = [r for r in self.export_columns if k in fields]
         else:
             columns = self.export_columns
 

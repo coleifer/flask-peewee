@@ -127,7 +127,8 @@ class UserResource(DeletableResource):
 
 
 class AResource(DeletableResource):
-    pass
+    expose_registry = True
+    export_columns = [("A", "a_field", str)]
 
 
 class BResource(DeletableResource):

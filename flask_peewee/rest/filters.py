@@ -182,37 +182,3 @@ def path_to_models(model, path):
     if path:
         accum.extend(path_to_models(model, path))
     return accum
-
-
-class ModelRegistry:
-
-    name = None
-
-    timefield = "created_at"
-
-    def __init__(self, model):
-        self.model = model
-        self.db = model._meta.database
-        self.pk = self.model._meta.primary_key
-
-    def get_fields(self, node, prefix=[]):
-        result = [{
-            "name": "__".join(prefix + [f.name]),
-            "type": f.__class__.__name__
-        } for f in node.fields]
-        for child_prefix, child in node.children.items():
-            result += self.get_fields(child, prefix + [child_prefix])
-        return result
-
-    def todict(self):
-        field_tree = make_field_tree(self.model, None, None)
-        slug = slugify(self.model.__name__)
-        return {
-            "name": self.name or slug,
-            "model": slug,
-            "fields": self.get_fields(field_tree),
-            "groups": [{
-                "name": f.name,
-                "type": f.__class__.__name__,
-            } for f in self.model._meta.fields.values()]
-        }

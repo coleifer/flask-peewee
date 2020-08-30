@@ -156,6 +156,46 @@ class RestApiResourceTestCase(RestApiTestCase):
             'e': None,
         })
 
+    def test_resources_count(self):
+        self.create_test_models()
+
+        # amodel
+        resp = self.app.get('/api/amodel/_count')
+        self.assertEqual(resp.get_json()['count'], 2)
+
+    def test_resources_exportable(self):
+        self.create_test_models()
+
+        # amodel
+        resp = self.app.get('/api/amodel/_exportable')
+        self.assertEqual(resp.get_json(), {'fields': [{'field': 'a_field', 'name': 'A'}]})
+
+        # amodel
+        resp = self.app.get('/api/amodel?format=csv')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_data(), b'A\r\na1\r\na2\r\n')
+
+
+    def test_resources_registry(self):
+        # amodel
+        resp = self.app.get('/api/amodel/_registry')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json(), {
+            'name': 'amodel',
+            'fields': [
+                {'name': 'id', 'type': 'AutoField'},
+                {'name': 'a_field', 'type': 'CharField'},
+            ],
+            'groups': [
+                {'name': 'id', 'type': 'AutoField'},
+                {'name': 'a_field', 'type': 'CharField'}
+            ],
+        })
+
+        # bmodel
+        resp = self.app.get('/api/bmodel/_registry')
+        self.assertEqual(resp.status_code, 403)
+
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
 
