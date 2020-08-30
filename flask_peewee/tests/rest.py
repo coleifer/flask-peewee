@@ -175,7 +175,6 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.get_data(), b'A\r\na1\r\na2\r\n')
 
-
     def test_resources_registry(self):
         # amodel
         resp = self.app.get('/api/amodel/_registry')
@@ -195,6 +194,37 @@ class RestApiResourceTestCase(RestApiTestCase):
         # bmodel
         resp = self.app.get('/api/bmodel/_registry')
         self.assertEqual(resp.status_code, 403)
+
+    def test_reverse_resources(self):
+        self.create_test_models()
+        resp = self.app.get('/api/amodel')
+        self.assertEqual(resp.get_json()["meta"]["count"], 2)
+
+        # Test reverse resource serialization
+        resp = self.app.get('/api/amodelv2')
+        self.assertEqual(resp.get_json()["objects"], [
+            {'a_field': 'a1', 'bmodel': {'a': 1, 'b_field': 'b1'}, 'id': 1},
+            {'a_field': 'a2', 'bmodel': {'a': 2, 'b_field': 'b2'}, 'id': 2},
+        ])
+
+        # Test filter on reverse resources
+        resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
+        self.assertEqual(resp.get_json()["objects"], [
+            {'a_field': 'a2', 'bmodel': {'a': 2, 'b_field': 'b2'}, 'id': 2},
+        ])
+
+        # Test empty reverse resources
+        AModel.create(a_field='a3')
+        resp = self.app.get('/api/amodelv2')
+        resp_json = resp.get_json()
+        self.assertEqual(resp_json["meta"]["count"], 3)
+        self.assertEqual(resp_json["objects"][2]["bmodel"], None)
+
+        # Test many to one reverse resources
+        BModel.create(b_field='b11', a=self.a1)
+        resp = self.app.get('/api/amodelv2')
+        resp_json = resp.get_json()
+        self.assertEqual(resp_json["meta"]["count"], 4)
 
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))

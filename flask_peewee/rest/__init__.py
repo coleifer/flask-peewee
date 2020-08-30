@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from flask import Blueprint, Response, request, url_for
 from flask_login import current_user
 from functools import reduce
-from peewee import fn, DQ, DJANGO_MAP, OP, Expression, ModelAlias, Node
+from peewee import fn, DQ, DJANGO_MAP, JOIN, OP, Expression, ModelAlias, Node
 from peewee import DateField, DateTimeField, DoesNotExist, ForeignKeyField
 from playhouse.postgres_ext import ArrayField, TSVectorField, JSONField
 from werkzeug.datastructures import MultiDict
@@ -79,7 +79,11 @@ class RestResource(object):
     filter_recursive = True
 
     # mapping of field name to resource class
-    include_resources = None
+    include_resources = {}
+
+    # mapping of field name to (resource class, model) tuples
+    # resource classes must exclude any duplicate fields
+    reverse_resources = {}
 
     # delete behavior
     delete_recursive = True
@@ -108,37 +112,47 @@ class RestResource(object):
         self.aliases = defaultdict(dict)
 
         self._fields = {self.model: self.fields or list(self.model._meta.sorted_field_names)}
-        if self.exclude:
-            self._exclude = {self.model: self.exclude}
-        else:
-            self._exclude = {}
-
+        self._exclude = {self.model: self.exclude} if self.exclude else {}
         self._filter_fields = self.filter_fields or list(self.model._meta.sorted_field_names)
         self._filter_exclude = self.filter_exclude or []
 
         self._resources = {}
 
         # recurse into nested resources
-        if self.include_resources:
-            for field_name, resource in self.include_resources.items():
-                field_obj = self.model._meta.fields[field_name]
-                resource_obj = resource(
-                    self.api, field_obj.rel_model, self.authentication, self.allowed_methods)
-                self._resources[field_name] = resource_obj
-                self._fields.update(resource_obj._fields)
-                self._exclude.update(resource_obj._exclude)
+        for field_name, resource in self.include_resources.items():
+            field_obj = self.model._meta.fields[field_name]
+            resource_obj = self.create_subresource(resource, field_obj.rel_model)
+            self._resources[field_name] = resource_obj
+            self._fields.update(resource_obj._fields)
+            self._exclude.update(resource_obj._exclude)
+            self._filter_fields.extend([
+                '%s__%s' % (field_name, ff)
+                for ff in resource_obj._filter_fields
+            ])
+            self._filter_exclude.extend([
+                '%s__%s' % (field_name, ff)
+                for ff in resource_obj._filter_exclude
+            ])
 
-                self._filter_fields.extend([
-                    '%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
-                self._filter_exclude.extend([
-                    '%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])
-
-            self._include_foreign_keys = False
-        else:
-            self._include_foreign_keys = True
+        self._reverse_resources = {
+            name: self.create_subresource(*v)
+            for name, v in self.reverse_resources.items()
+        }
 
         self._field_tree = make_field_tree(
             self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
+
+        self.extract_reverse_resource_field_tree(self._field_tree)
+
+    def create_subresource(self, resource, model):
+        return resource(self.api, model, self.authentication, self.allowed_methods)
+
+    def extract_reverse_resource_field_tree(self, field_tree):
+        for name, resource in self._reverse_resources.items():
+            field_tree.children[name] = resource._field_tree
+
+        for name, resource in self._resources.items():
+            resource.extract_reverse_resource_field_tree(field_tree.children[name])
 
     def alias(self, model, fk):
         model_alias = model.alias()
@@ -159,7 +173,27 @@ class RestResource(object):
         )
 
     def get_query(self):
-        return self.model.select()
+        fields = self.get_selected_fields()
+        query = self.model.select(*fields)
+        return self.prepare_joins(query)
+
+    def get_selected_fields(self):
+        fields = [self.model]
+        for v in self._resources.values():
+            fields += v.get_selected_fields()
+        for v in self._reverse_resources.values():
+            fields += v.get_selected_fields()
+        return fields
+
+    def prepare_joins(self, query):
+        query = query.switch(self.model)
+        for r in self._resources.values():
+            query = query.switch(self.model).join(r.model, JOIN.LEFT_OUTER)
+            query = r.prepare_joins(query)
+        for r in self._reverse_resources.values():
+            query = query.switch(self.model).join(r.model, JOIN.LEFT_OUTER)
+            query = r.prepare_joins(query)
+        return query
 
     def process_datetime_arg(self, arg):
         try:
@@ -365,16 +399,33 @@ class RestResource(object):
 
     def serialize_object(self, obj):
         s = self.get_serializer()
-        return self.prepare_data(
-            obj, s.serialize_object(obj, self._fields, self._exclude)
-        )
+        return self.prepare_data(obj, self.serialize(s, obj))
 
     def serialize_query(self, query):
         s = self.get_serializer()
-        return [
-            self.prepare_data(obj, s.serialize_object(obj, self._fields, self._exclude))
-            for obj in query
-        ]
+        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in query]
+
+    def serialize(self, serializer, obj):
+        data = serializer.serialize_object(obj, self._fields, self._exclude)
+        data = self.serialize_reverse_resources(obj, data)
+        return data
+
+    def serialize_reverse_resources(self, obj, data):
+        for name, resource in self._reverse_resources.items():
+            sub_obj = getattr(obj, name, None)
+            if sub_obj is not None:
+                data[name] = resource.serialize_object(sub_obj)
+            else:
+                data[name] = None
+
+        for name, resource in self._resources.items():
+            sub_obj = getattr(obj, name, None)
+            if sub_obj is not None:
+                data[name] = resource.serialize_reverse_resources(sub_obj, data[name])
+            else:
+                data[name] = None
+
+        return data
 
     def deserialize_object(self, data, instance):
         d = self.get_deserializer()
@@ -724,7 +775,7 @@ class RestAPI(object):
     def __init__(self, app, prefix='/api', default_auth=None, name='api'):
         self.app = app
 
-        self._registry = {}
+        self._registry = []
 
         self.url_prefix = prefix
         self.blueprint = self.get_blueprint(name)
@@ -732,13 +783,9 @@ class RestAPI(object):
         self.default_auth = default_auth or Authentication()
 
     def register(self, model, provider=RestResource, auth=None, allowed_methods=None):
-        self._registry[model] = provider(self, model, auth or self.default_auth, allowed_methods)
-
-    def unregister(self, model):
-        del(self._registry[model])
-
-    def is_registered(self, model):
-        return self._registry.get(model)
+        resource = provider(self, model, auth or self.default_auth, allowed_methods)
+        self._registry.append(resource)
+        return resource
 
     def auth_wrapper(self, func, provider):
         @functools.wraps(func)
@@ -758,7 +805,7 @@ class RestAPI(object):
         for url, callback in self.get_urls():
             self.blueprint.route(url)(callback)
 
-        for provider in self._registry.values():
+        for provider in self._registry:
             api_name = provider.get_api_name()
             for url, callback in provider.get_urls():
                 full_url = '/%s%s' % (api_name, url)

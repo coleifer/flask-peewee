@@ -147,6 +147,17 @@ class FResource(DeletableResource):
     include_resources = {'e': EResource}
 
 
+class BResourceV2(DeletableResource):
+    exclude = ("id")
+
+
+class AReverseResource(DeletableResource):
+    reverse_resources = {'bmodel': (BResourceV2, BModel)}
+
+    def get_api_name(self):
+        return super().get_api_name() + "v2"
+
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 admin_auth = AdminAuthentication()
@@ -162,6 +173,8 @@ api.register(CModel, CResource, auth=dummy_auth)
 
 api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
+
+api.register(AModel, AReverseResource, auth=dummy_auth)
 
 
 # views
