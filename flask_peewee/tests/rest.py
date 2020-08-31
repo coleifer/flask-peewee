@@ -1,4 +1,3 @@
-import datetime
 import json
 
 from flask_peewee.tests.base import FlaskPeeweeTestCase

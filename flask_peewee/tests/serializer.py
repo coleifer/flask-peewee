@@ -1,5 +1,3 @@
-import datetime
-
 from flask_peewee.rest.serializer import Deserializer
 from flask_peewee.rest.serializer import Serializer
 from flask_peewee.tests.base import FlaskPeeweeTestCase
