@@ -536,11 +536,7 @@ class RestResource(object):
             result += self.get_fields(child, prefix + [child_prefix])
         return result
 
-    def api_registry(self):
-        if not getattr(self, 'check_%s' % request.method.lower())():
-            return self.response_forbidden()
-        if not self.expose_registry:
-            return self.response_forbidden()
+    def get_registry(self):
         return {
             "name": self.get_api_name(),
             "fields": self.get_fields(self._field_tree),
@@ -549,6 +545,13 @@ class RestResource(object):
                 "type": f.__class__.__name__,
             } for f in self.model._meta.fields.values()]
         }
+
+    def api_registry(self):
+        if not getattr(self, 'check_%s' % request.method.lower())():
+            return self.response_forbidden()
+        if not self.expose_registry:
+            return self.response_forbidden()
+        return self.get_registry()
 
     def api_count(self):
         if not getattr(self, 'check_%s' % request.method.lower())():
