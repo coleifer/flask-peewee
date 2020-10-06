@@ -434,7 +434,7 @@ class RestResource(object):
         else:
             objects = query
 
-        return self.serialize_objects(objects)
+        return self.serialize_object_list(objects)
 
     def serialize(self, serializer, obj):
         data = serializer.serialize_object(obj, self._fields, self._exclude)
@@ -690,7 +690,7 @@ class RestResource(object):
         elif output_format == 'xls':
             return self.export_xls(objects, columns)
 
-        serialized = self.serialize_object_list(objects)
+        serialized = self.serialize_query(objects)
         response = {'meta': meta, 'objects': serialized} if meta else serialized
         return self.response(response)
 

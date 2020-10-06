@@ -228,6 +228,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         BModel.create(b_field='b11', a=self.a1)
         resp = self.app.get('/api/amodelv2')
         resp_json = resp.get_json()
+        self.assertEqual(len(resp_json), 3)
         self.assertEqual(len(resp_json[0]["bmodel_set"]), 2)
 
     def post_to(self, url, data):
