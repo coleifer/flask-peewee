@@ -91,7 +91,7 @@ class BModel(BaseModel):
 
 
 class CModel(BaseModel):
-    b = ForeignKeyField(BModel)
+    b = ForeignKeyField(BModel, unique=True)
     c_field = CharField()
 
 
@@ -147,15 +147,23 @@ class FResource(DeletableResource):
     include_resources = {'e': EResource}
 
 
-class BResourceV2(DeletableResource):
-    exclude = ("id")
-
-
-class AReverseResource(DeletableResource):
-    reverse_resources = {'bmodel': (BResourceV2, BModel.a)}
+class V2Resource(DeletableResource):
 
     def get_api_name(self):
         return super().get_api_name() + "v2"
+
+
+class CResourceV2(V2Resource):
+    exclude = ("id")
+
+
+class BResourceV2(V2Resource):
+    exclude = ("id")
+    reverse_resources = {'cmodel': (CResourceV2, CModel.b)}
+
+
+class AResourceV2(V2Resource):
+    reverse_resources = {'bmodel': (BResourceV2, BModel.a)}
 
 
 # rest api stuff
@@ -174,7 +182,8 @@ api.register(CModel, CResource, auth=dummy_auth)
 api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
 
-api.register(AModel, AReverseResource, auth=dummy_auth)
+api.register(AModel, AResourceV2, auth=dummy_auth)
+api.register(BModel, BResourceV2, auth=dummy_auth)
 
 
 # views

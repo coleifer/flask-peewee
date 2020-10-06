@@ -91,6 +91,8 @@ class RestResource(object):
     # whether to allow access to the registry
     expose_registry = False
 
+    prefetch = []
+
     @classmethod
     def timestamp(cls, dt):
         return dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -138,6 +140,13 @@ class RestResource(object):
             name: self.create_reverse_resource(*v)
             for name, v in self.reverse_resources.items()
         }
+
+        if not self.prefetch:
+            self.prefetch = [
+                resource.model
+                for name, resource in self._reverse_resources.items()
+                if not resource._fk_field.unique
+            ]
 
         self._field_tree = make_field_tree(
             self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
@@ -187,7 +196,8 @@ class RestResource(object):
         for v in self._resources.values():
             fields += v.get_selected_fields()
         for v in self._reverse_resources.values():
-            fields += v.get_selected_fields()
+            if v._fk_field.unique:
+                fields += v.get_selected_fields()
         return fields
 
     def prepare_joins(self, query):
@@ -411,23 +421,20 @@ class RestResource(object):
 
     def serialize_object(self, obj):
         s = self.get_serializer()
-        return self.prepare_data(obj, self.serialize(s, obj))
+        return self.serialize(s, obj)
+
+    def serialize_object_list(self, objects):
+        s = self.get_serializer()
+        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in objects]
 
     def serialize_query(self, query):
-        prefetch_models = [
-            resource.model
-            for name, resource in self._reverse_resources.items()
-            if not resource._fk_field.unique
-        ]
-
-        if prefetch_models:
-            query = query.prefetch(*prefetch_models)
+        if self.prefetch:
+            query = query.prefetch(*self.prefetch)
             objects = self.dedupe_objects(query)
         else:
             objects = query
 
-        s = self.get_serializer()
-        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in objects]
+        return self.serialize_objects(objects)
 
     def serialize(self, serializer, obj):
         data = serializer.serialize_object(obj, self._fields, self._exclude)
@@ -437,14 +444,12 @@ class RestResource(object):
     def serialize_reverse_resources(self, obj, data):
         for name, resource in self._reverse_resources.items():
             fk_field = resource._fk_field
-            sub_obj = getattr(obj, name, None)
-            if sub_obj is None:
-                data[name] = None
-            elif fk_field.unique:
-                data[name] = resource.serialize_object(sub_obj)
+            if fk_field.unique:
+                sub_obj = getattr(obj, name, None)
+                data[name] = resource.serialize_object(sub_obj) if sub_obj else None
             else:
                 data_set = getattr(obj, fk_field.backref)
-                data[fk_field.backref] = resource.serialize_query(data_set)
+                data[fk_field.backref] = resource.serialize_object_list(data_set)
 
         for name, resource in self._resources.items():
             sub_obj = getattr(obj, name, None)
@@ -653,7 +658,8 @@ class RestResource(object):
         # process any filters
         query = self.process_query(query)
 
-        if self.paginate_by or 'limit' in request.args:
+        supports_pagination = not self.prefetch and not self._reverse_resources
+        if supports_pagination and (self.paginate_by or 'limit' in request.args):
             return self.paginated_object_list(query)
 
         return self.send_objects(query)
@@ -684,7 +690,7 @@ class RestResource(object):
         elif output_format == 'xls':
             return self.export_xls(objects, columns)
 
-        serialized = self.serialize_query(objects)
+        serialized = self.serialize_object_list(objects)
         response = {'meta': meta, 'objects': serialized} if meta else serialized
         return self.response(response)
 

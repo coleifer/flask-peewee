@@ -196,34 +196,39 @@ class RestApiResourceTestCase(RestApiTestCase):
 
     def test_reverse_resources(self):
         self.create_test_models()
-        resp = self.app.get('/api/amodel')
-        self.assertEqual(resp.get_json()["meta"]["count"], 2)
+        CModel.delete().execute()
 
         # Test reverse resource serialization
         resp = self.app.get('/api/amodelv2')
-        self.assertEqual(resp.get_json()["objects"], [
-            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1'}], 'id': 1},
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2'}], 'id': 2},
+        self.assertEqual(resp.get_json(), [
+            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1', 'cmodel': None}], 'id': 1},
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'cmodel': None}], 'id': 2},
         ])
 
         # Test filter on reverse resources
         resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
-        self.assertEqual(resp.get_json()["objects"], [
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2'}], 'id': 2},
+        self.assertEqual(resp.get_json(), [
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'cmodel': None}], 'id': 2},
+        ])
+
+        # Test unique reverse resources
+        self.c2 = CModel.create(c_field='c2', b=self.b2)
+        resp = self.app.get('/api/bmodelv2?b_field=b2')
+        self.assertEqual(resp.get_json(), [
+            {'a': 2, 'b_field': 'b2', 'cmodel': {"c_field": "c2", "b": 2}},
         ])
 
         # Test empty reverse resources
         AModel.create(a_field='a3')
         resp = self.app.get('/api/amodelv2')
         resp_json = resp.get_json()
-        self.assertEqual(resp_json["meta"]["count"], 3)
-        self.assertEqual(resp_json["objects"][2]["bmodel"], None)
+        self.assertEqual(resp_json[2]["bmodel_set"], [])
 
         # Test many to one reverse resources
         BModel.create(b_field='b11', a=self.a1)
         resp = self.app.get('/api/amodelv2')
         resp_json = resp.get_json()
-        self.assertEqual(resp_json["meta"]["count"], 4)
+        self.assertEqual(len(resp_json[0]["bmodel_set"]), 2)
 
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
