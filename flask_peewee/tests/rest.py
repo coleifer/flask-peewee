@@ -202,14 +202,14 @@ class RestApiResourceTestCase(RestApiTestCase):
         # Test reverse resource serialization
         resp = self.app.get('/api/amodelv2')
         self.assertEqual(resp.get_json()["objects"], [
-            {'a_field': 'a1', 'bmodel': {'a': 1, 'b_field': 'b1'}, 'id': 1},
-            {'a_field': 'a2', 'bmodel': {'a': 2, 'b_field': 'b2'}, 'id': 2},
+            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1'}], 'id': 1},
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2'}], 'id': 2},
         ])
 
         # Test filter on reverse resources
         resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
         self.assertEqual(resp.get_json()["objects"], [
-            {'a_field': 'a2', 'bmodel': {'a': 2, 'b_field': 'b2'}, 'id': 2},
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2'}], 'id': 2},
         ])
 
         # Test empty reverse resources

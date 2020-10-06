@@ -135,7 +135,7 @@ class RestResource(object):
             ])
 
         self._reverse_resources = {
-            name: self.create_subresource(*v)
+            name: self.create_reverse_resource(*v)
             for name, v in self.reverse_resources.items()
         }
 
@@ -146,6 +146,11 @@ class RestResource(object):
 
     def create_subresource(self, resource, model):
         return resource(self.api, model, self.authentication, self.allowed_methods)
+
+    def create_reverse_resource(self, resource, fk_field):
+        resource_obj = self.create_subresource(resource, fk_field.model)
+        resource_obj._fk_field = fk_field
+        return resource_obj
 
     def extract_reverse_resource_field_tree(self, field_tree):
         for name, resource in self._reverse_resources.items():
@@ -397,13 +402,32 @@ class RestResource(object):
         """
         return data
 
+    def dedupe_objects(self, objects):
+        seen = set()
+        for obj in objects:
+            if obj._pk not in seen:
+                seen.add(obj._pk)
+                yield obj
+
     def serialize_object(self, obj):
         s = self.get_serializer()
         return self.prepare_data(obj, self.serialize(s, obj))
 
     def serialize_query(self, query):
+        prefetch_models = [
+            resource.model
+            for name, resource in self._reverse_resources.items()
+            if not resource._fk_field.unique
+        ]
+
+        if prefetch_models:
+            query = query.prefetch(*prefetch_models)
+            objects = self.dedupe_objects(query)
+        else:
+            objects = query
+
         s = self.get_serializer()
-        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in query]
+        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in objects]
 
     def serialize(self, serializer, obj):
         data = serializer.serialize_object(obj, self._fields, self._exclude)
@@ -412,11 +436,15 @@ class RestResource(object):
 
     def serialize_reverse_resources(self, obj, data):
         for name, resource in self._reverse_resources.items():
+            fk_field = resource._fk_field
             sub_obj = getattr(obj, name, None)
-            if sub_obj is not None:
+            if sub_obj is None:
+                data[name] = None
+            elif fk_field.unique:
                 data[name] = resource.serialize_object(sub_obj)
             else:
-                data[name] = None
+                data_set = getattr(obj, fk_field.backref)
+                data[fk_field.backref] = resource.serialize_query(data_set)
 
         for name, resource in self._resources.items():
             sub_obj = getattr(obj, name, None)

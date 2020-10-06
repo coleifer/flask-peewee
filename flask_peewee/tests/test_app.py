@@ -152,7 +152,7 @@ class BResourceV2(DeletableResource):
 
 
 class AReverseResource(DeletableResource):
-    reverse_resources = {'bmodel': (BResourceV2, BModel)}
+    reverse_resources = {'bmodel': (BResourceV2, BModel.a)}
 
     def get_api_name(self):
         return super().get_api_name() + "v2"
