@@ -201,21 +201,21 @@ class RestApiResourceTestCase(RestApiTestCase):
         # Test reverse resource serialization
         resp = self.app.get('/api/amodelv2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1', 'cmodel': None}], 'id': 1},
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'cmodel': None}], 'id': 2},
+            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1', 'c': None}], 'id': 1},
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
         ])
 
         # Test filter on reverse resources
         resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'cmodel': None}], 'id': 2},
+            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
         ])
 
         # Test unique reverse resources
         self.c2 = CModel.create(c_field='c2', b=self.b2)
         resp = self.app.get('/api/bmodelv2?b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a': 2, 'b_field': 'b2', 'cmodel': {"c_field": "c2", "b": 2}},
+            {'a': 2, 'b_field': 'b2', 'c': {"c_field": "c2", "b": 2}},
         ])
 
         # Test empty reverse resources

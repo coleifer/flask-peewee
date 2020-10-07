@@ -137,8 +137,8 @@ class RestResource(object):
             ])
 
         self._reverse_resources = {
-            name: self.create_reverse_resource(*v)
-            for name, v in self.reverse_resources.items()
+            fk_field.model._meta.name: self.create_reverse_resource(resource, fk_field)
+            for fk_field, resource in self.reverse_resources.items()
         }
 
         if not self.prefetch:
@@ -446,7 +446,7 @@ class RestResource(object):
             fk_field = resource._fk_field
             if fk_field.unique:
                 sub_obj = getattr(obj, name, None)
-                data[name] = resource.serialize_object(sub_obj) if sub_obj else None
+                data[fk_field.backref] = resource.serialize_object(sub_obj) if sub_obj else None
             else:
                 data_set = getattr(obj, fk_field.backref)
                 data[fk_field.backref] = resource.serialize_object_list(data_set)

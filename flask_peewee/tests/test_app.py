@@ -91,7 +91,7 @@ class BModel(BaseModel):
 
 
 class CModel(BaseModel):
-    b = ForeignKeyField(BModel, unique=True)
+    b = ForeignKeyField(BModel, unique=True, backref="c")
     c_field = CharField()
 
 
@@ -159,11 +159,11 @@ class CResourceV2(V2Resource):
 
 class BResourceV2(V2Resource):
     exclude = ("id")
-    reverse_resources = {'cmodel': (CResourceV2, CModel.b)}
+    reverse_resources = {CModel.b: CResourceV2}
 
 
 class AResourceV2(V2Resource):
-    reverse_resources = {'bmodel': (BResourceV2, BModel.a)}
+    reverse_resources = {BModel.a: BResourceV2}
 
 
 # rest api stuff
