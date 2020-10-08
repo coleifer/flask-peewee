@@ -91,6 +91,8 @@ class RestResource(object):
     # whether to allow access to the registry
     expose_registry = False
 
+    prefetch = []
+
     @classmethod
     def timestamp(cls, dt):
         return dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -135,9 +137,16 @@ class RestResource(object):
             ])
 
         self._reverse_resources = {
-            name: self.create_subresource(*v)
-            for name, v in self.reverse_resources.items()
+            fk_field.model._meta.name: self.create_reverse_resource(resource, fk_field)
+            for fk_field, resource in self.reverse_resources.items()
         }
+
+        if not self.prefetch:
+            self.prefetch = [
+                resource.model
+                for name, resource in self._reverse_resources.items()
+                if not resource._fk_field.unique
+            ]
 
         self._field_tree = make_field_tree(
             self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
@@ -146,6 +155,11 @@ class RestResource(object):
 
     def create_subresource(self, resource, model):
         return resource(self.api, model, self.authentication, self.allowed_methods)
+
+    def create_reverse_resource(self, resource, fk_field):
+        resource_obj = self.create_subresource(resource, fk_field.model)
+        resource_obj._fk_field = fk_field
+        return resource_obj
 
     def extract_reverse_resource_field_tree(self, field_tree):
         for name, resource in self._reverse_resources.items():
@@ -182,7 +196,8 @@ class RestResource(object):
         for v in self._resources.values():
             fields += v.get_selected_fields()
         for v in self._reverse_resources.values():
-            fields += v.get_selected_fields()
+            if v._fk_field.unique:
+                fields += v.get_selected_fields()
         return fields
 
     def prepare_joins(self, query):
@@ -397,13 +412,29 @@ class RestResource(object):
         """
         return data
 
+    def dedupe_objects(self, objects):
+        seen = set()
+        for obj in objects:
+            if obj._pk not in seen:
+                seen.add(obj._pk)
+                yield obj
+
     def serialize_object(self, obj):
         s = self.get_serializer()
-        return self.prepare_data(obj, self.serialize(s, obj))
+        return self.serialize(s, obj)
+
+    def serialize_object_list(self, objects):
+        s = self.get_serializer()
+        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in objects]
 
     def serialize_query(self, query):
-        s = self.get_serializer()
-        return [self.prepare_data(obj, self.serialize(s, obj)) for obj in query]
+        if self.prefetch:
+            query = query.prefetch(*self.prefetch)
+            objects = self.dedupe_objects(query)
+        else:
+            objects = query
+
+        return self.serialize_object_list(objects)
 
     def serialize(self, serializer, obj):
         data = serializer.serialize_object(obj, self._fields, self._exclude)
@@ -412,11 +443,13 @@ class RestResource(object):
 
     def serialize_reverse_resources(self, obj, data):
         for name, resource in self._reverse_resources.items():
-            sub_obj = getattr(obj, name, None)
-            if sub_obj is not None:
-                data[name] = resource.serialize_object(sub_obj)
+            fk_field = resource._fk_field
+            if fk_field.unique:
+                sub_obj = getattr(obj, name, None)
+                data[fk_field.backref] = resource.serialize_object(sub_obj) if sub_obj else None
             else:
-                data[name] = None
+                data_set = getattr(obj, fk_field.backref)
+                data[fk_field.backref] = resource.serialize_object_list(data_set)
 
         for name, resource in self._resources.items():
             sub_obj = getattr(obj, name, None)
@@ -625,7 +658,8 @@ class RestResource(object):
         # process any filters
         query = self.process_query(query)
 
-        if self.paginate_by or 'limit' in request.args:
+        supports_pagination = not self.prefetch and not self._reverse_resources
+        if supports_pagination and (self.paginate_by or 'limit' in request.args):
             return self.paginated_object_list(query)
 
         return self.send_objects(query)
