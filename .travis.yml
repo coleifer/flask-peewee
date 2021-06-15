@@ -1,9 +1,0 @@
-language: python
-sudo: false
-python:
-  - 3.6
-  - 3.7
-install:
-  - pip install -r flask_peewee/tests/requirements.txt
-  - pip install .
-script: flake8 . && python runtests.py
