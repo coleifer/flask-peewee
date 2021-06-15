@@ -1,0 +1,9 @@
+version: '3.7'
+services:
+  flask_peewee_test_db:
+    container_name: flask_peewee_test_db
+    image: postgres:12.4
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5432:5432"
