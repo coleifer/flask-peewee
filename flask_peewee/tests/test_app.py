@@ -19,7 +19,7 @@ from flask_peewee.rest import RestrictOwnerResource
 
 class FlaskApp(Flask):
     def update_template_context(self, context):
-        ret = super(FlaskApp, self).update_template_context(context)
+        ret = super().update_template_context(context)
         self._template_context.update(context)
         return ret
 

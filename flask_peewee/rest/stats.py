@@ -132,7 +132,7 @@ class StatsMixin(object):
     timezone = "UTC"
 
     def get_urls(self):
-        return super(StatsMixin, self).get_urls() + (
+        return super().get_urls() + (
             ("/stats/", self.require_method(self.stats_all, ["GET"])),
             ("/stats/<path:group_by>/", self.require_method(self.stats, ["GET"])),
             ("/keys/<field>", self.require_method(self.jsonb_keys, ["GET"])),

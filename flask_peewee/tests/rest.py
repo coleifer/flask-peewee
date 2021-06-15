@@ -59,7 +59,7 @@ class RestApiTestCase(FlaskPeeweeTestCase):
 
 class RestApiResourceTestCase(RestApiTestCase):
     def setUp(self):
-        super(RestApiResourceTestCase, self).setUp()
+        super().setUp()
         db.create_tables([
             AModel,
             BModel,
@@ -677,7 +677,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
 class RestApiOwnerAuthTestCase(RestApiTestCase):
     def setUp(self):
-        super(RestApiOwnerAuthTestCase, self).setUp()
+        super().setUp()
         self.create_users()
 
     def create_messages(self):

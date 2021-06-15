@@ -55,7 +55,7 @@ class AdminAuthentication(Authentication):
 
     def authorize(self, resource):
         return (
-            super(AdminAuthentication, self).authorize(resource)
+            super().authorize(resource)
             and current_user.is_authenticated
             and self.verify_user(current_user)
         )
@@ -804,7 +804,7 @@ class RestrictOwnerResource(RestResource):
 
     def save_object(self, instance, raw_data):
         self.set_owner(instance, current_user.id)
-        return super(RestrictOwnerResource, self).save_object(instance, raw_data)
+        return super().save_object(instance, raw_data)
 
 
 class RestAPI(object):
