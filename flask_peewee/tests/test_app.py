@@ -1,4 +1,5 @@
 import datetime
+import os
 
 from flask import Flask, Response
 from flask_login import login_user, logout_user, LoginManager, UserMixin
@@ -6,8 +7,10 @@ from flask_login import login_user, logout_user, LoginManager, UserMixin
 from peewee import (
     BooleanField, CharField, DateTimeField,
     ForeignKeyField, TextField,
-    Model, SqliteDatabase,
+    Model,
 )
+
+from playhouse.postgres_ext import PostgresqlExtDatabase
 
 # flask-peewee bindings
 from flask_peewee.rest import AdminAuthentication
@@ -30,7 +33,13 @@ app.config.from_object('flask_peewee.tests.test_config.Configuration')
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-db = SqliteDatabase(':memory:')
+db = PostgresqlExtDatabase(
+    database=os.environ.get("PG_DB", "postgres"),
+    host=os.environ.get("PG_HOST", "localhost"),
+    port=int(os.environ.get("PG_PORT", 5432)),
+    user=os.environ.get("PG_USER", "postgres"),
+    password=os.environ.get("PG_USER"),
+)
 
 
 class BaseModel(Model):

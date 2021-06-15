@@ -1,5 +1,6 @@
 import json
 
+from unittest.mock import ANY
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import (
     db, AModel, BModel, BDetails, CModel,
@@ -201,21 +202,21 @@ class RestApiResourceTestCase(RestApiTestCase):
         # Test reverse resource serialization
         resp = self.app.get('/api/amodelv2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1', 'c': None}], 'id': 1},
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
+            {'a_field': 'a1', 'bmodel_set': [{'a': ANY, 'b_field': 'b1', 'c': None}], 'id': ANY},
+            {'a_field': 'a2', 'bmodel_set': [{'a': ANY, 'b_field': 'b2', 'c': None}], 'id': ANY},
         ])
 
         # Test filter on reverse resources
         resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
+            {'a_field': 'a2', 'bmodel_set': [{'a': ANY, 'b_field': 'b2', 'c': None}], 'id': ANY},
         ])
 
         # Test unique reverse resources
         self.c2 = CModel.create(c_field='c2', b=self.b2)
         resp = self.app.get('/api/bmodelv2?b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a': 2, 'b_field': 'b2', 'c': {"c_field": "c2", "b": 2}},
+            {'a': ANY, 'b_field': 'b2', 'c': {"c_field": "c2", "b": ANY}},
         ])
 
         # Test empty reverse resources
@@ -634,7 +635,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         # do a filter with an IN operator and multiple IDs
         # https://github.com/coleifer/flask-peewee/issues/112
-        resp = self.app.get('/api/note?id__in=1,2,5')
+        resp = self.app.get('/api/note?id__in=1&id__in=2&id__in=5')
         self.assertAPINotes(
             resp.get_json(),
             Note.filter(id__in=[1, 2, 5]).order_by(Note.id))

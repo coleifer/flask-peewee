@@ -24,6 +24,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: pip deps
-        run: pip install peewee flask flask-login wtforms wtf-peewee
+        run: pip install -r flask_peewee/tests/requirements.txt
       - name: runtests
-        run: python runtests.py
+        run: pytest flask_peewee/tests
+        env:
+          PG_DB: postgres
+          PG_HOST: postgres
+          PG_USER: postgres
+          PG_PASSWORD: postgres
