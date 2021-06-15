@@ -29,6 +29,6 @@ jobs:
         run: pytest flask_peewee/tests
         env:
           PG_DB: postgres
-          PG_HOST: postgres
+          PG_HOST: localhost
           PG_USER: postgres
           PG_PASSWORD: postgres
