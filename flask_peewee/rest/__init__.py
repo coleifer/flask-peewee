@@ -91,6 +91,9 @@ class RestResource(object):
     # whether to allow access to the registry
     expose_registry = False
 
+    # http methods supported for `edit` operations.
+    edit_methods = ('PATCH', 'PUT', 'POST')
+
     prefetch = []
 
     @classmethod
@@ -512,7 +515,6 @@ class RestResource(object):
         return (
             ('', self.require_method(self.api_list, ['GET', 'POST'])),
             ('/<pk>', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
-            ('/<pk>/delete', self.require_method(self.post_delete, ['POST', 'DELETE'])),
             ('/_registry', self.require_method(self.api_registry, ['GET'])),
             ('/_count', self.require_method(self.api_count, ['GET'])),
             ('/_exportable', self.require_method(self.api_exportable, ['GET'])),
@@ -552,13 +554,10 @@ class RestResource(object):
 
         if method == 'GET':
             return self.object_detail(obj)
-        elif method in ('PUT', 'POST'):
+        elif method in self.edit_methods:
             return self.edit(obj)
         elif method == 'DELETE':
             return self.delete(obj)
-
-    def post_delete(self, pk):
-        return self.api_detail(pk, 'DELETE')
 
     def get_fields(self, node, prefix=[]):
         result = [{

@@ -234,6 +234,9 @@ class RestApiResourceTestCase(RestApiTestCase):
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
 
+    def delete_to(self, url):
+        return self.app.delete(url)
+
     def test_resources_create(self):
         # a model
         resp = self.post_to('/api/amodel', {'a_field': 'ax'})
@@ -500,21 +503,21 @@ class RestApiResourceTestCase(RestApiTestCase):
     def test_delete(self):
         self.create_test_models()
 
-        resp = self.post_to('/api/cmodel/%s/delete' % self.c2.id, {})
+        resp = self.delete_to('/api/cmodel/%s' % self.c2.id)
         self.assertEqual(resp.get_json(), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 1)
         self.assertEqual(BModel.select().count(), 2)
         self.assertEqual(AModel.select().count(), 2)
 
-        resp = self.post_to('/api/amodel/%s/delete' % self.a1.id, {})
+        resp = self.delete_to('/api/amodel/%s' % self.a1.id)
         self.assertEqual(resp.get_json(), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 0)
         self.assertEqual(BModel.select().count(), 1)
         self.assertEqual(AModel.select().count(), 1)
 
-        resp = self.post_to('/api/emodel/%s/delete' % self.e1.id, {})
+        resp = self.delete_to('/api/emodel/%s' % self.e1.id)
         self.assertEqual(json.loads(resp.data.decode('utf8')), {'deleted': 1})
 
         self.assertEqual(EModel.select().count(), 1)
