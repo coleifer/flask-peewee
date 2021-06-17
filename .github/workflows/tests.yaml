@@ -1,0 +1,36 @@
+name: Tests
+on: [push]
+jobs:
+  tests:
+    name: ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: pip deps
+        run: pip install -r flask_peewee/tests/requirements.txt
+      - name: runtests
+        run: pytest flask_peewee/tests
+        env:
+          PG_DB: postgres
+          PG_HOST: localhost
+          PG_USER: postgres
+          PG_PASSWORD: postgres

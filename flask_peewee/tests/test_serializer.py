@@ -6,7 +6,7 @@ from flask_peewee.tests.test_app import User
 
 class SerializerTestCase(FlaskPeeweeTestCase):
     def setUp(self):
-        super(SerializerTestCase, self).setUp()
+        super().setUp()
         self.s = Serializer()
         self.d = Deserializer()
 

@@ -21,7 +21,9 @@ requirements:
 * `peewee <https://github.com/coleifer/peewee>`_
 * `wtforms <https://github.com/wtforms/wtforms>`_
 * `wtf-peewee <https://github.com/coleifer/wtf-peewee>`_
-* python 3.5 or greater
+* `flask-login <https://github.com/maxcountryman/flask-login>`_
+* `pytest <https://github.com/pytest-dev/pytest>`_
+* python 3.6 or greater
 
 
 Check out the original `documentation <https://flask-peewee.readthedocs.io/>`_.

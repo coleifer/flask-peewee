@@ -3,7 +3,7 @@ import json
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import (
     db, AModel, BModel, BDetails, CModel,
-    DModel, EModel, FModel, Message,
+    DModel, EModel, FModel, JModel, Message,
     Note, User,
 )
 
@@ -26,6 +26,16 @@ class RestApiTestCase(FlaskPeeweeTestCase):
             'join_date': self.conv_date(user.join_date),
             'admin': user.admin,
             'id': user.id,
+        })
+
+    def assertAPIJModels(self, json_data, jmodels):
+        for json_item, jmodel in zip(json_data['objects'], jmodels):
+            self.assertAPIJModel(json_item, jmodel)
+
+    def assertAPIJModel(self, json_data, jmodel):
+        self.assertEqual(json_data, {
+            'id': jmodel.id,
+            'j_field': jmodel.j_field,
         })
 
     def assertAPIUsers(self, json_data, users):
@@ -59,7 +69,7 @@ class RestApiTestCase(FlaskPeeweeTestCase):
 
 class RestApiResourceTestCase(RestApiTestCase):
     def setUp(self):
-        super(RestApiResourceTestCase, self).setUp()
+        super().setUp()
         db.create_tables([
             AModel,
             BModel,
@@ -68,7 +78,9 @@ class RestApiResourceTestCase(RestApiTestCase):
             DModel,
             EModel,
             FModel,
+            JModel,
         ])
+        JModel.delete().execute()
         FModel.delete().execute()
         EModel.delete().execute()
         DModel.delete().execute()
@@ -89,6 +101,7 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.e2 = EModel.create(e_field='e2')
         self.f1 = FModel.create(f_field='f1', e=self.e1)
         self.f2 = FModel.create(f_field='f2')
+        self.j1 = JModel.create(j_field={'foo': {'star': 'far'}, 'bar': 'car', 'n': None})
 
     def test_resources_list_detail(self):
         self.create_test_models()
@@ -155,6 +168,12 @@ class RestApiResourceTestCase(RestApiTestCase):
             'e': None,
         })
 
+        resp = self.app.get('/api/jmodel/%s' % self.j1.id)
+        self.assertEqual(resp.get_json(), {
+            'id': self.j1.id,
+            'j_field': {'foo': {'star': 'far'}, 'bar': 'car', 'n': None},
+        })
+
     def test_resources_count(self):
         self.create_test_models()
 
@@ -201,21 +220,21 @@ class RestApiResourceTestCase(RestApiTestCase):
         # Test reverse resource serialization
         resp = self.app.get('/api/amodelv2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a1', 'bmodel_set': [{'a': 1, 'b_field': 'b1', 'c': None}], 'id': 1},
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
+            {'a_field': 'a1', 'bmodel_set': [{'a': self.a1.id, 'b_field': 'b1', 'c': None}], 'id': self.a1.id},
+            {'a_field': 'a2', 'bmodel_set': [{'a': self.a2.id, 'b_field': 'b2', 'c': None}], 'id': self.a2.id},
         ])
 
         # Test filter on reverse resources
         resp = self.app.get('/api/amodelv2?bmodel__b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a_field': 'a2', 'bmodel_set': [{'a': 2, 'b_field': 'b2', 'c': None}], 'id': 2},
+            {'a_field': 'a2', 'bmodel_set': [{'a': self.a2.id, 'b_field': 'b2', 'c': None}], 'id': self.a2.id},
         ])
 
         # Test unique reverse resources
         self.c2 = CModel.create(c_field='c2', b=self.b2)
         resp = self.app.get('/api/bmodelv2?b_field=b2')
         self.assertEqual(resp.get_json(), [
-            {'a': 2, 'b_field': 'b2', 'c': {"c_field": "c2", "b": 2}},
+            {'a': self.a2.id, 'b_field': 'b2', 'c': {"c_field": "c2", "b": self.b2.id}},
         ])
 
         # Test empty reverse resources
@@ -233,6 +252,9 @@ class RestApiResourceTestCase(RestApiTestCase):
 
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
+
+    def delete_to(self, url):
+        return self.app.delete(url)
 
     def test_resources_create(self):
         # a model
@@ -500,21 +522,21 @@ class RestApiResourceTestCase(RestApiTestCase):
     def test_delete(self):
         self.create_test_models()
 
-        resp = self.post_to('/api/cmodel/%s/delete' % self.c2.id, {})
+        resp = self.delete_to('/api/cmodel/%s' % self.c2.id)
         self.assertEqual(resp.get_json(), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 1)
         self.assertEqual(BModel.select().count(), 2)
         self.assertEqual(AModel.select().count(), 2)
 
-        resp = self.post_to('/api/amodel/%s/delete' % self.a1.id, {})
+        resp = self.delete_to('/api/amodel/%s' % self.a1.id)
         self.assertEqual(resp.get_json(), {'deleted': 1})
 
         self.assertEqual(CModel.select().count(), 0)
         self.assertEqual(BModel.select().count(), 1)
         self.assertEqual(AModel.select().count(), 1)
 
-        resp = self.post_to('/api/emodel/%s/delete' % self.e1.id, {})
+        resp = self.delete_to('/api/emodel/%s' % self.e1.id)
         self.assertEqual(json.loads(resp.data.decode('utf8')), {'deleted': 1})
 
         self.assertEqual(EModel.select().count(), 1)
@@ -523,6 +545,120 @@ class RestApiResourceTestCase(RestApiTestCase):
         f_obj = FModel.get(id=self.f1.id)
         self.assertEqual(f_obj.e, None)
 
+    def test_json_filtering(self):
+        # test that filtering on JSON fields works
+        resp = self.app.get('/api/jmodel?j_field.bar=car')
+        self.assertAPIJModels(
+            resp.get_json(),
+            JModel.select().where(JModel.j_field['bar'] == 'car').order_by(JModel.id))
+
+    def test_json_value(self):
+        self.create_test_models()
+        # test wrong pk
+        resp = self.app.get('/api/jmodel/9000/j_field/new')
+        self.assertEqual(resp.status_code, 404)
+
+        # test wrong field name
+        resp = self.app.get('/api/jmodel/%s/no_field/new' % self.j1.id)
+        self.assertEqual(resp.status_code, 404)
+
+        url = '/api/jmodel/%s' % self.j1.id
+
+        resp = self.app.get(url + '/j_field/foo')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json() == {'star': 'far'}
+
+        resp = self.app.get(url + '/j_field/foo/star')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json() == 'far'
+
+        resp = self.app.get(url + '/j_field/foo/tzar')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get(url + '/j_field/n')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json() == None
+
+        resp = self.app.get(url + '/j_field/foo/star/car')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get(url + '/j_field/foo/star/car')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get(url + '/j_field/foo/star')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_json_edit(self):
+        self.create_test_models()
+        # test wrong pk
+        resp = self.app.put('/api/jmodel/9000/j_field/new', json='value')
+        self.assertEqual(resp.status_code, 404)
+
+        # test wrong field name
+        resp = self.app.put('/api/jmodel/%s/no_field/new' % self.j1.id, json='value')
+        self.assertEqual(resp.status_code, 404)
+
+        url = '/api/jmodel/%s' % self.j1.id
+        resp = self.app.put(url + '/j_field/new', json='value')
+        self.assertEqual(resp.status_code, 200)
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert resp.get_json() == 'value'
+        assert j1.j_field == {'foo': {'star': 'far'}, 'bar': 'car', 'n': None, 'new': 'value'}
+
+        resp = self.app.put(url + '/j_field/foo', json={'planet': 'mars'})
+        self.assertEqual(resp.status_code, 200)
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert resp.get_json() == {'planet': 'mars'}
+        assert j1.j_field == {'foo': {'planet': 'mars'}, 'bar': 'car', 'n': None, 'new': 'value'}
+
+        # test -p ness
+        resp = self.app.put(url + '/j_field/fast/cars', json={'toycar': 1})
+        self.assertEqual(resp.status_code, 200)
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert resp.get_json() == {'toycar': 1}
+        assert j1.j_field['fast'] == {'cars': {'toycar': 1}}
+
+    def test_json_delete(self):
+        self.create_test_models()
+        # test wrong pk
+        resp = self.app.delete('/api/jmodel/9000/j_field/foo')
+        self.assertEqual(resp.status_code, 404)
+
+        # test wrong field name
+        resp = self.app.delete('/api/jmodel/%s/no_field/foo' % self.j1.id)
+        self.assertEqual(resp.status_code, 404)
+
+        url = '/api/jmodel/%s' % self.j1.id
+        resp = self.app.delete(url + '/j_field')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.delete(url + '/j_field/foo/star/far/car')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json()['deleted'] is False
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert j1.j_field == self.j1.j_field
+
+        resp = self.app.delete(url + '/j_field/foo/star')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json()['deleted'] is True
+
+        resp = self.app.delete(url + '/j_field/foo')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json()['deleted'] is True
+
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert j1.j_field == {'bar': 'car', 'n': None}
+
+        resp = self.app.delete(url + '/j_field/n')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json()['deleted'] is True
+
+        j1 = JModel.get(JModel.id == self.j1.id)
+        assert j1.j_field == {'bar': 'car'}
+
+        resp = self.app.delete(url + '/j_field/foo')
+        self.assertEqual(resp.status_code, 200)
+        assert resp.get_json()['deleted'] is False
 
 class RestApiBasicTestCase(RestApiTestCase):
     def get_users_and_notes(self):
@@ -631,7 +767,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         # do a filter with an IN operator and multiple IDs
         # https://github.com/coleifer/flask-peewee/issues/112
-        resp = self.app.get('/api/note?id__in=1,2,5')
+        resp = self.app.get('/api/note?id__in=1&id__in=2&id__in=5')
         self.assertAPINotes(
             resp.get_json(),
             Note.filter(id__in=[1, 2, 5]).order_by(Note.id))
@@ -674,7 +810,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
 class RestApiOwnerAuthTestCase(RestApiTestCase):
     def setUp(self):
-        super(RestApiOwnerAuthTestCase, self).setUp()
+        super().setUp()
         self.create_users()
 
     def create_messages(self):

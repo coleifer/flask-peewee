@@ -1,10 +1,13 @@
 # config
 
 
-class Configuration(object):
+class Configuration:
     DATABASE = {
-        'name': 'test.db',
-        'engine': 'peewee.SqliteDatabase',
+        'name': 'postgres',
+        'user': 'postgres',
+        'host': 'localhost',
+        'port': '5432',
+        'engine': 'playhouse.postgres_ext.PostgresqlExtDatabase',
     }
     DEBUG = True
     SECRET_KEY = 'shhhh'

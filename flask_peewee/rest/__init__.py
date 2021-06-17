@@ -30,12 +30,16 @@ DJANGO_MAP.update(
 )
 
 
-class BadRequestException(Exception):
+class BadRequest(Exception):
     """ Thrown if there is an error while parsing the request. """
 
 
-class UserRequiredException(Exception):
+class UserRequired(Exception):
     """ Thrown if a user needs to be provided to complete the request. """
+
+
+class NotAuthorized(Exception):
+    """ Thrown if the action is not authorized. """
 
 
 class Authentication(object):
@@ -44,22 +48,16 @@ class Authentication(object):
 
     def authorize(self, resource):
         if request.method in self.protected_methods:
-            return False
-
-        return True
-
+            raise NotAuthorized('Auth Failed')
 
 class AdminAuthentication(Authentication):
     def verify_user(self, user):
         return user.admin
 
     def authorize(self, resource):
-        return (
-            super(AdminAuthentication, self).authorize(resource)
-            and current_user.is_authenticated
-            and self.verify_user(current_user)
-        )
-
+        super().authorize(resource)
+        if not current_user.is_authenticated or not self.verify_user(current_user):
+            raise NotAuthorized('Auth Failed')
 
 class RestResource(object):
     paginate_by = 20
@@ -91,6 +89,9 @@ class RestResource(object):
     # whether to allow access to the registry
     expose_registry = False
 
+    # http methods supported for `edit` operations.
+    edit_methods = ('PATCH', 'PUT', 'POST')
+
     prefetch = []
 
     @classmethod
@@ -101,7 +102,7 @@ class RestResource(object):
     def user(self):
         if hasattr(self, '_user'):
             return self._user
-        raise UserRequiredException
+        raise UserRequired
 
     def __init__(self, rest_api, model, authentication, allowed_methods=None):
         self.api = rest_api
@@ -109,7 +110,7 @@ class RestResource(object):
         self.pk = model._meta.primary_key
 
         self.authentication = authentication
-        self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
+        self.allowed_methods = allowed_methods or ['GET', 'PATCH', 'POST', 'PUT', 'DELETE']
 
         self.aliases = defaultdict(dict)
 
@@ -490,32 +491,35 @@ class RestResource(object):
         res.headers['Expires'] = 0
         return res
 
-    def require_method(self, func, methods):
-        """ Overriden to add custom exception handling. """
+    def protect(self, func, methods):
         @functools.wraps(func)
         def inner(*args, **kwargs):
             if request.method not in methods:
                 return self.response_bad_method()
 
             try:
+                self.authorize()
                 db = self.model._meta.database
                 return db.atomic()(func)(*args, **kwargs)
+
             except DoesNotExist as err:
                 return self.response_api_exception({'error': str(err)})
-            except UserRequiredException:
+            except UserRequired:
                 return self.response_api_exception({'error': 'user required'})
-            except BadRequestException:
+            except NotAuthorized as err:
+                return self.response_api_exception({'error': str(err)}, status=401)
+            except BadRequest:
                 return self.response_bad_request()
         return inner
 
     def get_urls(self):
         return (
-            ('', self.require_method(self.api_list, ['GET', 'POST'])),
-            ('/<pk>', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
-            ('/<pk>/delete', self.require_method(self.post_delete, ['POST', 'DELETE'])),
-            ('/_registry', self.require_method(self.api_registry, ['GET'])),
-            ('/_count', self.require_method(self.api_count, ['GET'])),
-            ('/_exportable', self.require_method(self.api_exportable, ['GET'])),
+            ('', self.protect(self.api_list, ['GET', 'POST'])),
+            ('/<pk>', self.protect(self.api_detail, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])),
+            ('/<pk>/<field>/<path:path>', self.protect(self.api_detail_json, ['GET', 'PUT', 'DELETE'])),
+            ('/_registry', self.protect(self.api_registry, ['GET'])),
+            ('/_count', self.protect(self.api_count, ['GET'])),
+            ('/_exportable', self.protect(self.api_exportable, ['GET'])),
         )
 
     def check_get(self, obj=None):
@@ -527,15 +531,22 @@ class RestResource(object):
     def check_put(self, obj):
         return True
 
+    def check_patch(self, obj):
+        return True
+
     def check_delete(self, obj):
-        return False
+        return True
+
+    @property
+    def check_http_method(self):
+        return getattr(self, 'check_%s' % request.method.lower())
 
     def save_object(self, instance, raw_data):
         instance.save()
         return instance
 
     def api_list(self):
-        if not getattr(self, 'check_%s' % request.method.lower())():
+        if not self.check_http_method():
             return self.response_forbidden()
 
         if request.method == 'GET':
@@ -543,22 +554,18 @@ class RestResource(object):
         elif request.method == 'POST':
             return self.create()
 
-    def api_detail(self, pk, method=None):
+    def api_detail(self, pk):
         obj = get_object_or_404(self.get_query(), self.pk == pk)
 
-        method = method or request.method
-        if not getattr(self, 'check_%s' % method.lower())(obj):
+        if not self.check_http_method(obj):
             return self.response_forbidden()
 
-        if method == 'GET':
+        if request.method == 'GET':
             return self.object_detail(obj)
-        elif method in ('PUT', 'POST'):
+        elif request.method in self.edit_methods:
             return self.edit(obj)
-        elif method == 'DELETE':
+        elif request.method == 'DELETE':
             return self.delete(obj)
-
-    def post_delete(self, pk):
-        return self.api_detail(pk, 'DELETE')
 
     def get_fields(self, node, prefix=[]):
         result = [{
@@ -580,14 +587,14 @@ class RestResource(object):
         }
 
     def api_registry(self):
-        if not getattr(self, 'check_%s' % request.method.lower())():
+        if not self.check_http_method():
             return self.response_forbidden()
         if not self.expose_registry:
             return self.response_forbidden()
         return self.get_registry()
 
     def api_count(self):
-        if not getattr(self, 'check_%s' % request.method.lower())():
+        if not self.check_http_method():
             return self.response_forbidden()
 
         query = self.get_query()
@@ -596,7 +603,7 @@ class RestResource(object):
         return self.response({'count': query.count()})
 
     def api_exportable(self):
-        if not getattr(self, 'check_%s' % request.method.lower())():
+        if not self.check_http_method():
             return self.response_forbidden()
 
         return self.response({
@@ -605,6 +612,30 @@ class RestResource(object):
                 'name': h
             } for h, c, _ in self.export_columns]
         })
+
+    def api_detail_json(self, pk, field, path):
+        path = path.split('/')
+
+        if field not in self.editable_json_fields:
+            return Response({'error': 'Not Found'}, 404)
+
+        obj = get_object_or_404(self.get_query(), self.pk == pk)
+        if not self.check_http_method(obj):
+            return self.response_forbidden()
+
+        if request.method == 'GET':
+            return self.json_value(obj, field, path)
+
+        # Fetch the object again, this time for update since
+        # the previous query may have included nullable outer joins
+        # which cannot be used with SELECT FOR UPDATE.
+        obj = self.model.select().where(self.pk == pk).for_update(True).get()
+
+        if request.method == 'PUT':
+            return self.json_edit(obj, field, path)
+
+        if request.method == 'DELETE':
+            return self.json_delete(obj, field, path)
 
     def apply_ordering(self, query):
         ordering = request.args.get('ordering') or ''
@@ -739,12 +770,12 @@ class RestResource(object):
             data = json.loads(data.decode())
         except ValueError:
             if not request.form:
-                raise BadRequestException
-            data = MultiDict(request.form)
+                raise BadRequest
 
-        for k, v in data.items():
-            if k in self.escaped_fields:
-                data[k] = v and cgi.escape(v)
+            data = MultiDict(request.form)
+            for k, v in data.items():
+                if k in self.escaped_fields:
+                    data[k] = v and cgi.escape(v)
 
         return data
 
@@ -771,6 +802,45 @@ class RestResource(object):
         res = obj.delete_instance(recursive=self.delete_recursive)
         return self.response({'deleted': res})
 
+    def json_value(self, obj, field_name, path):
+        value = getattr(obj, field_name)
+        for key in path:
+            if not isinstance(value, dict) or key not in value:
+                return Response({'error': 'Not Found'}, 404)
+            value = value[key]
+        return self.response(value)
+
+    def json_edit(self, obj, field_name, path):
+        value = getattr(obj, field_name)
+        for key in path[:-1]:
+            if key not in value or not isinstance(value[key], dict):
+                value[key] = {}
+            value = value[key]
+
+        key = path[-1]
+        value[key] = self.read_request_data()
+        obj.save()
+        return self.response(value[key])
+
+    def json_delete(self, obj, field_name, path):
+        value = getattr(obj, field_name)
+        for key in path[:-1]:
+            if key not in value or not isinstance(value[key], dict):
+                value[key] = {}
+            value = value[key]
+
+        key = path[-1]
+        deleted = False
+        if key in value:
+            del value[key]
+            deleted = True
+
+        if deleted:
+            obj.save()
+
+        return self.response({'deleted': deleted})
+
+
 
 class ReadOnlyResource(RestResource):
 
@@ -778,6 +848,9 @@ class ReadOnlyResource(RestResource):
         return False
 
     def check_put(self, obj):
+        return False
+
+    def check_patch(self, obj):
         return False
 
 
@@ -800,12 +873,15 @@ class RestrictOwnerResource(RestResource):
     def check_put(self, obj):
         return self.validate_owner(obj)
 
+    def check_patch(self, obj):
+        return self.validate_owner(obj)
+
     def check_delete(self, obj):
         return self.validate_owner(obj)
 
     def save_object(self, instance, raw_data):
         self.set_owner(instance, current_user.id)
-        return super(RestrictOwnerResource, self).save_object(instance, raw_data)
+        return super().save_object(instance, raw_data)
 
 
 class RestAPI(object):
@@ -824,14 +900,6 @@ class RestAPI(object):
         self._registry.append(resource)
         return resource
 
-    def auth_wrapper(self, func, provider):
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            if not provider.authorize():
-                return Response({'error': 'Auth Failed'}, 401)
-            return func(*args, **kwargs)
-        return inner
-
     def get_blueprint(self, blueprint_name):
         return Blueprint(blueprint_name, __name__)
 
@@ -849,7 +917,7 @@ class RestAPI(object):
                 self.blueprint.add_url_rule(
                     full_url,
                     '%s_%s' % (api_name, callback.__name__),
-                    self.auth_wrapper(callback, provider),
+                    callback,
                     methods=provider.allowed_methods,
                     strict_slashes=True,
                 )

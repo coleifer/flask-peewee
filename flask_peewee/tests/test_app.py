@@ -1,4 +1,5 @@
 import datetime
+import os
 
 from flask import Flask, Response
 from flask_login import login_user, logout_user, LoginManager, UserMixin
@@ -6,8 +7,10 @@ from flask_login import login_user, logout_user, LoginManager, UserMixin
 from peewee import (
     BooleanField, CharField, DateTimeField,
     ForeignKeyField, TextField,
-    Model, SqliteDatabase,
+    Model,
 )
+
+from playhouse.postgres_ext import PostgresqlExtDatabase, BinaryJSONField
 
 # flask-peewee bindings
 from flask_peewee.rest import AdminAuthentication
@@ -19,7 +22,7 @@ from flask_peewee.rest import RestrictOwnerResource
 
 class FlaskApp(Flask):
     def update_template_context(self, context):
-        ret = super(FlaskApp, self).update_template_context(context)
+        ret = super().update_template_context(context)
         self._template_context.update(context)
         return ret
 
@@ -30,7 +33,13 @@ app.config.from_object('flask_peewee.tests.test_config.Configuration')
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-db = SqliteDatabase(':memory:')
+db = PostgresqlExtDatabase(
+    database=os.environ.get("PG_DB", "postgres"),
+    host=os.environ.get("PG_HOST", "localhost"),
+    port=int(os.environ.get("PG_PORT", 5432)),
+    user=os.environ.get("PG_USER", "postgres"),
+    password=os.environ.get("PG_USER"),
+)
 
 
 class BaseModel(Model):
@@ -113,6 +122,9 @@ class FModel(BaseModel):
     f_field = CharField()
 
 
+class JModel(BaseModel):
+    j_field = BinaryJSONField(default=None)
+
 class DeletableResource(RestResource):
 
     def check_delete(self, obj):
@@ -146,6 +158,9 @@ class EResource(DeletableResource):
 class FResource(DeletableResource):
     include_resources = {'e': EResource}
 
+
+class JResource(DeletableResource):
+    editable_json_fields = ('j_field', )
 
 class V2Resource(DeletableResource):
 
@@ -181,6 +196,7 @@ api.register(CModel, CResource, auth=dummy_auth)
 
 api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
+api.register(JModel, JResource, auth=dummy_auth)
 
 api.register(AModel, AResourceV2, auth=dummy_auth)
 api.register(BModel, BResourceV2, auth=dummy_auth)

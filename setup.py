@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 requirements = ['Flask', 'werkzeug', 'jinja2', 'peewee>=3.0.0', 'wtforms', 'wtf-peewee']
 setup(
     name='flask-peewee',
-    version='3.0.3',
+    version='3.0.4-propel',
     url='http://github.com/coleifer/flask-peewee/',
     license='MIT',
     author='Charles Leifer',
@@ -35,5 +35,4 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
-    test_suite='runtests.runtests',
 )
