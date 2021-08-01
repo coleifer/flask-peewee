@@ -157,6 +157,7 @@ class EResource(DeletableResource):
 
 class FResource(DeletableResource):
     include_resources = {'e': EResource}
+    enable_row_count = False
 
 
 class JResource(DeletableResource):

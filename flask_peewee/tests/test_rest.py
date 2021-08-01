@@ -181,6 +181,16 @@ class RestApiResourceTestCase(RestApiTestCase):
         resp = self.app.get('/api/amodel/_count')
         self.assertEqual(resp.get_json()['count'], 2)
 
+        resp = self.app.get('/api/amodel')
+        self.assertEqual(resp.get_json()['meta']['count'], 2)
+
+        # fmodel
+        resp = self.app.get('/api/fmodel/_count')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get('/api/fmodel')
+        self.assertEqual(resp.get_json()['meta']['count'], None)
+
     def test_resources_exportable(self):
         self.create_test_models()
 
