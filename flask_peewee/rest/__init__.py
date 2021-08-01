@@ -503,10 +503,7 @@ class RestResource(object):
                 return self.response_bad_method()
 
             try:
-                self.authorize()
-                db = self.model._meta.database
-                return db.atomic()(func)(*args, **kwargs)
-
+                return self.run_protected_route(func, *args, **kwargs)
             except DoesNotExist as err:
                 return self.response_api_exception({'error': str(err)})
             except UserRequired:
@@ -516,6 +513,11 @@ class RestResource(object):
             except BadRequest:
                 return self.response_bad_request()
         return inner
+
+    def run_protected_route(self, func, *args, **kwargs):
+        self.authorize()
+        db = self.model._meta.database
+        return db.atomic()(func)(*args, **kwargs)
 
     def get_urls(self):
         return (
