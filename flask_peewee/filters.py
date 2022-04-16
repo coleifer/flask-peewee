@@ -10,7 +10,6 @@ from wtforms import widgets
 
 from flask_peewee.forms import BaseModelConverter
 from flask_peewee._compat import reduce
-from flask_peewee._wtforms_compat import TextField as WTextField
 
 
 class QueryFilter(object):
@@ -389,5 +388,5 @@ class FilterModelConverter(BaseModelConverter):
     def __init__(self, *args, **kwargs):
         super(FilterModelConverter, self).__init__(*args, **kwargs)
         self.defaults = dict(self.defaults)
-        self.defaults[TextField] = WTextField
+        self.defaults[TextField] = fields.StringField
         self.defaults[DateTimeField] = fields.DateTimeField
