@@ -47,7 +47,7 @@ class AdminTestCase(BaseAdminTestCase):
         # check login redirect
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp.headers['location'], 'http://localhost/accounts/login/?next=%2Fadmin%2F')
+        self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fadmin%2F'))
 
         # try logging in as a normal user, get a 403 forbidden
         resp = self.app.post('/accounts/login/', data={
@@ -56,7 +56,7 @@ class AdminTestCase(BaseAdminTestCase):
             'next': '/admin/',
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp.headers['location'], 'http://localhost/admin/')
+        self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 403)
@@ -71,7 +71,7 @@ class AdminTestCase(BaseAdminTestCase):
             'next': '/admin/',
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp.headers['location'], 'http://localhost/admin/')
+        self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
         resp = self.app.get('/admin/')
         self.assertEqual(resp.status_code, 200)

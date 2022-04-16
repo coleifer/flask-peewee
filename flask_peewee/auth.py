@@ -13,12 +13,12 @@ from flask import url_for
 from peewee import *
 from wtforms import Form
 from wtforms import PasswordField
-from wtforms import TextField
-from wtforms import validators
 
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
+from flask_peewee._wtforms_compat import TextField as WTextField # WTForms compat.
+from flask_peewee._wtforms_compat import DataRequired
 
 
 current_dir = os.path.dirname(__file__)
@@ -26,8 +26,8 @@ current_dir = os.path.dirname(__file__)
 
 
 class LoginForm(Form):
-    username = TextField('Username', validators=[validators.Required()])
-    password = PasswordField('Password', validators=[validators.Required()])
+    username = WTextField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
 
 
 class BaseUser(object):
