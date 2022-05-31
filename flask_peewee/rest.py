@@ -318,7 +318,7 @@ class RestResource(object):
         return True
 
     def save_object(self, instance, raw_data):
-        instance.save()
+        instance.save(force_insert=(instance.__class__.mro()[0]._meta.primary_key.__class__ != AutoField))
         return instance
 
     def api_list(self):
