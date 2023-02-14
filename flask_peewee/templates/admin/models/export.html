@@ -25,7 +25,7 @@ PARAMS:
     </div>
   </div>
 
-  <form action="./?{{ request.query_string }}" class="form-horizontal" method="post">
+  <form action="./?{{ request.query_string.decode('utf8') }}" class="form-horizontal" method="post">
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Select fields to export</legend>
@@ -56,7 +56,7 @@ PARAMS:
 
       <div class="form-actions">
         <button class="btn btn-primary" type="submit">Export JSON</button>
-        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string }}">Cancel</a>
+        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">Cancel</a>
       </div>
     </fieldset>
   </form>
