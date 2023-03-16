@@ -429,8 +429,7 @@ class RestResource(object):
             return json.loads(request.data.decode('utf-8'))
         elif request.form.get('data'):
             return json.loads(request.form['data'])
-        else:
-            return dict(request.form)
+        return dict(request.form)
 
     def create(self):
         try:
