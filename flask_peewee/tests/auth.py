@@ -209,7 +209,9 @@ class AuthTestCase(FlaskPeeweeTestCase):
         with self.flask_app.test_client() as c:
             resp = c.get('/private/')
             self.assertEqual(resp.status_code, 302)
-            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fprivate%2F'))
+            self.assertTrue(resp.headers['location'].endswith((
+                '/accounts/login/?next=%2Fprivate%2F',
+                '/accounts/login/?next=/private/')))
 
             self.login('normal', 'normal', c)
 
@@ -231,13 +233,17 @@ class AuthTestCase(FlaskPeeweeTestCase):
         with self.flask_app.test_client() as c:
             resp = c.get('/secret/')
             self.assertEqual(resp.status_code, 302)
-            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fsecret%2F'))
+            self.assertTrue(resp.headers['location'].endswith((
+                '/accounts/login/?next=%2Fsecret%2F',
+                '/accounts/login/?next=/secret/')))
 
             self.login('normal', 'normal', c)
 
             resp = c.get('/secret/')
             self.assertEqual(resp.status_code, 302)
-            self.assertTrue(resp.headers['location'].endswith('/accounts/login/?next=%2Fsecret%2F'))
+            self.assertTrue(resp.headers['location'].endswith((
+                '/accounts/login/?next=%2Fsecret%2F',
+                '/accounts/login/?next=/secret/')))
             self.assertEqual(auth.get_logged_in_user(), self.normal)
 
             self.login('admin', 'admin', c)
