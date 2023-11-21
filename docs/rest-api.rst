@@ -99,6 +99,8 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
         "model": "message", 
         "next": "", 
         "page": 1, 
+	"num_pages" 1, 
+	"num_results": 2, 
         "previous": ""
       }, 
       "objects": [
@@ -144,6 +146,8 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
         "model": "user", 
         "next": "", 
         "page": 1, 
+	"num_pages": 1, 
+	"num_results": 2, 
         "previous": ""
       }, 
       "objects": [
@@ -387,6 +391,8 @@ This call will return only messages by the ``User`` with id=2:
         "model": "message", 
         "next": "", 
         "page": 1, 
+	"num_pages": 1, 
+	"num_results": 1, 
         "previous": ""
       }, 
       "objects": [
@@ -412,6 +418,8 @@ Joins can be traversed using the django double-underscore notation:
         "model": "message", 
         "next": "", 
         "page": 1, 
+	"num_pages": 1, 
+	"num_results": 2, 
         "previous": ""
       }, 
       "objects": [
@@ -443,6 +451,8 @@ It is also supported to use different comparison operators with the same double-
         "model": "user",
         "next": "",
         "page": 1,
+	"num_pages": 1,
+	"num_results": 1,
         "previous": ""
         }, 
     "objects": [{
@@ -482,7 +492,7 @@ can specify a ``limit`` in the querystring.
 `/api/message/?limit=2`
 
 In the "meta" section of the response, URIs for the "next" and "previous" sets
-of results are available:
+of results, the total number of results, and total number of pages are available:
 
 .. code-block:: javascript
 
@@ -490,5 +500,7 @@ of results are available:
       model: "message"
       next: "/api/message/?limit=1&page=3"
       page: 2
+      num_pages: 3,
+      num_results: 3,
       previous: "/api/message/?limit=1&page=1"
     }

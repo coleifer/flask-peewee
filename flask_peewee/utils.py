@@ -54,6 +54,9 @@ class PaginatedQuery(object):
                 float(self.query.count()) / self.paginate_by))
         return self._get_pages
 
+    def get_count(self):
+        return self.query.count()
+
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
 
