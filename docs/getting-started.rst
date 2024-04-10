@@ -153,9 +153,10 @@ After cleaning up the imports and declarations, we have something like the follo
 
     import datetime
     from flask import Flask
+
+    from peewee import *
     from flask_peewee.auth import Auth
     from flask_peewee.db import Database
-    from peewee import *
 
     # configure our database
     DATABASE = {
