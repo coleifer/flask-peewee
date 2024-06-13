@@ -23,8 +23,7 @@ class Serializer(object):
             return value._pk
         elif isinstance(value, uuid.UUID):
             return str(value)
-        else:
-            return value
+        return value
 
     def clean_data(self, data):
         for key, value in data.items():
