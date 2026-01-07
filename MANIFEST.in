@@ -4,3 +4,5 @@ recursive-include docs *
 recursive-include example *
 recursive-include flask_peewee *
 prune docs/_build
+recursive-exclude * __pycache__/
+global-exclude *.pyc

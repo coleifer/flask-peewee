@@ -32,9 +32,9 @@ from flask_peewee.utils import object_list
 
 
 class TestFlask(Flask):
-    def update_template_context(self, ctx, context):
-        ret = super(TestFlask, self).update_template_context(ctx, context)
-        self._template_context.update(context)
+    def update_template_context(self, *args):
+        ret = super(TestFlask, self).update_template_context(*args)
+        self._template_context.update(args[-1])
         return ret
 
 

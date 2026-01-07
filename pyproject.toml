@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flask-peewee"
+dynamic = ["version"]
+description = "flask admin, api, auth, forms and more with peewee"
+dependencies = [
+    "flask",
+    "peewee>=3.0.0",
+]
+readme = "README.rst"
+authors = [
+    { name = "Charles Leifer", email = "coleifer@gmail.com" }
+]
+classifiers = [
+    "Environment :: Web Environment",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Repository = "https://github.com/coleifer/flask-peewee"
+Documentation = "https://flask-peewee.readthedocs.io/"
+
+[tool.setuptools.packages.find]
+include = ["flask_peewee*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "flask_peewee.__version__" }
