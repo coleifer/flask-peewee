@@ -32,8 +32,8 @@ from flask_peewee.utils import object_list
 
 
 class TestFlask(Flask):
-    def update_template_context(self, context):
-        ret = super(TestFlask, self).update_template_context(context)
+    def update_template_context(self, ctx, context):
+        ret = super(TestFlask, self).update_template_context(ctx, context)
         self._template_context.update(context)
         return ret
 
