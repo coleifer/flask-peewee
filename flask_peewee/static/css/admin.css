@@ -24,7 +24,7 @@ form.modeladmin-filters select { margin-right: 10px; }
 div.form-wrapper { width: 100%; overflow: auto; }
 
 form textarea { height: 150px; }
-form input[type="text"].datetime-widget { width: 100px; margin-right: 10px; }
+form input.datetime-widget { width: 150px !important; margin-right: 10px; }
 
 div.sidebar li.active { font-weight: bold; }
 
