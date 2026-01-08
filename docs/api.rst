@@ -6,7 +6,7 @@ API
 Admin
 -----
 
-.. py:class:: Admin(app, auth[, blueprint_factory[, template_helper[, prefix]]])
+.. py:class:: Admin(app, auth[, blueprint_factory[, prefix]])
 
     Class used to expose an admin area at a certain url in your application.  The
     Admin object implements a flask blueprint and acts as the central registry
@@ -40,8 +40,6 @@ Admin
     :param app: flask application to bind admin to
     :param auth: :py:class:`Auth` instance which will provide authentication
     :param blueprint_factory: an object that will create the ``BluePrint`` used by the admin
-    :param template_helper: a subclass of :py:class:`AdminTemplateHelper` that provides helpers
-        and context to used by the admin templates
     :param prefix: url to bind admin to, defaults to ``/admin``
 
     .. py:method:: register(model[, admin_class=ModelAdmin])

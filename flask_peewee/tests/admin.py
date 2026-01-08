@@ -690,39 +690,37 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
         self.create_message(self.admin, 'admin message 2')
         self.create_message(self.normal, 'normal message')
 
-        self.th = admin.template_helper
-
     def test_get_model_field(self):
-        self.assertEqual(self.th.get_model_field(self.admin, 'username'), 'admin')
-        self.assertEqual(self.th.get_model_field(self.admin, 'message_count'), 2)
-        self.assertRaises(AttributeError, self.th.get_model_field, self.admin, 'missing_attr')
+        self.assertEqual(admin.get_model_field(self.admin, 'username'), 'admin')
+        self.assertEqual(admin.get_model_field(self.admin, 'message_count'), 2)
+        self.assertRaises(AttributeError, admin.get_model_field, self.admin, 'missing_attr')
 
     def test_get_form_field(self):
         form = model_form(User)(obj=self.admin)
-        self.assertEqual(self.th.get_form_field(form, 'username'), form.username)
-        self.assertEqual(self.th.get_form_field(form, 'username').data, 'admin')
+        self.assertEqual(admin.get_form_field(form, 'username'), form.username)
+        self.assertEqual(admin.get_form_field(form, 'username').data, 'admin')
 
     def test_fix_underscores(self):
-        self.assertEqual(self.th.fix_underscores('some_model'), 'Some Model')
-        self.assertEqual(self.th.fix_underscores('test'), 'Test')
+        self.assertEqual(admin.fix_underscores('some_model'), 'Some Model')
+        self.assertEqual(admin.fix_underscores('test'), 'Test')
 
     def test_update_querystring(self):
         qs = lambda t: text_type(t).encode('utf8')
-        self.assertEqual(self.th.update_querystring(qs(''), 'page', 1), 'page=1')
-        self.assertEqual(self.th.update_querystring(qs('page=1'), 'page', 2), 'page=2')
-        self.assertEqual(self.th.update_querystring(qs('session=3&page=1'), 'page', 2), 'session=3&page=2')
-        self.assertEqual(self.th.update_querystring(qs('page=1&session=3'), 'page', 2), 'session=3&page=2')
-        self.assertEqual(self.th.update_querystring(qs('session=3&page=1&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
-        self.assertEqual(self.th.update_querystring(qs('session=3&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
+        self.assertEqual(admin.update_querystring(qs(''), 'page', 1), 'page=1')
+        self.assertEqual(admin.update_querystring(qs('page=1'), 'page', 2), 'page=2')
+        self.assertEqual(admin.update_querystring(qs('session=3&page=1'), 'page', 2), 'session=3&page=2')
+        self.assertEqual(admin.update_querystring(qs('page=1&session=3'), 'page', 2), 'session=3&page=2')
+        self.assertEqual(admin.update_querystring(qs('session=3&page=1&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
+        self.assertEqual(admin.update_querystring(qs('session=3&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
 
     def test_get_verbose_name(self):
-        self.assertEqual(self.th.get_verbose_name(User, 'username'), 'Username')
-        self.assertEqual(self.th.get_verbose_name(User, 'join_date'), 'Join Date')
-        self.assertEqual(self.th.get_verbose_name(User, 'admin'), 'Can access admin')
-        self.assertEqual(self.th.get_verbose_name(User, 'some_field'), 'Some Field')
+        self.assertEqual(admin.get_verbose_name(User, 'username'), 'Username')
+        self.assertEqual(admin.get_verbose_name(User, 'join_date'), 'Join Date')
+        self.assertEqual(admin.get_verbose_name(User, 'admin'), 'Can access admin')
+        self.assertEqual(admin.get_verbose_name(User, 'some_field'), 'Some Field')
 
     def test_get_model_admins(self):
-        self.assertEqual(self.th.get_model_admins(), {'model_admins': [
+        self.assertEqual(admin.get_model_admins(), [
             admin._registry[AModel],
             admin._registry[BDetails],
             admin._registry[BModel],
@@ -731,4 +729,4 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
             admin._registry[Message],
             admin._registry[Note],
             admin._registry[User],
-        ], 'branding': 'flask-peewee'})
+        ])

@@ -24,7 +24,7 @@
     <tbody>
       {% for iter_admin in model_admins %}
         <tr class="link">
-          <td><span class="show"><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></span></td>
+          <td><span class="show"><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></span></td>
           <td><span>{{ iter_admin.get_query().count() }}</span></td>
           <td class="links">
             <ul class="inline">

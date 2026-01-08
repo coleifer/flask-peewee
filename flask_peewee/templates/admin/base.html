@@ -7,7 +7,7 @@
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-  <title>{% block title %}{% endblock %}{% block title_branding %} | {{ branding }}{% endblock %}</title>
+  <title>{% block title %}{% endblock %}{% block title_branding %} | {{ admin.branding }}{% endblock %}</title>
   <meta name="description" content="">
   <meta name="author" content="">
 
@@ -33,13 +33,13 @@
   <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
       <div class="container-fluid">
-        <a class="brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ branding }}</a>
+        <a class="brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ admin.branding }}</a>
         <ul class="nav">
           <li class="active"><a href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
           <li><a href="/">View site</a></li>
         </ul>
 
-        <form action="{{ get_logout_url() }}" class="navbar-form pull-right" method="get">
+        <form action="{{ admin.get_logout_url() }}" class="navbar-form pull-right" method="get">
           <button class="btn btn-danger">Logout</button>
         </form>
       </div>
@@ -53,8 +53,8 @@
           <h3>Navigation</h3>
           {% block sidebar %}
             <ul id="nav" class="nav nav-list">
-              {% for iter_admin in model_admins %}
-                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ iter_admin.get_admin_name()|fix_underscores }}</a></li>
+              {% for iter_admin in admin.get_model_admins() %}
+                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></li>
               {% endfor %}
             </ul>
           {% endblock %}

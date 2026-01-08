@@ -4,17 +4,17 @@
 
 {% block body_class %}{{ super() }} model-admin{% endblock %}
 
-{% block title %}{{ model_admin.get_display_name()|fix_underscores }} Admin{% endblock %}
+{% block title %}{{ admin.fix_underscores(model_admin.get_display_name()) }} Admin{% endblock %}
 
-{% block content_title %}{{ model_admin.get_display_name()|fix_underscores }} Admin{% endblock %}
+{% block content_title %}{{ admin.fix_underscores(model_admin.get_display_name()) }} Admin{% endblock %}
 
 {% block breadcrumbs %}
-  <li><span class="divider">/</span> <a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ model_admin.get_display_name()|fix_underscores }}</a></li>
+  <li><span class="divider">/</span> <a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ admin.fix_underscores(model_admin.get_display_name()) }}</a></li>
 {% endblock %}
 
 {% block pre_content %}
   <ul class="nav nav-tabs">
-    <li class="{% block tab_index_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">{{ model_admin.get_display_name()|fix_underscores }} ({{ model_admin.get_query().count() }})</a></li>
+    <li class="{% block tab_index_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">{{ admin.fix_underscores(model_admin.get_display_name()) }} ({{ model_admin.get_query().count() }})</a></li>
     <li class="{% block tab_add_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a></li>
     <li class="{% block tab_export_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('export')) }}?{{ request.query_string.decode('utf8') }}">Export</a></li>
     {% block extra_tabs %}{% endblock %}

@@ -486,91 +486,8 @@ class AdminPanel(object):
         return render_template(self.get_template_name(), panel=self, **self.get_context())
 
 
-class AdminTemplateHelper(object):
-    def __init__(self, admin):
-        self.admin = admin
-        self.app = self.admin.app
-
-    def get_model_field(self, model, field):
-        try:
-            attr = getattr(model, field)
-        except AttributeError:
-            model_admin = self.admin[type(model)]
-            try:
-                attr = getattr(model_admin, field)
-            except AttributeError:
-                raise AttributeError('Could not find attribute or method '
-                                     'named "%s".' % field)
-            else:
-                return attr(model)
-        else:
-            if callable(attr):
-                attr = attr()
-            return attr
-
-    def get_form_field(self, form, field_name):
-        return getattr(form, field_name)
-
-    def fix_underscores(self, s):
-        return s.replace('_', ' ').title()
-
-    def update_querystring(self, querystring, key, val):
-        if not querystring:
-            return '%s=%s' % (key, val)
-        else:
-            querystring = re.sub(r'%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
-            return ('%s&%s=%s' % (querystring, key, val)).lstrip('&')
-
-    def get_verbose_name(self, model, column_name):
-        try:
-            field = model._meta.fields[column_name]
-        except KeyError:
-            return self.fix_underscores(column_name)
-        else:
-            return field.verbose_name or self.fix_underscores(field.name)
-
-    def get_model_admins(self):
-        return {'model_admins': self.admin.get_model_admins(), 'branding': self.admin.branding}
-
-    def get_admin_url(self, obj):
-        model_admin = self.admin.get_admin_for(type(obj))
-        if model_admin:
-            return url_for(model_admin.get_url_name('edit'), pk=obj._pk)
-
-    def get_logout_url(self):
-        return url_for('%s.logout' % self.admin.auth.blueprint.name)
-
-    def get_model_name(self, model_class):
-        model_admin = self.admin.get_admin_for(model_class)
-        if model_admin:
-            return model_admin.get_display_name()
-        return model_class.__name__
-
-    def apply_prefix(self, field_name, prefix_accum, field_prefix, rel_prefix='fr_', rel_sep='-'):
-        accum = []
-        for prefix in prefix_accum:
-            accum.append('%s%s' % (rel_prefix, prefix))
-        accum.append('%s%s' % (field_prefix, field_name))
-        return rel_sep.join(accum)
-
-    def prepare_environment(self):
-        self.app.template_context_processors[None].append(self.get_model_admins)
-
-        self.app.jinja_env.globals['get_model_field'] = self.get_model_field
-        self.app.jinja_env.globals['get_form_field'] = self.get_form_field
-        self.app.jinja_env.globals['get_verbose_name'] = self.get_verbose_name
-        self.app.jinja_env.filters['fix_underscores'] = self.fix_underscores
-        self.app.jinja_env.globals['update_querystring'] = self.update_querystring
-        self.app.jinja_env.globals['get_admin_url'] = self.get_admin_url
-        self.app.jinja_env.globals['get_logout_url'] = self.get_logout_url
-        self.app.jinja_env.globals['get_model_name'] = self.get_model_name
-
-        self.app.jinja_env.filters['apply_prefix'] = self.apply_prefix
-
-
 class Admin(object):
-    def __init__(self, app, auth, template_helper=AdminTemplateHelper,
-                 prefix='/admin', name='admin', branding='flask-peewee'):
+    def __init__(self, app, auth, prefix='/admin', name='admin', branding='flask-peewee'):
         self.app = app
         self.auth = auth
 
@@ -580,11 +497,9 @@ class Admin(object):
 
         self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
-
-        self.template_helper = template_helper(self)
-        self.template_helper.prepare_environment()
-
         self.branding = branding
+
+        self.prepare_template_environment()
 
     def get_url_name(self, name):
         return '%s.%s' % (self.blueprint.name, name)
@@ -692,6 +607,68 @@ class Admin(object):
     def setup(self):
         self.configure_routes()
         self.register_blueprint()
+
+    def get_model_field(self, model, field):
+        try:
+            attr = getattr(model, field)
+        except AttributeError:
+            model_admin = self[type(model)]
+            try:
+                attr = getattr(model_admin, field)
+            except AttributeError:
+                raise AttributeError('Could not find attribute or method '
+                                     'named "%s".' % field)
+            else:
+                return attr(model)
+        else:
+            if callable(attr):
+                attr = attr()
+            return attr
+
+    def get_form_field(self, form, field_name):
+        return getattr(form, field_name)
+
+    def fix_underscores(self, s):
+        return s.replace('_', ' ').title()
+
+    def update_querystring(self, querystring, key, val):
+        if not querystring:
+            return '%s=%s' % (key, val)
+        else:
+            querystring = re.sub(r'%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
+            return ('%s&%s=%s' % (querystring, key, val)).lstrip('&')
+
+    def get_verbose_name(self, model, column_name):
+        try:
+            field = model._meta.fields[column_name]
+        except KeyError:
+            return self.fix_underscores(column_name)
+        else:
+            return field.verbose_name or self.fix_underscores(field.name)
+
+    def get_admin_url(self, obj):
+        model_admin = self.get_admin_for(type(obj))
+        if model_admin:
+            return url_for(model_admin.get_url_name('edit'), pk=obj._pk)
+
+    def get_logout_url(self):
+        return url_for('%s.logout' % self.auth.blueprint.name)
+
+    def get_model_name(self, model_class):
+        model_admin = self.get_admin_for(model_class)
+        if model_admin:
+            return model_admin.get_display_name()
+        return model_class.__name__
+
+    def apply_prefix(self, field_name, prefix_accum, field_prefix, rel_prefix='fr_', rel_sep='-'):
+        accum = []
+        for prefix in prefix_accum:
+            accum.append('%s%s' % (rel_prefix, prefix))
+        accum.append('%s%s' % (field_prefix, field_name))
+        return rel_sep.join(accum)
+
+    def prepare_template_environment(self):
+        self.app.jinja_env.filters['apply_prefix'] = self.apply_prefix
 
 
 class Export(object):
