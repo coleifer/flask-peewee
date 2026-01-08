@@ -48,10 +48,15 @@ class PaginatedQuery(object):
             return int(curr_page)
         return 1
 
+    def get_count(self):
+        if not hasattr(self, '_get_count'):
+            self._get_count = self.query.count()
+        return self._get_count
+
     def get_pages(self):
         if not hasattr(self, '_get_pages'):
             self._get_pages = int(math.ceil(
-                float(self.query.count()) / self.paginate_by))
+                float(self.get_count()) / self.paginate_by))
         return self._get_pages
 
     def get_list(self):

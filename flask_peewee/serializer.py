@@ -19,6 +19,8 @@ class Serializer(object):
             return value.strftime(self.date_format)
         elif isinstance(value, datetime.time):
             return value.strftime(self.time_format)
+        elif isinstance(value, datetime.timedelta):
+            return value.total_seconds()
         elif isinstance(value, Model):
             return value._pk
         elif isinstance(value, uuid.UUID):

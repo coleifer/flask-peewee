@@ -53,11 +53,11 @@ we will expose via the API.  Here is a truncated version of what they look like:
         join_date = DateTimeField(default=datetime.datetime.now)
         active = BooleanField(default=True)
         admin = BooleanField(default=False)
-    
+
     class Relationship(db.Model):
         from_user = ForeignKeyField(User, related_name='relationships')
         to_user = ForeignKeyField(User, related_name='related_to')
-    
+
     class Message(db.Model):
         user = ForeignKeyField(User)
         content = TextField()
@@ -75,17 +75,17 @@ Here we'll create a simple api and register our models:
 .. code-block:: python
 
     from flask_peewee.rest import RestAPI
-    
+
     from app import app # our project's Flask app
-    
+
     # instantiate our api wrapper
     api = RestAPI(app)
-    
+
     # register our models so they are exposed via /api/<model>/
     api.register(User)
     api.register(Relationship)
     api.register(Message)
-    
+
     # configure the urls
     api.setup()
 
@@ -96,22 +96,23 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
 
     {
       "meta": {
-        "model": "message", 
-        "next": "", 
-        "page": 1, 
+        "model": "message",
+        "next": "",
+        "page_count": 1,
+        "page": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "content": "flask and peewee, together at last!", 
-          "pub_date": "2011-09-16 18:36:15", 
-          "user_id": 1, 
+          "content": "flask and peewee, together at last!",
+          "pub_date": "2011-09-16 18:36:15",
+          "user_id": 1,
           "id": 1
-        }, 
+        },
         {
-          "content": "Hey, I'm just some user", 
-          "pub_date": "2011-09-16 18:46:59", 
-          "user_id": 2, 
+          "content": "Hey, I'm just some user",
+          "pub_date": "2011-09-16 18:46:59",
+          "user_id": 2,
           "id": 2
         }
       ]
@@ -138,31 +139,32 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
 .. code-block:: console
 
     $ curl http://127.0.0.1:5000/api/user/
-    
+
     {
       "meta": {
-        "model": "user", 
-        "next": "", 
-        "page": 1, 
+        "model": "user",
+        "next": "",
+        "page": 1,
+        "page_count": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "username": "admin", 
-          "admin": true, 
-          "email": "", 
-          "join_date": "2011-09-16 18:34:49", 
-          "active": true, 
-          "password": "d033e22ae348aeb5660fc2140aec35850c4da997", 
+          "username": "admin",
+          "admin": true,
+          "email": "",
+          "join_date": "2011-09-16 18:34:49",
+          "active": true,
+          "password": "d033e22ae348aeb5660fc2140aec35850c4da997",
           "id": 1
-        }, 
+        },
         {
-          "username": "coleifer", 
-          "admin": false, 
-          "email": "coleifer@gmail.com", 
-          "join_date": "2011-09-16 18:35:56", 
-          "active": true, 
-          "password": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3", 
+          "username": "coleifer",
+          "admin": false,
+          "email": "coleifer@gmail.com",
+          "join_date": "2011-09-16 18:35:56",
+          "active": true,
+          "password": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
           "id": 2
         }
       ]
@@ -174,12 +176,12 @@ from serialization, subclass :py:class:`RestResource`:
 .. code-block:: python
 
     from flask_peewee.rest import RestAPI, RestResource
-    
+
     from app import app # our project's Flask app
-    
+
     # instantiate our api wrapper
     api = RestAPI(app)
-    
+
     # create a special resource for users that excludes email and password
     class UserResource(RestResource):
         exclude = ('password', 'email',)
@@ -200,7 +202,7 @@ What if we want to create new messages via the Api?  Or modify/delete existing m
 .. code-block:: console
 
     $ curl -i -d '' http://127.0.0.1:5000/api/message/
-    
+
     HTTP/1.0 401 UNAUTHORIZED
     WWW-Authenticate: Basic realm="Login Required"
     Content-Type: text/html; charset=utf-8
@@ -223,15 +225,15 @@ mechanism.
 .. code-block:: python
 
     from auth import auth # import the Auth object used by our project
-    
+
     from flask_peewee.rest import RestAPI, RestResource, UserAuthentication
-    
+
     # create an instance of UserAuthentication
     user_auth = UserAuthentication(auth)
 
     # instantiate our api wrapper, specifying user_auth as the default
     api = RestAPI(app, default_auth=user_auth)
-    
+
     # create a special resource for users that excludes email and password
     class UserResource(RestResource):
         exclude = ('password', 'email',)
@@ -240,7 +242,7 @@ mechanism.
     api.register(User, UserResource) # specify the UserResource
     api.register(Relationship)
     api.register(Message)
-    
+
     # configure the urls
     api.setup()
 
@@ -250,15 +252,15 @@ Now we should be able to POST new messages.
 
     import json
     import httplib2
-    
+
     sock = httplib2.Http()
     sock.add_credentials('admin', 'admin') # use basic auth
-    
+
     message = {'user_id': 1, 'content': 'hello api'}
     msg_json = json.dumps(message)
-    
+
     headers, resp = sock.request('http://localhost:5000/api/message/', 'POST', body=msg_json)
-    
+
     response = json.loads(resp)
 
 The response object will look something like this:
@@ -281,9 +283,9 @@ It also means a user can use PUT requests to modify another user's message:
     # continued from above script
     update = {'content': 'haxed you, bro'}
     update_json = json.dumps(update)
-    
+
     headers, resp = sock.request('http://127.0.0.1:5000/api/message/2/', 'PUT', body=update_json)
-    
+
     response = json.loads(resp)
 
 The response will look like this:
@@ -325,7 +327,7 @@ Now, if we try and modify the message, we get a 403 Forbidden:
 
     headers, resp = sock.request('http://127.0.0.1:5000/api/message/2/', 'PUT', body=update_json)
     print headers['status']
-    
+
     # prints 403
 
 It is fine to modify our own message, though (message with id=1):
@@ -334,7 +336,7 @@ It is fine to modify our own message, though (message with id=1):
 
     headers, resp = sock.request('http://127.0.0.1:5000/api/message/1/', 'PUT', body=update_json)
     print headers['status']
-    
+
     # prints 200
 
 Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py#L284>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
@@ -353,16 +355,16 @@ to administrators:
 .. code-block:: python
 
     from flask_peewee.rest import AdminAuthentication
-    
+
     # instantiate our user-based auth
     user_auth = UserAuthentication(auth)
-    
+
     # instantiate admin-only auth
     admin_auth = AdminAuthentication(auth)
 
     # instantiate our api wrapper, specifying user_auth as the default
     api = RestAPI(app, default_auth=user_auth)
-    
+
     # register the UserResource with admin auth
     api.register(User, UserResource, auth=admin_auth)
 
@@ -384,16 +386,17 @@ This call will return only messages by the ``User`` with id=2:
 
     {
       "meta": {
-        "model": "message", 
-        "next": "", 
-        "page": 1, 
+        "model": "message",
+        "next": "",
+        "page": 1,
+        "page_count": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "content": "haxed you, bro", 
-          "pub_date": "2011-09-16 18:36:15", 
-          "user_id": 2, 
+          "content": "haxed you, bro",
+          "pub_date": "2011-09-16 18:36:15",
+          "user_id": 2,
           "id": 2
         }
       ]
@@ -409,16 +412,17 @@ Joins can be traversed using the django double-underscore notation:
 
     {
       "meta": {
-        "model": "message", 
-        "next": "", 
-        "page": 1, 
+        "model": "message",
+        "next": "",
+        "page": 1,
+        "page_count": 1,
         "previous": ""
-      }, 
+      },
       "objects": [
         {
-          "content": "flask and peewee, together at last!", 
-          "pub_date": "2011-09-16 18:36:15", 
-          "user_id": 1, 
+          "content": "flask and peewee, together at last!",
+          "pub_date": "2011-09-16 18:36:15",
+          "user_id": 1,
           "id": 1
         },
         {
@@ -443,8 +447,9 @@ It is also supported to use different comparison operators with the same double-
         "model": "user",
         "next": "",
         "page": 1,
+        "page_count": 1,
         "previous": ""
-        }, 
+    },
     "objects": [{
         "username": "admin",
         "admin": true,
@@ -456,7 +461,7 @@ It is also supported to use different comparison operators with the same double-
     }
 
 
-Valid Comparison Operators are: 
+Valid Comparison Operators are:
     'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'like', 'ilike'
 
 
@@ -482,7 +487,7 @@ can specify a ``limit`` in the querystring.
 `/api/message/?limit=2`
 
 In the "meta" section of the response, URIs for the "next" and "previous" sets
-of results are available:
+of results are available, along with the total number of pages:
 
 .. code-block:: javascript
 
@@ -490,5 +495,6 @@ of results are available:
       model: "message"
       next: "/api/message/?limit=1&page=3"
       page: 2
+      page_count: 5,
       previous: "/api/message/?limit=1&page=1"
     }

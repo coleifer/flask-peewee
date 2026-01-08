@@ -372,6 +372,7 @@ class RestResource(object):
         return {
             'model': self.get_api_name(),
             'page': current_page,
+            'page_count': paginated_query.get_pages(),
             'previous': previous,
             'next': next,
         }

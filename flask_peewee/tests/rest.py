@@ -508,6 +508,7 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertEqual(resp_json['meta']['model'], 'note')
         self.assertEqual(resp_json['meta']['previous'], '')
         self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertEqual(resp_json['meta']['page_count'], 2)
         self.assertTrue('page=2' in resp_json['meta']['next'])
 
         # verify response objects are paginated properly
@@ -520,6 +521,7 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertEqual(resp_json['meta']['model'], 'note')
         self.assertEqual(resp_json['meta']['previous'], '')
         self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertEqual(resp_json['meta']['page_count'], 3)
         self.assertTrue('page=2' in resp_json['meta']['next'])
 
         # verify response objects are paginated properly
@@ -531,6 +533,7 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         self.assertEqual(resp_json['meta']['model'], 'note')
         self.assertEqual(resp_json['meta']['page'], 2)
+        self.assertEqual(resp_json['meta']['page_count'], 3)
         self.assertTrue('page=1' in resp_json['meta']['previous'])
         self.assertTrue('page=3' in resp_json['meta']['next'])
 
@@ -561,6 +564,7 @@ class RestApiBasicTestCase(RestApiTestCase):
             'previous': '',
             'next': '',
             'page': 1,
+            'page_count': 1,
         })
         self.assertAPINotes(resp_json, self.normal.note_set.order_by(Note.id))
 
@@ -573,6 +577,7 @@ class RestApiBasicTestCase(RestApiTestCase):
             'previous': '',
             'next': '',
             'page': 1,
+            'page_count': 1,
         })
         self.assertAPINotes(resp_json, self.admin.note_set.order_by(Note.id))
 
@@ -593,6 +598,7 @@ class RestApiBasicTestCase(RestApiTestCase):
             'previous': '',
             'next': '',
             'page': 1,
+            'page_count': 1,
         })
         self.assertAPINotes(resp_json, Note.filter(user__in=[self.admin, self.inactive]).order_by(Note.id))
 
@@ -669,7 +675,12 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'note', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {
+            'model': 'note',
+            'next': '',
+            'page': 1,
+            'page_count': 0,
+            'previous': ''})
 
         self.create_notes()
 
@@ -809,7 +820,12 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'message', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {
+            'model': 'message',
+            'next': '',
+            'page': 1,
+            'page_count': 0,
+            'previous': ''})
 
         self.create_messages()
 
@@ -948,7 +964,12 @@ class RestApiAdminAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
 
         self.assertAPIResponse(resp_json, [])
-        self.assertAPIMeta(resp_json, {'model': 'user', 'next': '', 'page': 1, 'previous': ''})
+        self.assertAPIMeta(resp_json, {
+            'model': 'user',
+            'next': '',
+            'page': 1,
+            'page_count': 0,
+            'previous': ''})
 
         self.create_users()
 
@@ -1127,7 +1148,12 @@ class RestApiKeyAuthTestCase(RestApiTestCase):
                 self.tm1,
                 self.tm2,
             ])
-            self.assertAPIMeta(resp_json, {'model': 'testmodel', 'next': '', 'page': 1, 'previous': ''})
+            self.assertAPIMeta(resp_json, {
+                'model': 'testmodel',
+                'next': '',
+                'page': 1,
+                'page_count': 1,
+                'previous': ''})
 
     def test_auth_headers(self):
         with self.flask_app.test_client() as c:
