@@ -8,6 +8,8 @@ from flask_peewee import tests
 def runtests(*test_args):
     suite = unittest.TestLoader().loadTestsFromModule(tests)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
+    if os.path.exists('test.db'):
+        os.unlink('test.db')
     if result.failures:
         sys.exit(1)
     elif result.errors:
