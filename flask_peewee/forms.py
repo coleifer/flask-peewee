@@ -3,6 +3,7 @@ from peewee import BooleanField
 from wtforms import widgets
 from wtfpeewee.fields import BooleanSelectField
 from wtfpeewee.fields import ModelSelectField
+from wtfpeewee.fields import wtf_choice
 from wtfpeewee.orm import ModelConverter
 
 
@@ -36,4 +37,4 @@ class ChosenAjaxSelectWidget(widgets.Select):
 class LimitedModelSelectField(ModelSelectField):
     def iter_choices(self):
         for obj in self.query.limit(20):
-            yield (obj._pk, self.get_label(obj), obj == self.data)
+            yield wtf_choice(obj._pk, self.get_label(obj), obj == self.data)

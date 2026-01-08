@@ -258,6 +258,7 @@ class ModelAdmin(object):
         pq = PaginatedQuery(query, self.paginate_by)
 
         return render_template(self.templates['index'],
+            admin=self.admin,
             model_admin=self,
             query=pq,
             ordering=ordering,
@@ -296,6 +297,7 @@ class ModelAdmin(object):
             form = Form()
 
         return render_template(self.templates['add'],
+            admin=self.admin,
             model_admin=self,
             form=form,
             instance=instance,
@@ -320,6 +322,7 @@ class ModelAdmin(object):
             form = Form(obj=instance)
 
         return render_template(self.templates['edit'],
+            admin=self.admin,
             model_admin=self,
             instance=instance,
             form=form,
@@ -362,6 +365,7 @@ class ModelAdmin(object):
             return self._index_redirect()
 
         return render_template(self.templates['delete'], **dict(
+            admin=self.admin,
             model_admin=self,
             query=query,
             collected=collected,
@@ -402,6 +406,7 @@ class ModelAdmin(object):
             return export.json_response('export-%s.json' % self.get_admin_name())
 
         return render_template(self.templates['export'],
+            admin=self.admin,
             model_admin=self,
             model=query.model,
             query=query,
@@ -577,6 +582,9 @@ class Admin(object):
 
         self.branding = branding
 
+    def get_url_name(self, name):
+        return '%s.%s' % (self.blueprint.name, name)
+
     def auth_required(self, func):
         @functools.wraps(func)
         def inner(*args, **kwargs):
@@ -633,9 +641,9 @@ class Admin(object):
 
     def index(self):
         return render_template('admin/index.html',
-            model_admins=self.get_model_admins(),
-            panels=self.get_panels(),
-        )
+                               admin=self,
+                               model_admins=self.get_model_admins(),
+                               panels=self.get_panels())
 
     def get_blueprint(self, blueprint_name):
         return Blueprint(
