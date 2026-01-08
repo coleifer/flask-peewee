@@ -193,6 +193,9 @@ class RestResource(object):
 
         # clean and normalize the request parameters
         for key in request.args:
+            if key in ('ordering', 'page', 'limit'):
+                continue
+
             orig_key = key
             if key.startswith('-'):
                 negated = True
@@ -210,6 +213,9 @@ class RestResource(object):
             raw_filters.setdefault(expr, [])
             raw_filters[expr].append((op, request.args.getlist(orig_key), negated))
 
+        if not raw_filters:
+            return query
+
         # do a breadth first search across the field tree created by filter_fields,
         # searching for matching keys in the request parameters -- when found,
         # filter the query accordingly
@@ -220,7 +226,7 @@ class RestResource(object):
                 filter_expr = '%s%s' % (prefix, field.name)
 
                 if filter_expr in raw_filters:
-                    for op, arg_list, negated in raw_filters[filter_expr]:
+                    for op, arg_list, negated in raw_filters.pop(filter_expr):
                         clean_args = self.clean_arg_list(arg_list)
                         query = self.apply_filter(query, field, filter_expr, op, clean_args, negated)
 
