@@ -11,15 +11,43 @@ project's models with subclasses of :py:class:`RestResource`.
 Each :py:class:`RestResource` you expose via the API will support, by default,
 the following:
 
-* `/api/<model name>/` -- GET and POST requests
-* `/api/<model name>/<primary key>/` -- GET, PUT and DELETE requests
+* ``/api/<model name>/`` -- GET and POST requests
+* ``/api/<model name>/<primary key>/`` -- GET, PUT and DELETE requests
 
 Also, you can filter results by columns on the model using django-style syntax,
 for example:
 
-* `/api/blog/?name=Some%20Blog`
-* `/api/blog/?author__username=some_blogger`
+* ``/api/blog/?name=Some%20Blog``
+* `/`api/blog/?author__username=some_blogger``
 
+Full operations:
+
+* ``__eq``: equals
+* ``__lt``: less-than
+* ``__lte``: less-than or equal to
+* ``__gt``: greater-than
+* ``__gte``: greater-than or equal to
+* ``__ne``: not equal to
+* ``__in``: in set
+* ``__is``: is, ``?field__is=None`` or ``?-field__is=None`` for NOT NULL
+* ``__is_not``: is not , ``?field__is_not=None``
+* ``__like``: wild-card matching, case-sensitive
+* ``__ilike``: wild-card matching, case-insensitive
+* ``__regexp``: regular-expression matching (database-specific)
+
+To negate an operation, prefix it with the ``-`` character, e.g. the following
+are equivalent:
+
+* ``/api/user/?is_admin=true``
+* ``/api/user/?is_admin__eq=true``
+* ``/api/user/?-is_admin=false``
+* ``/api/user/?is_admin__ne=false``
+
+Special Python constants are supported when used as querystring parameters:
+
+* ``?value=none`` translates the value to ``None``
+* ``?value=true`` translates the value to ``True``
+* ``?value=false`` translates the value to ``False``
 
 Getting started with the API
 ----------------------------
