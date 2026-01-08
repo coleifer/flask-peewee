@@ -43,7 +43,7 @@ class RestApiTestCase(FlaskPeeweeTestCase):
         return {'Authorization': 'Basic %s' % base64.b64encode(data.encode('utf8')).decode('utf8')}
 
     def conv_date(self, dt):
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
+        return dt.isoformat()
 
     def assertAPIResponse(self, resp_json, body):
         self.assertEqual(body, resp_json['objects'])
@@ -760,6 +760,20 @@ class RestApiUserAuthTestCase(RestApiTestCase):
 
         resp_json = self.response_json(resp)
         self.assertAPINote(resp_json, new_note)
+
+        note_data = {'message': 'test2', 'user': self.inactive.id,
+                     'created_date': '2026-01-02T03:04:05'}
+        resp = self.app.post('/api/note/', data=json.dumps(note_data),
+                             headers=self.auth_headers('normal', 'normal'))
+        new_note = Note.get(message='test2')
+        self.assertEqual(new_note.user, self.inactive)
+        self.assertEqual(new_note.created_date,
+                         datetime.datetime(2026, 1, 2, 3, 4, 5))
+
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json, {
+            'message': 'test2', 'user': self.inactive.id, 'id': new_note.id,
+            'created_date': '2026-01-02T03:04:05'})
 
     def test_auth_edit(self):
         self.create_notes()

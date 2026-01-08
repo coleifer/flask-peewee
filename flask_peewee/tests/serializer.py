@@ -21,7 +21,7 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'id': self.admin.id,
             'username': 'admin',
             'password': self.admin.password,
-            'join_date': self.admin.join_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'join_date': self.admin.join_date.isoformat(),
             'active': True,
             'admin': True,
             'email': '',

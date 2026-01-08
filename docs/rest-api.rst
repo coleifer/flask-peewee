@@ -133,13 +133,13 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
       "objects": [
         {
           "content": "flask and peewee, together at last!",
-          "pub_date": "2011-09-16 18:36:15",
+          "pub_date": "2011-09-16T18:36:15",
           "user_id": 1,
           "id": 1
         },
         {
           "content": "Hey, I'm just some user",
-          "pub_date": "2011-09-16 18:46:59",
+          "pub_date": "2011-09-16T18:46:59",
           "user_id": 2,
           "id": 2
         }
@@ -153,7 +153,7 @@ just the details on that object:
 
     {
       content: "flask and peewee, together at last!"
-      pub_date: "2011-09-16 18:36:15"
+      pub_date: "2011-09-16T18:36:15"
       user_id: 1
       id: 1
     }
@@ -181,7 +181,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
           "username": "admin",
           "admin": true,
           "email": "",
-          "join_date": "2011-09-16 18:34:49",
+          "join_date": "2011-09-16T18:34:49",
           "active": true,
           "password": "d033e22ae348aeb5660fc2140aec35850c4da997",
           "id": 1
@@ -190,7 +190,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
           "username": "coleifer",
           "admin": false,
           "email": "coleifer@gmail.com",
-          "join_date": "2011-09-16 18:35:56",
+          "join_date": "2011-09-16T18:35:56",
           "active": true,
           "password": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
           "id": 2
@@ -298,7 +298,7 @@ The response object will look something like this:
     {
       'content': 'hello api',
       'user_id': 1,
-      'pub_date': '2011-09-22 11:25:02',
+      'pub_date': '2011-09-22T11:25:02',
       'id': 3
     }
 
@@ -322,7 +322,7 @@ The response will look like this:
 
     {
       'content': 'haxed you, bro',
-      'pub_date': '2011-09-16 18:36:15',
+      'pub_date': '2011-09-16T18:36:15',
       'user_id': 2,
       'id': 2
     }
@@ -423,7 +423,7 @@ This call will return only messages by the ``User`` with id=2:
       "objects": [
         {
           "content": "haxed you, bro",
-          "pub_date": "2011-09-16 18:36:15",
+          "pub_date": "2011-09-16T18:36:15",
           "user_id": 2,
           "id": 2
         }
@@ -449,13 +449,13 @@ Joins can be traversed using the django double-underscore notation:
       "objects": [
         {
           "content": "flask and peewee, together at last!",
-          "pub_date": "2011-09-16 18:36:15",
+          "pub_date": "2011-09-16T18:36:15",
           "user_id": 1,
           "id": 1
         },
         {
           "content": "hello api",
-          "pub_date": "2011-09-22 11:25:02",
+          "pub_date": "2011-09-22T11:25:02",
           "user_id": 1,
           "id": 3
         }

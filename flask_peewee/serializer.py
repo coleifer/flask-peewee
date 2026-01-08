@@ -10,11 +10,15 @@ from flask_peewee.utils import get_model_from_dictionary
 class Serializer(object):
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
-    datetime_format = ' '.join([date_format, time_format])
+    datetime_format = 'T'.join([date_format, time_format])
+    use_iso8601 = True
 
     def convert_value(self, value):
         if isinstance(value, datetime.datetime):
-            return value.strftime(self.datetime_format)
+            if self.use_iso8601:
+                return value.isoformat()
+            else:
+                return value.strftime(self.datetime_format)
         elif isinstance(value, datetime.date):
             return value.strftime(self.date_format)
         elif isinstance(value, datetime.time):

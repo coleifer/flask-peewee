@@ -1,3 +1,4 @@
+import datetime
 import math
 import random
 import re
@@ -8,6 +9,7 @@ from flask import abort
 from flask import render_template
 from flask import request
 from peewee import BooleanField
+from peewee import DateTimeField
 from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
@@ -125,9 +127,24 @@ def get_model_from_dictionary(model, field_dict):
             if isinstance(field_obj, BooleanField):
                 if isinstance(value, str) and value.lower() in ('0', 'f', 'false', ''):
                     value = False
+            elif isinstance(field_obj, DateTimeField):
+                value = deserialize_datetime(field_obj, value)
 
             setattr(model_instance, field_name, field_obj.python_value(value))
     return model_instance, models
+
+def deserialize_datetime(field_obj, value):
+    formats = ('%Y-%m-%dT%H:%M:%S%z',
+               '%Y-%m-%dT%H:%M:%S.%f',
+               '%Y-%m-%dT%H:%M:%S',
+               '%Y-%m-%dT',
+               '%Y-%m-%d')
+    for fmt in formats:
+        try:
+            return datetime.datetime.strptime(value, fmt)
+        except Exception:
+            continue
+    return value
 
 def path_to_models(model, path):
     accum = []
