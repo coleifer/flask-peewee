@@ -664,6 +664,27 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertEqual(resp_json['meta']['previous'], '')
         self.assertAPINotes(resp_json, notes[:4])
 
+    def test_filter_null(self):
+        e1 = EModel.create(e_field='e1')
+        f1 = FModel.create(e=e1, f_field='f1')
+        f2 = FModel.create(f_field='f2')
+
+        resp = self.app.get('/api/fmodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': f1.id, 'e': {'id': e1.id, 'e_field': 'e1'}, 'f_field': 'f1'},
+            {'id': f2.id, 'e': None, 'f_field': 'f2'}])
+
+        resp = self.app.get('/api/fmodel/?e__is=None')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': f2.id, 'e': None, 'f_field': 'f2'}])
+
+        resp = self.app.get('/api/fmodel/?-e__is=None')
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['objects'], [
+            {'id': f1.id, 'e': {'id': e1.id, 'e_field': 'e1'}, 'f_field': 'f1'}])
+
 
 class RestApiUserAuthTestCase(RestApiTestCase):
     def setUp(self):
