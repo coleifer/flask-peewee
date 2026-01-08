@@ -64,7 +64,7 @@ def get_next():
     return '%s?%s' % (request.path, request.query_string)
 
 def slugify(s):
-    return re.sub('[^a-z0-9_\-]+', '-', s.lower())
+    return re.sub(r'[^a-z0-9_\-]+', '-', s.lower())
 
 def load_class(s):
     path, klass = s.rsplit('.', 1)

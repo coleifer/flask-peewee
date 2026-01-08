@@ -1,9 +1,6 @@
 import functools
+import json
 import operator
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 from flask import Blueprint
 from flask import Response

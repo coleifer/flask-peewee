@@ -1,9 +1,5 @@
-try:
-    import simplejson as json
-except ImportError:
-    import json
-
 import datetime
+import json
 
 from flask import request
 from werkzeug.exceptions import NotFound

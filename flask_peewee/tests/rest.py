@@ -1,12 +1,6 @@
-from __future__ import with_statement
-
-try:
-    import simplejson as json
-except ImportError:
-    import json
-
 import base64
 import datetime
+import json
 import unittest
 
 from flask import g

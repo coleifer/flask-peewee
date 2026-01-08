@@ -1,11 +1,8 @@
 import functools
+import json
 import operator
 import os
 import re
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 from flask import Blueprint
 from flask import Response
@@ -78,7 +75,7 @@ class AdminFilterModelConverter(FilterModelConverter):
 class Action(object):
     def __init__(self, name=None, description=None):
         self.name = name or (type(self).__name__.replace('Action', ''))
-        self.description = description or re.sub('[\-_]', ' ', self.name).title()
+        self.description = description or re.sub(r'[\-_]', ' ', self.name).title()
 
     def callback(self, id_list):
         """
@@ -516,7 +513,7 @@ class AdminTemplateHelper(object):
         if not querystring:
             return '%s=%s' % (key, val)
         else:
-            querystring = re.sub('%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
+            querystring = re.sub(r'%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
             return ('%s&%s=%s' % (querystring, key, val)).lstrip('&')
 
     def get_verbose_name(self, model, column_name):
