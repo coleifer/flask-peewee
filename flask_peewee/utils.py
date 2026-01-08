@@ -145,6 +145,12 @@ def path_to_models(model, path):
     return accum
 
 
+def convert_boolean(s):
+    if isinstance(s, str) and s.lower() in ('', '0', 'false', 'f'):
+        return False
+    return bool(s)
+
+
 # borrowing these methods, slightly modified, from django.contrib.auth
 def get_hexdigest(salt, raw_password):
     data = salt + raw_password

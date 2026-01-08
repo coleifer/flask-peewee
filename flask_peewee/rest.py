@@ -17,6 +17,7 @@ from flask_peewee.filters import make_field_tree
 from flask_peewee.serializer import Deserializer
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
+from flask_peewee.utils import convert_boolean
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import slugify
 from flask_peewee._compat import reduce
@@ -217,10 +218,11 @@ class RestResource(object):
             node, prefix = queue.pop(0)
             for field in node.fields:
                 filter_expr = '%s%s' % (prefix, field.name)
+
                 if filter_expr in raw_filters:
                     for op, arg_list, negated in raw_filters[filter_expr]:
                         clean_args = self.clean_arg_list(arg_list)
-                        query = self.apply_filter(query, filter_expr, op, clean_args, negated)
+                        query = self.apply_filter(query, field, filter_expr, op, clean_args, negated)
 
             for child_prefix, child_node in node.children.items():
                 queue.append((child_node, prefix + child_prefix + '__'))
@@ -230,9 +232,12 @@ class RestResource(object):
     def clean_arg_list(self, arg_list):
         return [self.value_transforms.get(arg, arg) for arg in arg_list]
 
-    def apply_filter(self, query, expr, op, arg_list, negated):
+    def apply_filter(self, query, field, expr, op, arg_list, negated):
         query_expr = '%s__%s' % (expr, op)
         constructor = lambda kwargs: negated and ~DQ(**kwargs) or DQ(**kwargs)
+        if isinstance(field, BooleanField):
+            arg_list = [convert_boolean(arg) for arg in arg_list]
+
         if op == 'in':
             # in gives us a string format list '1,2,3,4'
             # we have to turn it into a list before passing to

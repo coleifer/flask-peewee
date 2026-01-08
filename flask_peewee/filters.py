@@ -134,6 +134,20 @@ class OlderThanDaysAgoFilter(QueryFilter):
         return 'older than X days ago'
 
 
+class BooleanEqualQueryFilter(EqualQueryFilter):
+    def query(self, value):
+        if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
+            value = False
+        return self.field == value
+
+
+class BooleanNotEqualQueryFilter(NotEqualQueryFilter):
+    def query(self, value):
+        if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
+            value = False
+        return self.field != value
+
+
 class FilterMapping(object):
     """
     Map a peewee field to a list of valid query filters for that field
@@ -148,7 +162,7 @@ class FilterMapping(object):
     datetime_date = (numeric + (
         WithinDaysAgoFilter, OlderThanDaysAgoFilter, YearFilter, MonthFilter))
     foreign_key = (EqualQueryFilter, NotEqualQueryFilter)
-    boolean = (EqualQueryFilter, NotEqualQueryFilter)
+    boolean = (BooleanEqualQueryFilter, BooleanNotEqualQueryFilter)
 
     def get_field_types(self):
         return {

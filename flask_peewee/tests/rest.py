@@ -619,6 +619,14 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPIUsers(resp_json, User.filter(username__in=['admin', 'normal']).order_by(User.id))
 
+        for falsey in ('0', '', 'false', 'f'):
+            resp = self.app.get('/api/user/?admin=%s' % falsey)
+            resp_json = self.response_json(resp)
+            self.assertAPIUsers(resp_json, User.filter(username='normal').order_by(User.id))
+
+        resp = self.app.get('/api/user/?admin=true')
+        resp_json = self.response_json(resp)
+        self.assertAPIUsers(resp_json, User.filter(username='admin').order_by(User.id))
 
     def test_filter_with_pagination(self):
         users, notes = self.get_users_and_notes()
