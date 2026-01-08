@@ -39,7 +39,7 @@
           <li><a href="/">View site</a></li>
         </ul>
 
-        <form action="{{ url_for('auth.logout') }}" class="navbar-form pull-right" method="get">
+        <form action="{{ get_logout_url() }}" class="navbar-form pull-right" method="get">
           <button class="btn btn-danger">Logout</button>
         </form>
       </div>
