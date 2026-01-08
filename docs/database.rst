@@ -37,15 +37,55 @@ be passed to the database driver when connecting:
     }
 
     app = Flask(__name__)
-    app.config.from_object(__name__) # load database configuration from this module
+    app.config.from_object(__name__)  # Load database configuration from module.
 
-    # instantiate the db wrapper
+    # Instantiate the db wrapper.
     db = Database(app)
 
-    # start creating models
+    # Start creating models.
     class Blog(db.Model):
         name = CharField()
-        # .. etc
+        # .. etc.
+
+You can also directly pass the Peewee database instance to the
+:py:class:`Database` helper:
+
+.. code-block:: python
+
+    app = Flask(__name__)
+    app.config.from_object(__name__)
+
+    sqlite_db = SqliteDatabase('example.db')
+    db = Database(app, sqlite_db)
+
+    class Blob(db.Model):
+        # ...
+
+The database initialization can be deferred in order to support more dynamic
+behavior:
+
+.. code-block:: python
+
+    from flask_peewee.db import Database
+
+    # Defer initialization but define our models.
+    db = Database()
+
+    class Blog(db.Model):
+        name = CharField()
+        # .. etc.
+
+    # Some time later, we can:
+    app = Flask(__name__)
+    app.config.from_object(__name__)
+    db.init_app(app)
+
+    # Or we can also specify the database directly.
+    app = Flask(__name__)
+
+    sqlite_db = SqliteDatabase('example.db')
+    db.init_app(app, sqlite_db)
+
 
 Other examples
 --------------
@@ -61,12 +101,22 @@ To connect to MySQL using authentication:
         'passwd': 'secret password',
     }
 
-If using a multi-threaded WSGI server:
+To connect to Postgresql using the playhouse ``PostgresqlExtDatabase``:
 
 .. code-block:: python
 
     DATABASE = {
-        'name': 'foo.db',
-        'engine': 'peewee.SqliteDatabase',
-        'threadlocals': True,
+        'name': 'pg_database',
+        'engine': 'playhouse.PostgresqlExtDatabase',
+        'host': '127.0.0.1',
+        'user': 'postgres',
+        'port': 5432,
     }
+
+We can specify the database directly, as well:
+
+.. code-block:: python
+
+    pg_db = PostgresqlDatabase('pg_database')
+
+    db = Database(app, pg_db)

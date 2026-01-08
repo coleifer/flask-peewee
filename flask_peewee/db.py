@@ -6,19 +6,29 @@ from flask_peewee.utils import load_class
 
 
 class Database(object):
-    def __init__(self, app, database=None):
-        self.app = app
-        self.database = database
+    def __init__(self, app=None, database=None):
+        self.database = None
+        self.init_app(app, database)
 
-        if self.database is None:
-            self.load_database()
+    def init_app(self, app, database=None):
+        if app is None:
+            self.database = database or Proxy()
+            self.Model = self.get_model_class()
+            return
 
-        self.register_handlers()
+        if isinstance(self.database, Proxy):
+            # We deferred initialization, now initialize the proxy.
+            self.database.initialize(database or self.load_database(app))
+        elif self.database is None:
+            self.database = database or self.load_database(app)
+            self.Model = self.get_model_class()
+        elif database:
+            raise ImproperlyConfigured('Database plugin has already been initialized.')
 
-        self.Model = self.get_model_class()
+        self.register_handlers(app)
 
-    def load_database(self):
-        self.database_config = dict(self.app.config['DATABASE'])
+    def load_database(self, app):
+        self.database_config = dict(app.config['DATABASE'])
         try:
             self.database_name = self.database_config.pop('name')
             self.database_engine = self.database_config.pop('engine')
@@ -35,7 +45,7 @@ class Database(object):
         except AssertionError:
             raise ImproperlyConfigured('Database engine not a subclass of peewee.Database: "%s"' % self.database_engine)
 
-        self.database = self.database_class(self.database_name, **self.database_config)
+        return self.database_class(self.database_name, **self.database_config)
 
     def get_model_class(self):
         class BaseModel(Model):
@@ -52,6 +62,6 @@ class Database(object):
         if not self.database.is_closed():
             self.database.close()
 
-    def register_handlers(self):
-        self.app.before_request(self.connect_db)
-        self.app.teardown_request(self.close_db)
+    def register_handlers(self, app):
+        app.before_request(self.connect_db)
+        app.teardown_request(self.close_db)

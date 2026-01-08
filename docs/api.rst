@@ -288,7 +288,7 @@ Exposing Models with the ModelAdmin
         index/export views.  This form is slightly different in that it is tailored for use
         when filtering the list of models.
 
-        :rtype: A special Form instance (:py:class:`FilterForm`) that will be used 
+        :rtype: A special Form instance (:py:class:`FilterForm`) that will be used
                 when filtering the list of objects in the index view.
 
     .. py:method:: save_model(instance, form, adding=False)
@@ -621,7 +621,7 @@ The BaseUser mixin
 Database
 --------
 
-.. py:class:: Database(app)
+.. py:class:: Database([app=None[, database=None]])
 
     The database wrapper provides integration between the peewee ORM and flask.
     It reads database configuration information from the flask app configuration
@@ -629,6 +629,10 @@ Database
 
     The db wrapper also provides a ``Model`` subclass which is configured to work
     with the database specified by the application's config.
+
+    :param app: a ``Flask`` instance or ``None`` (for deferred initialization).
+    :param db: a peewee database instance or ``None``. If None then the
+        database can be configured via the ``app.config`` settings.
 
     To configure the database specify a database engine and name:
 
@@ -651,8 +655,35 @@ Database
             # this model will automatically work with the database specified
             # in the application's config.
 
+    Here is how to defer initialization via ``init_app``:
 
-    :param app: flask application to bind admin to
+    .. code-block:: python
+
+        db = Database()
+
+        class Blog(db.Model):
+            # ...
+
+        # Some time later, we can initialize the database wrapper.
+        app = Flask(__name__)
+        app.config.update(DATABASE={'engine': 'peewee.SqliteDatabase',
+                                    'name': 'example.db'})
+        db.init_app(app)
+
+        # Alternately, we can specify the peewee database instance directly:
+        app = Flask(__name__)
+        sqlite_db = SqliteDatabase('example.db')
+        db.init_app(app, sqlite_db)
+
+    .. py:method:: init_app([app=None[, database=None]])
+
+        :param app: a ``Flask`` instance.
+        :param db: a peewee database instance or ``None``. If None then the
+            database will be configured via the ``app.config`` settings.
+
+        Initialize the Database wrapper with a Flask app you intend to use,
+        optionally specifying a Peewee database instance. If ``database`` is
+        None then the database will be loaded from ``app.config``.
 
     .. py:attribute:: Model
 
@@ -798,7 +829,7 @@ RESTful Resources and their subclasses
                 "id": 2
               }
             }
-            
+
     .. py:attribute:: delete_recursive = True
 
         Recursively delete dependencies
@@ -1093,7 +1124,7 @@ Utilities
     :param query: a list of query expressions
 
     .. code-block:: python
-    
+
         @app.route('/blog/<title>/')
         def blog_detail(title):
             blog = get_object_or_404(Blog.select().where(Blog.active==True), Blog.title==title)
@@ -1110,19 +1141,19 @@ Utilities
     :param kwargs: arbitrary context to pass in to the template
 
     .. code-block:: python
-    
+
         @app.route('/blog/')
         def blog_list():
             active = Blog.select().where(Blog.active==True)
             return object_list('blog/index.html', active)
-    
+
     .. code-block:: html
-    
+
         <!-- template -->
         {% for blog in object_list %}
           {# render the blog here #}
         {% endfor %}
-        
+
         {% if page > 1 %}
           <a href="./?page={{ page - 1 }}">Prev</a>
         {% endif %}
@@ -1152,15 +1183,15 @@ Utilities
     Example:
 
     .. code-block:: python
-    
+
         query = Blog.select().where(Blog.active==True)
         pq = PaginatedQuery(query)
-        
+
         # assume url was /?page=3
         obj_list = pq.get_list()  # returns 3rd page of results
-        
+
         pq.get_page() # returns "3"
-        
+
         pq.get_pages() # returns total objects / objects-per-page
 
     .. py:method:: get_list()
