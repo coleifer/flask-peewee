@@ -384,7 +384,7 @@ class FilterForm(object):
             for (filter_idx_list, filter_value_list, path, join_path, qf_s, qf_v) in filters:
                 query = query.switch(self.model)
                 for join, model in zip(join_path, path):
-                    query = query.join(model, on=join)
+                    query = query.ensure_join(join.model, model, join)
 
                 q_objects = []
                 for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
