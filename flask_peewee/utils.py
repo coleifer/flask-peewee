@@ -109,7 +109,7 @@ def get_model_from_dictionary(model, field_dict):
     models = [model_instance]
     for field_name, value in field_dict.items():
         field_obj = model._meta.fields[field_name]
-        if isinstance(value, dict):
+        if isinstance(value, dict) and isinstance(field_obj, ForeignKeyField):
             rel_obj = field_obj.rel_model
             if check_fks:
                 try:
