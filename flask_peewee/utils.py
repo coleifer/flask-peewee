@@ -7,6 +7,7 @@ from hashlib import sha1
 from flask import abort
 from flask import render_template
 from flask import request
+from peewee import BooleanField
 from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
@@ -121,6 +122,10 @@ def get_model_from_dictionary(model, field_dict):
             models.extend(rel_models)
             setattr(model_instance, field_name, rel_inst)
         else:
+            if isinstance(field_obj, BooleanField):
+                if isinstance(value, str) and value.lower() in ('0', 'f', 'false', ''):
+                    value = False
+
             setattr(model_instance, field_name, field_obj.python_value(value))
     return model_instance, models
 
