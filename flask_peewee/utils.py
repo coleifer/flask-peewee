@@ -101,7 +101,7 @@ def get_dictionary_from_model(model, fields=None, exclude=None):
             data[field_name] = field_data
     return data
 
-def get_model_from_dictionary(model, field_dict):
+def get_model_from_dictionary(model, field_dict, strict=False):
     if isinstance(model, Model):
         model_instance = model
         check_fks = True
@@ -113,7 +113,10 @@ def get_model_from_dictionary(model, field_dict):
         try:
             field_obj = model._meta.fields[field_name]
         except KeyError:
+            if not strict:
+                setattr(model_instance, field_name, value)
             continue
+
         if isinstance(value, dict) and isinstance(field_obj, ForeignKeyField):
             rel_obj = field_obj.rel_model
             if check_fks:

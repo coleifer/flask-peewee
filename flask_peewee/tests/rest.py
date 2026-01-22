@@ -1228,3 +1228,13 @@ class RestApiKeyAuthTestCase(RestApiTestCase):
 
             self.assertEqual(TestModel.select().count(), 3)
             self.assertEqual(resp_json['data'], 't3')
+
+            resp = c.post('/api/testmodel/', data={
+                'data': json.dumps({'data': 't4'}),
+                'key': 'k',
+                'secret': 's'})
+            self.assertEqual(g.api_key, self.k1)
+            resp_json = self.response_json(resp)
+
+            self.assertEqual(TestModel.select().count(), 4)
+            self.assertEqual(resp_json['data'], 't4')
