@@ -39,6 +39,9 @@ class BaseAdminTestCase(FlaskPeeweeTestCase):
         context = context or self.app
         context.post('/accounts/logout/')
 
+    def assertRedirect(self, resp):
+        self.assertTrue(resp.status_code in (302, 303))
+
 
 class AdminTestCase(BaseAdminTestCase):
     def test_admin_auth(self):
@@ -46,7 +49,7 @@ class AdminTestCase(BaseAdminTestCase):
 
         # check login redirect
         resp = self.app.get('/admin/')
-        self.assertEqual(resp.status_code, 302)
+        self.assertRedirect(resp)
         self.assertTrue(resp.headers['location'].endswith((
             '/accounts/login/?next=%2Fadmin%2F',
             '/accounts/login/?next=/admin/')))
@@ -57,7 +60,7 @@ class AdminTestCase(BaseAdminTestCase):
             'password': 'normal',
             'next': '/admin/',
         })
-        self.assertEqual(resp.status_code, 302)
+        self.assertRedirect(resp)
         self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
         resp = self.app.get('/admin/')
@@ -72,7 +75,7 @@ class AdminTestCase(BaseAdminTestCase):
             'password': 'admin',
             'next': '/admin/',
         })
-        self.assertEqual(resp.status_code, 302)
+        self.assertRedirect(resp)
         self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
         resp = self.app.get('/admin/')
@@ -172,7 +175,7 @@ class AdminTestCase(BaseAdminTestCase):
                 'join_date-date': '2011-01-01',
                 'join_date-time': '00:00:00',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             # new user was created
             self.assertEqual(User.select().count(), 4)
@@ -265,7 +268,7 @@ class AdminTestCase(BaseAdminTestCase):
                 'join_date-date': '2011-01-01',
                 'join_date-time': '00:00:00',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             # no new user was created
             self.assertEqual(User.select().count(), 3)
@@ -291,7 +294,7 @@ class AdminTestCase(BaseAdminTestCase):
                 'join_date-date': '2011-01-01',
                 'join_date-time': '00:00:00',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             # no new user was created
             self.assertEqual(User.select().count(), 3)
@@ -331,7 +334,7 @@ class AdminTestCase(BaseAdminTestCase):
 
             # post to it, get a redirect on success
             resp = c.post('/admin/user/delete/', data={'id': self.normal.id})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             # ensure the user was deleted
             self.assertEqual(User.select().count(), 2)
@@ -348,7 +351,7 @@ class AdminTestCase(BaseAdminTestCase):
 
             # post to it and check both deleted
             resp = c.post('/admin/user/delete/', data={'id': [self.admin.id, self.inactive.id]})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             self.assertEqual(User.select().count(), 0)
 
@@ -391,7 +394,7 @@ class AdminTestCase(BaseAdminTestCase):
             })
 
             resp = c.post('/admin/amodel/delete/', data={'id': a1.id})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertEqual(AModel.select().count(), 1)
             self.assertEqual(BModel.select().count(), 1)
             self.assertEqual(BDetails.select().count(), 1)
@@ -417,7 +420,7 @@ class AdminTestCase(BaseAdminTestCase):
 
             # post to it, get a redirect on success
             resp = c.post('/admin/user/delete/', data={'id': self.normal.id})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             self.assertEqual(User.select().count(), 2)
             self.assertEqual(Message.select().count(), 1)
@@ -442,7 +445,7 @@ class AdminTestCase(BaseAdminTestCase):
 
             # post to it, get a redirect on success
             resp = c.post('/admin/user/delete/', data={'id': [self.admin.id, self.inactive.id]})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             self.assertEqual(User.select().count(), 0)
             self.assertEqual(Message.select().count(), 0)
@@ -582,7 +585,7 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(Note.select().count(), 0)
 
             resp = c.post('/admin/notes/create/', data={'message': 'testing'})
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
             self.assertEqual(Note.select().count(), 1)

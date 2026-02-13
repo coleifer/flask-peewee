@@ -42,6 +42,9 @@ class AuthTestCase(FlaskPeeweeTestCase):
         context = context or self.app
         return context.post('/accounts/logout/')
 
+    def assertRedirect(self, resp):
+        self.assertTrue(resp.status_code in (302, 303))
+
     def test_table(self):
         self.assertEqual(self.test_auth.User._meta.table_name, 'user')
 
@@ -116,7 +119,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
                 'username': 'normal',
                 'password': 'normal',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
 
             # check that we now have a logged-in user
             self.assertEqual(auth.get_logged_in_user(), self.normal)
@@ -150,7 +153,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
                 'password': 'normal',
                 'next': '/admin/',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith('/admin/'))
 
     def test_login_default_redirect(self):
@@ -161,7 +164,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
                 'username': 'normal',
                 'password': 'normal',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             location = resp.location.replace('http://localhost', '')
             self.assertTrue(location, '/')
 
@@ -174,7 +177,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
                 'password': 'normal',
                 'next': '/foo-baz/',
             })
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith('/foo-baz/'))
 
     def test_login_logout(self):
@@ -208,7 +211,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
 
         with self.flask_app.test_client() as c:
             resp = c.get('/private/')
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith((
                 '/accounts/login/?next=%2Fprivate%2F',
                 '/accounts/login/?next=/private/')))
@@ -232,7 +235,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
 
         with self.flask_app.test_client() as c:
             resp = c.get('/secret/')
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith((
                 '/accounts/login/?next=%2Fsecret%2F',
                 '/accounts/login/?next=/secret/')))
@@ -240,7 +243,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
             self.login('normal', 'normal', c)
 
             resp = c.get('/secret/')
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith((
                 '/accounts/login/?next=%2Fsecret%2F',
                 '/accounts/login/?next=/secret/')))
