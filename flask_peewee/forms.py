@@ -24,9 +24,9 @@ class ChosenAjaxSelectWidget(widgets.Select):
 
     def __call__(self, field, **kwargs):
         if field.allow_blank and not self.multiple:
-            kwargs['data-role'] = u'ajax-chosenblank'
+            kwargs['data-role'] = 'ajax-chosenblank'
         else:
-            kwargs['data-role'] = u'ajax-chosen'
+            kwargs['data-role'] = 'ajax-chosen'
         kwargs['data-source'] = self.data_source
         kwargs['data-param'] = self.data_param
         kwargs['data-placeholder'] = 'Type to search...'

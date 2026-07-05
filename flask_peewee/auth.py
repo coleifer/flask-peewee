@@ -18,7 +18,7 @@ from wtforms.fields import StringField
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
-from flask_peewee._wtforms_compat import DataRequired
+from wtforms.validators import DataRequired
 
 
 current_dir = os.path.dirname(__file__)

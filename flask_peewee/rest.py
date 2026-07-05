@@ -20,7 +20,7 @@ from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import convert_boolean
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import slugify
-from flask_peewee._compat import reduce
+from functools import reduce
 
 
 class Authentication(object):

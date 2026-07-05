@@ -1,4 +1,3 @@
-from __future__ import with_statement
 
 import datetime
 
@@ -22,7 +21,6 @@ from flask_peewee.tests.test_app import admin
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
-from flask_peewee._compat import text_type
 
 from wtfpeewee.orm import model_form
 
@@ -708,7 +706,7 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
         self.assertEqual(admin.fix_underscores('test'), 'Test')
 
     def test_update_querystring(self):
-        qs = lambda t: text_type(t).encode('utf8')
+        qs = lambda t: str(t).encode('utf8')
         self.assertEqual(admin.update_querystring(qs(''), 'page', 1), 'page=1')
         self.assertEqual(admin.update_querystring(qs('page=1'), 'page', 2), 'page=2')
         self.assertEqual(admin.update_querystring(qs('session=3&page=1'), 'page', 2), 'session=3&page=2')

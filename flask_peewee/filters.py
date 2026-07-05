@@ -9,7 +9,7 @@ from wtforms import validators
 from wtforms import widgets
 
 from flask_peewee.forms import BaseModelConverter
-from flask_peewee._compat import reduce
+from functools import reduce
 
 
 class QueryFilter(object):

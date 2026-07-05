@@ -1,4 +1,3 @@
-from __future__ import with_statement
 
 import datetime
 try:
@@ -74,7 +73,7 @@ class AuthTestCase(FlaskPeeweeTestCase):
 
             # check form for errors
             frm = self.get_context('form')
-            self.assertEqual(frm.errors, {'username': [u'This field is required.']})
+            self.assertEqual(frm.errors, {'username': ['This field is required.']})
 
             # check that no messages were generated
             self.assertFalse('_flashes' in session)
