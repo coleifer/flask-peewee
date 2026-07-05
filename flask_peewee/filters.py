@@ -17,6 +17,10 @@ class QueryFilter(object):
     Basic class representing a named field (with or without a list of options)
     and an operation against a given value
     """
+    # override the value input's HTML type for this operation, e.g. 'number'
+    # for operations that take a count or year rather than a date.
+    input_type = None
+
     def __init__(self, field, name, options=None):
         self.field = field
         self.name = name
@@ -97,6 +101,8 @@ class ContainsQueryFilter(QueryFilter):
 
 
 class YearFilter(QueryFilter):
+    input_type = 'number'
+
     def query(self, value):
         value = int(value)
         return self.field.year == value
@@ -106,6 +112,8 @@ class YearFilter(QueryFilter):
 
 
 class MonthFilter(QueryFilter):
+    input_type = 'number'
+
     def query(self, value):
         value = int(value)
         return self.field.month == value
@@ -115,6 +123,8 @@ class MonthFilter(QueryFilter):
 
 
 class WithinDaysAgoFilter(QueryFilter):
+    input_type = 'number'
+
     def query(self, value):
         value = int(value)
         return self.field >= (
@@ -125,6 +135,8 @@ class WithinDaysAgoFilter(QueryFilter):
 
 
 class OlderThanDaysAgoFilter(QueryFilter):
+    input_type = 'number'
+
     def query(self, value):
         value = int(value)
         return self.field < (
@@ -292,7 +304,11 @@ class FilterForm(object):
     def get_operation_field(self, field):
         choices = []
         for i, query_filter in enumerate(self._query_filters[field]):
-            choices.append((str(i), query_filter.operation()))
+            if query_filter.input_type:
+                choices.append((str(i), query_filter.operation(),
+                                {'data-input-type': query_filter.input_type}))
+            else:
+                choices.append((str(i), query_filter.operation()))
 
         return fields.SelectField(choices=choices, validators=[validators.Optional()], widget=SmallSelectWidget())
 
@@ -398,9 +414,17 @@ class FilterForm(object):
         return form, query, cleaned
 
 
+class DateTimeLocalField(fields.DateTimeLocalField):
+    # wtforms' default format list renders with a space separator, which is
+    # not a valid value for <input type="datetime-local">.
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('format', ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M'])
+        super(DateTimeLocalField, self).__init__(*args, **kwargs)
+
+
 class FilterModelConverter(BaseModelConverter):
     def __init__(self, *args, **kwargs):
         super(FilterModelConverter, self).__init__(*args, **kwargs)
         self.defaults = dict(self.defaults)
         self.defaults[TextField] = fields.StringField
-        self.defaults[DateTimeField] = fields.DateTimeField
+        self.defaults[DateTimeField] = DateTimeLocalField

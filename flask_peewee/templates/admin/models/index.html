@@ -24,7 +24,7 @@
   <table class="table table-bordered table-striped">
     <thead>
       <tr>
-        <th class="check first shrink"><input type="checkbox" name="xxx" onchange="javascript:$('td input[type=checkbox]').attr('checked', this.checked);" /></th>
+        <th class="check first shrink"><input type="checkbox" name="xxx" onchange="$('td input[type=checkbox]').prop('checked', this.checked);" /></th>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
             {% if ordering == column %}

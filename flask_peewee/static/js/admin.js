@@ -43,7 +43,8 @@ var Admin = window.Admin || {};
       target.empty();
       for (var i=0, l=data.object_list.length; i < l; i++) {
         var o = data.object_list[i];
-        target.append('<li><a data-object-id="'+o.id+'" href="#">'+o.repr+'</a></li>');
+        var link = $('<a href="#"></a>').attr('data-object-id', o.id).text(o.repr);
+        target.append($('<li></li>').append(link));
       }
 
       if (data.prev_page) {
@@ -156,6 +157,21 @@ var Admin = window.Admin || {};
 
     if (ival && sval) {
         select_clone.val(sval);
+    }
+
+    /* certain operations want a different input type than the field's
+       default, e.g. "within X days ago" takes a number, not a date */
+    if (input_clone.is('input')) {
+      var original_type = input_clone.prop('type');
+      var sync_input_type = function() {
+        var input_type = select_clone.find('option:selected').data('input-type');
+        input_clone.prop('type', input_type || original_type);
+      };
+      select_clone.change(sync_input_type);
+      sync_input_type();
+    }
+
+    if (ival && sval) {
         input_clone.val(ival);
     }
 
@@ -166,11 +182,7 @@ var Admin = window.Admin || {};
     this.filter_list.prepend(row_elem);
 
     /* reload our jquery plugin stuff */
-    if (input_clone.hasClass('datetime-widget')) {
-      $(input_clone[0]).datepicker({format: 'yyyy-mm-dd'});
-    } else if (input_clone.hasClass('date-widget')) {
-      input_clone.datepicker({format: 'yyyy-mm-dd'});
-    } else if (input_clone.data('role') === 'chosen') {
+    if (input_clone.data('role') === 'chosen') {
       input_clone.chosen();
     } else if (input_clone.data('role') === 'ajax-chosen') {
       input_clone.ajaxChosen({
