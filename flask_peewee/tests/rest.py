@@ -813,6 +813,28 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPINote(resp_json, note)
 
+    def test_readonly_field_mass_assignment(self):
+        # UserResource marks "admin" read-only; an authorized editor still
+        # cannot escalate a user's privileges through the request body.
+        url = '/api/user/%s/' % self.normal.id
+        serialized = json.dumps({'username': 'normal', 'admin': True})
+
+        resp = self.app.put(url, data=serialized,
+                            headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.get(User.id == self.normal.id).admin)
+
+    def test_readonly_pk_immutable(self):
+        # the primary key is always read-only and can't be rewritten.
+        url = '/api/user/%s/' % self.normal.id
+        serialized = json.dumps({'username': 'normal', 'id': 99999})
+
+        resp = self.app.put(url, data=serialized,
+                            headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(User.select().where(User.id == self.normal.id).exists())
+        self.assertFalse(User.select().where(User.id == 99999).exists())
+
     def test_auth_delete(self):
         self.create_notes()
 

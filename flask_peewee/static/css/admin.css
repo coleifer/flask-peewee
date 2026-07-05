@@ -1,12 +1,102 @@
 body.admin {
+  --fp-accent: #2a6f6f;
+  --fp-accent-dark: #1d5858;
+  --fp-ink: 18, 30, 30;
+
   --bs-body-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --bs-body-bg: #f2f5f5;
+  --bs-body-color: #1c2b2b;
+  --bs-link-color: var(--fp-accent);
+  --bs-link-hover-color: var(--fp-accent-dark);
+  --bs-link-color-rgb: 42, 111, 111;
+  --bs-link-hover-color-rgb: 29, 88, 88;
   padding-top: 76px;
+}
+
+.navbar {
+  --bs-dark-rgb: var(--fp-ink);
+  border-bottom: 2px solid var(--fp-accent);
+}
+.navbar-brand {
+  font-weight: 700;
+}
+
+.content {
+  background: #fff;
+  border: 1px solid rgba(var(--fp-ink), .1);
+  border-radius: .5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(var(--fp-ink), .04);
+}
+.page-header h1 {
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.breadcrumb {
+  font-size: .875rem;
 }
 
 .sidebar-nav {
   position: sticky;
   top: 76px;
+}
+.card {
+  --bs-card-border-color: rgba(var(--fp-ink), .12);
+  box-shadow: 0 1px 2px rgba(var(--fp-ink), .04);
+}
+.card-header {
+  background-color: rgba(var(--fp-ink), .03);
+  font-weight: 600;
+}
+.list-group {
+  --bs-list-group-active-bg: var(--fp-accent);
+  --bs-list-group-active-border-color: var(--fp-accent);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--fp-accent);
+  --bs-btn-border-color: var(--fp-accent);
+  --bs-btn-hover-bg: var(--fp-accent-dark);
+  --bs-btn-hover-border-color: var(--fp-accent-dark);
+  --bs-btn-active-bg: var(--fp-accent-dark);
+  --bs-btn-active-border-color: var(--fp-accent-dark);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--fp-accent);
+  --bs-btn-border-color: var(--fp-accent);
+  --bs-btn-hover-bg: var(--fp-accent);
+  --bs-btn-hover-border-color: var(--fp-accent);
+  --bs-btn-active-bg: var(--fp-accent-dark);
+  --bs-btn-active-border-color: var(--fp-accent-dark);
+}
+.pagination {
+  --bs-pagination-active-bg: var(--fp-accent);
+  --bs-pagination-active-border-color: var(--fp-accent);
+}
+
+.nav-tabs .nav-link.active {
+  font-weight: 600;
+}
+.table thead th {
+  font-size: .78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.table thead th a {
+  text-decoration: none;
+}
+
+.form-check-input:checked {
+  background-color: var(--fp-accent);
+  border-color: var(--fp-accent);
+}
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: #7fadad;
+  box-shadow: 0 0 0 .25rem rgba(42, 111, 111, .2);
 }
 
 /* modeladmin filters */

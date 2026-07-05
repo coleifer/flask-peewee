@@ -17,6 +17,8 @@ from wtforms.fields import StringField
 
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
+from flask_peewee.utils import is_legacy_password
+from flask_peewee.utils import is_safe_url
 from flask_peewee.utils import make_password
 from wtforms.validators import DataRequired
 
@@ -146,6 +148,11 @@ class Auth(object):
             if not user.check_password(password):
                 return False
 
+        # transparently upgrade legacy password hashes on successful login.
+        if is_legacy_password(user.password):
+            user.set_password(password)
+            user.save()
+
         return user
 
     def login_user(self, user):
@@ -171,7 +178,7 @@ class Auth(object):
             try:
                 return self.User.select().where(
                     self.User.active==True,
-                    self.User.id==session.get('user_pk')
+                    self.User._meta.primary_key==session.get('user_pk')
                 ).get()
             except self.User.DoesNotExist:
                 pass
@@ -182,7 +189,9 @@ class Auth(object):
 
         if request.method == 'POST':
             form = Form(request.form)
-            next_url = request.form.get('next') or self.default_next_url
+            next_url = request.form.get('next')
+            if not is_safe_url(next_url):
+                next_url = self.default_next_url
             if form.validate():
                 authenticated_user = self.authenticate(
                     form.username.data,
@@ -192,7 +201,7 @@ class Auth(object):
                     self.login_user(authenticated_user)
                     return redirect(next_url)
                 else:
-                    flash('Incorrect username or password')
+                    flash('Incorrect username or password', 'danger')
         else:
             form = Form()
             next_url = request.args.get('next')
@@ -206,7 +215,10 @@ class Auth(object):
 
     def logout(self):
         self.logout_user()
-        return redirect(request.args.get('next') or self.default_next_url)
+        next_url = request.args.get('next')
+        if not is_safe_url(next_url):
+            next_url = self.default_next_url
+        return redirect(next_url)
 
     def configure_routes(self):
         for url, callback in self.get_urls():

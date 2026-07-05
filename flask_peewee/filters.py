@@ -285,7 +285,8 @@ def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
         if field_obj.name in exclude or field_obj in seen:
             continue
 
-        if field_obj.name in fields:
+        # binary fields have no meaningful filter operation.
+        if field_obj.name in fields and not isinstance(field_obj, BlobField):
             model_fields.append(field_obj)
 
         if isinstance(field_obj, ForeignKeyField):

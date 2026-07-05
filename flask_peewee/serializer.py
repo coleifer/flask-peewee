@@ -1,3 +1,4 @@
+import base64
 import datetime
 import sys
 import uuid
@@ -29,6 +30,8 @@ class Serializer(object):
             return value._pk
         elif isinstance(value, uuid.UUID):
             return str(value)
+        elif isinstance(value, (bytes, bytearray, memoryview)):
+            return base64.b64encode(bytes(value)).decode('ascii')
         else:
             return value
 

@@ -179,6 +179,31 @@ class AuthTestCase(FlaskPeeweeTestCase):
             self.assertRedirect(resp)
             self.assertTrue(resp.headers['location'].endswith('/foo-baz/'))
 
+    def test_login_open_redirect_blocked(self):
+        self.create_users()
+
+        for bad in ('http://evil.com/', '//evil.com/', 'https://evil.com'):
+            with self.flask_app.test_client() as c:
+                resp = c.post('/accounts/login/', data={
+                    'username': 'normal',
+                    'password': 'normal',
+                    'next': bad,
+                })
+                self.assertRedirect(resp)
+                location = resp.location.replace('http://localhost', '')
+                self.assertEqual(location, '/')
+
+    def test_logout_open_redirect_blocked(self):
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            c.post('/accounts/login/', data={
+                'username': 'normal', 'password': 'normal'})
+            resp = c.get('/accounts/logout/?next=//evil.com/')
+            self.assertRedirect(resp)
+            location = resp.location.replace('http://localhost', '')
+            self.assertEqual(location, '/')
+
     def test_login_logout(self):
         self.create_users()
 

@@ -29,6 +29,7 @@ from peewee import DateField
 from peewee import DateTimeField
 from peewee import ForeignKeyField
 from peewee import TextField
+from werkzeug.datastructures import CombinedMultiDict
 from werkzeug.datastructures import Headers
 from wtforms import fields
 from wtforms import widgets
@@ -223,6 +224,13 @@ class ModelAdmin(object):
     def get_extra_context(self):
         return {}
 
+    def get_form_data(self):
+        # combine files with form data so file-upload fields (e.g. blobs)
+        # receive their uploads.
+        if request.files:
+            return CombinedMultiDict((request.files, request.form))
+        return request.form
+
     def index(self):
         if request.method == 'POST':
             id_list = request.form.getlist('id')
@@ -286,7 +294,7 @@ class ModelAdmin(object):
         instance = self.model()
 
         if request.method == 'POST':
-            form = Form(request.form)
+            form = Form(self.get_form_data())
             if form.validate():
                 instance = self.save_model(instance, form, True)
                 flash('New %s saved successfully' % self.get_display_name(), 'success')
@@ -311,7 +319,7 @@ class ModelAdmin(object):
         Form = self.get_edit_form(instance)
 
         if request.method == 'POST':
-            form = Form(request.form, obj=instance)
+            form = Form(self.get_form_data(), obj=instance)
             if form.validate():
                 self.save_model(instance, form, False)
                 flash('Changes to %s saved successfully' % self.get_display_name(), 'success')

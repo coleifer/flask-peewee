@@ -1,5 +1,6 @@
 import unittest
 
+from flask_peewee import utils
 from flask_peewee.tests import test_app
 from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import BDetails
@@ -14,7 +15,10 @@ from flask_peewee.tests.test_app import User
 
 
 class FlaskPeeweeTestCase(unittest.TestCase):
+    # use a cheap hashing method so the suite is not dominated by scrypt.
     def setUp(self):
+        utils.PASSWORD_HASH_METHOD = 'pbkdf2:sha256:1'
+
         Note.drop_table(True)
         Message.drop_table(True)
         User.drop_table(True)

@@ -123,6 +123,10 @@ class RestResource(object):
     fields = None
     exclude = None
 
+    # field names that clients may never write, even when they appear in an
+    # incoming POST/PUT body -- protects against mass assignment.
+    readonly_fields = None
+
     # exclude certian fields from being exposed as filters -- for related fields
     # use "__" notation, e.g. user__password
     filter_exclude = None
@@ -282,7 +286,17 @@ class RestResource(object):
                 for obj in query
         ]
 
+    def get_readonly_fields(self):
+        # the primary key is always read-only: it is addressed via the URL,
+        # never rewritten from the request body.
+        readonly = set(self.readonly_fields or ())
+        readonly.add(self.pk.name)
+        return readonly
+
     def deserialize_object(self, data, instance):
+        readonly = self.get_readonly_fields()
+        if readonly:
+            data = dict((k, v) for k, v in data.items() if k not in readonly)
         d = self.get_deserializer()
         return d.deserialize_object(instance, data)
 
@@ -368,7 +382,9 @@ class RestResource(object):
 
     def get_request_metadata(self, paginated_query):
         var = paginated_query.page_var
-        request_arguments = request.args.copy()
+        # to_dict(flat=False) keeps repeated params (e.g. ?user=1&user=2) so
+        # they survive into the next/previous links.
+        request_arguments = request.args.to_dict(flat=False)
 
         current_page = paginated_query.get_page()
         next = previous = ''

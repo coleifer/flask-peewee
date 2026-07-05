@@ -5,8 +5,11 @@ from flask import request
 from werkzeug.exceptions import NotFound
 
 from flask_peewee.utils import check_password
+from flask_peewee.utils import get_hexdigest
 from flask_peewee.utils import get_model_from_dictionary
 from flask_peewee.utils import get_object_or_404
+from flask_peewee.utils import is_legacy_password
+from flask_peewee.utils import is_safe_url
 from flask_peewee.utils import make_password
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import Message
@@ -43,6 +46,44 @@ class UtilsTestCase(FlaskPeeweeTestCase):
 
         p2 = make_password('Testing')
         self.assertFalse(p == p2)
+
+    def make_legacy_password(self, raw_password):
+        salt = get_hexdigest('salt', 'salt')[:5]
+        return '%s$%s' % (salt, get_hexdigest(salt, raw_password))
+
+    def test_legacy_password_verify(self):
+        legacy = self.make_legacy_password('testing')
+        self.assertTrue(is_legacy_password(legacy))
+        self.assertFalse(is_legacy_password(make_password('testing')))
+
+        # legacy salted-sha1 hashes still verify.
+        self.assertTrue(check_password('testing', legacy))
+        self.assertFalse(check_password('wrong', legacy))
+
+    def test_legacy_password_upgraded_on_login(self):
+        from flask_peewee.tests.test_app import auth
+
+        user = self.create_user('legacy', 'placeholder')
+        user.password = self.make_legacy_password('sekret')
+        user.save()
+        self.assertTrue(is_legacy_password(user.password))
+
+        # wrong password does not authenticate or rehash.
+        self.assertFalse(auth.authenticate('legacy', 'nope'))
+        self.assertTrue(is_legacy_password(User.get(User.id == user.id).password))
+
+        # correct login verifies and transparently rehashes.
+        self.assertTrue(auth.authenticate('legacy', 'sekret'))
+        stored = User.get(User.id == user.id).password
+        self.assertFalse(is_legacy_password(stored))
+        self.assertTrue(check_password('sekret', stored))
+
+    def test_is_safe_url(self):
+        for good in ('/', '/admin/', '/a/b/?x=1', 'relative/path'):
+            self.assertTrue(is_safe_url(good), good)
+        for bad in ('', None, 'http://evil.com', 'https://evil.com/x',
+                    '//evil.com', 'javascript:alert(1)'):
+            self.assertFalse(is_safe_url(bad), bad)
 
     def test_get_model_from_dictionary(self):
         class User(Model):

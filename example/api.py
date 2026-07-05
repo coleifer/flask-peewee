@@ -14,6 +14,7 @@ api = RestAPI(app, default_auth=user_auth)
 
 class UserResource(RestResource):
     exclude = ('password', 'email',)
+    readonly_fields = ('admin', 'active',)
 
 
 class MessageResource(RestrictOwnerResource):

@@ -1,9 +1,11 @@
 import datetime
+import hmac
 import math
 import random
 import re
 import sys
 from hashlib import sha1
+from urllib.parse import urlparse
 
 from flask import abort
 from flask import render_template
@@ -14,6 +16,8 @@ from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
 from peewee import SelectQuery
+from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash
 
 
 
@@ -69,6 +73,14 @@ def get_next():
     if not request.query_string:
         return request.path
     return '%s?%s' % (request.path, request.query_string)
+
+def is_safe_url(url):
+    # only allow redirects to relative, same-host paths -- reject absolute
+    # urls (http://evil.com) and scheme-relative urls (//evil.com).
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return not parsed.scheme and not parsed.netloc
 
 def slugify(s):
     return re.sub(r'[^a-z0-9_\-]+', '-', s.lower())
@@ -173,16 +185,26 @@ def convert_boolean(s):
     return bool(s)
 
 
-# borrowing these methods, slightly modified, from django.contrib.auth
+# legacy django-style salted-sha1 hashes, e.g. "a1b2c$<40 hex chars>".
+LEGACY_PASSWORD_RE = re.compile(r'^[0-9a-f]{5}\$[0-9a-f]{40}$')
+
+# hashing method passed to werkzeug -- override to tune cost, e.g. in tests.
+# See werkzeug.security.generate_password_hash for accepted values.
+PASSWORD_HASH_METHOD = 'scrypt'
+
+
 def get_hexdigest(salt, raw_password):
     data = salt + raw_password
     return sha1(data.encode('utf8')).hexdigest()
 
+def is_legacy_password(enc_password):
+    return bool(LEGACY_PASSWORD_RE.match(enc_password or ''))
+
 def make_password(raw_password):
-    salt = get_hexdigest(str(random.random()), str(random.random()))[:5]
-    hsh = get_hexdigest(salt, raw_password)
-    return '%s$%s' % (salt, hsh)
+    return generate_password_hash(raw_password, method=PASSWORD_HASH_METHOD)
 
 def check_password(raw_password, enc_password):
-    salt, hsh = enc_password.split('$', 1)
-    return hsh == get_hexdigest(salt, raw_password)
+    if is_legacy_password(enc_password):
+        salt, hsh = enc_password.split('$', 1)
+        return hmac.compare_digest(hsh, get_hexdigest(salt, raw_password))
+    return check_password_hash(enc_password, raw_password)

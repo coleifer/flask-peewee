@@ -183,6 +183,7 @@ admin.register_panel('Notes', NotePanel)
 
 class UserResource(RestResource):
     exclude = ('password', 'email',)
+    readonly_fields = ('admin',)
 
     def get_query(self):
         return User.select().where(User.active==True)
