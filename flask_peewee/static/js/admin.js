@@ -139,9 +139,46 @@ var Admin = window.Admin || {};
         self.add_row(link.dataset.field, link.dataset.select);
       });
     });
+
+    if (!this.filter_list) return;
+
+    this.filter_list.addEventListener('click', function(e) {
+      var btn = e.target.closest('a.remove-filter');
+      if (btn) {
+        e.preventDefault();
+        btn.closest('.filter-row').remove();
+      }
+    });
+
+    /* rows for active filters are rendered server-side */
+    this.filter_list.querySelectorAll('.filter-row').forEach(function(row) {
+      self.bind_row(row);
+    });
   };
 
-  A.ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
+  A.ModelAdminFilter.prototype.bind_row = function(row) {
+    var select_elem = row.children[1],
+        input_elem = row.children[2];
+
+    /* certain operations want a different input type than the field's
+       default, e.g. "within X days ago" takes a number, not a date */
+    if (input_elem.tagName === 'INPUT') {
+      var lookup = this.lookups_elem.querySelector('[name="' + input_elem.name + '"]'),
+          default_type = lookup ? lookup.type : input_elem.type;
+      var sync_input_type = function() {
+        var opt = select_elem.selectedOptions[0];
+        input_elem.type = (opt && opt.dataset.inputType) || default_type;
+      };
+      select_elem.addEventListener('change', sync_input_type);
+      sync_input_type();
+    }
+
+    if (input_elem.dataset.role === 'ajax-select') {
+      A.ajaxSelect(input_elem);
+    }
+  };
+
+  A.ModelAdminFilter.prototype.add_row = function(qf_v, qf_s) {
     var select_clone = this.lookups_elem.querySelector('#' + CSS.escape(qf_s)).cloneNode(true),
         input_clone = this.lookups_elem.querySelector('#' + CSS.escape(qf_v)).cloneNode(true),
         field_label = document.getElementById('filter-' + qf_s).textContent.trim();
@@ -157,43 +194,16 @@ var Admin = window.Admin || {};
     row.className = 'filter-row d-flex align-items-center gap-2 mb-2';
 
     var remove_btn = document.createElement('a');
-    remove_btn.className = 'btn btn-danger btn-sm';
+    remove_btn.className = 'btn btn-danger btn-sm remove-filter';
     remove_btn.href = '#';
     remove_btn.title = 'click to remove';
     remove_btn.textContent = field_label;
-    remove_btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      row.remove();
-    });
 
     row.appendChild(remove_btn);
     row.appendChild(select_clone);
     row.appendChild(input_clone);
 
-    if (ival && sval) {
-      select_clone.value = sval;
-    }
-
-    /* certain operations want a different input type than the field's
-       default, e.g. "within X days ago" takes a number, not a date */
-    if (input_clone.tagName === 'INPUT') {
-      var original_type = input_clone.type;
-      var sync_input_type = function() {
-        var opt = select_clone.selectedOptions[0];
-        input_clone.type = (opt && opt.dataset.inputType) || original_type;
-      };
-      select_clone.addEventListener('change', sync_input_type);
-      sync_input_type();
-    }
-
-    if (ival && sval) {
-      input_clone.value = ival;
-    }
-
-    if (input_clone.dataset.role === 'ajax-select') {
-      A.ajaxSelect(input_clone);
-    }
-
+    this.bind_row(row);
     this.filter_list.prepend(row);
     this.wrapper.classList.remove('d-none');
 
@@ -203,11 +213,6 @@ var Admin = window.Admin || {};
   /* add a filter of a given type */
   A.ModelAdminFilter.prototype.add_filter = function(elem) {
     return this.add_row(elem.dataset.field, elem.dataset.select);
-  };
-
-  /* pull request data and simulate adding a filter */
-  A.ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val) {
-    return this.add_row(qf_v, qf_s, filter_val, '' + filter_idx);
   };
 
   /* bulk action helper for the model list */

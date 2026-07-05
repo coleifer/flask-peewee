@@ -1,13 +1,34 @@
-  <div class="card card-body mb-3 d-none" id="filter-wrapper">
+  {% macro render_flat(field) %}
+    {%- if field.type == 'FormField' -%}
+      {% for sub in field %}{{ render_flat(sub) }}{% endfor %}
+    {%- else -%}
+      {{ field() }}
+    {%- endif -%}
+  {% endmacro %}
+  <div class="card card-body mb-3{% if not active_filters %} d-none{% endif %}" id="filter-wrapper">
     <div class="d-none" id="filter-fields">
       {% for field in filter_form %}
-        {{ field() }}
+        {{ render_flat(field) }}
       {% endfor %}
     </div>
     <form action="." class="modeladmin-filters" method="get">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
       <div class="d-flex align-items-start">
-        <div class="filter-list flex-grow-1"></div>
+        <div class="filter-list flex-grow-1">
+          {% for f in active_filters %}
+            <div class="filter-row d-flex align-items-center gap-2 mb-2">
+              <a class="btn btn-danger btn-sm remove-filter" href="#" title="click to remove">{{ f.label }}</a>
+              {{ f.op_field(id='filter-op-' ~ loop.index) }}
+              {% if 'Select' in f.value_field.type %}
+                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-select form-select-sm w-auto') }}
+              {% elif f.input_type %}
+                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto', type=f.input_type, value=f.value) }}
+              {% else %}
+                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto', value=f.value) }}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
         <div class="d-flex gap-2">
           <button class="btn btn-primary btn-sm" type="submit">Apply</button>
           <a class="btn btn-secondary btn-sm" href=".">Reset</a>

@@ -17,6 +17,9 @@ class QueryFilter(object):
     Basic class representing a named field (with or without a list of options)
     and an operation against a given value
     """
+    # stable name identifying this operation in query-strings.
+    key = None
+
     # override the value input's HTML type for this operation, e.g. 'number'
     # for operations that take a count or year rather than a date.
     input_type = None
@@ -25,6 +28,9 @@ class QueryFilter(object):
         self.field = field
         self.name = name
         self.options = options
+
+    def clean(self, value):
+        return self.field.db_value(value)
 
     def query(self, value):
         raise NotImplementedError
@@ -37,6 +43,8 @@ class QueryFilter(object):
 
 
 class EqualQueryFilter(QueryFilter):
+    key = 'eq'
+
     def query(self, value):
         return self.field == value
 
@@ -45,6 +53,8 @@ class EqualQueryFilter(QueryFilter):
 
 
 class NotEqualQueryFilter(QueryFilter):
+    key = 'ne'
+
     def query(self, value):
         return self.field != value
 
@@ -53,6 +63,8 @@ class NotEqualQueryFilter(QueryFilter):
 
 
 class LessThanQueryFilter(QueryFilter):
+    key = 'lt'
+
     def query(self, value):
         return self.field < value
 
@@ -61,6 +73,8 @@ class LessThanQueryFilter(QueryFilter):
 
 
 class LessThanEqualToQueryFilter(QueryFilter):
+    key = 'lte'
+
     def query(self, value):
         return self.field <= value
 
@@ -69,6 +83,8 @@ class LessThanEqualToQueryFilter(QueryFilter):
 
 
 class GreaterThanQueryFilter(QueryFilter):
+    key = 'gt'
+
     def query(self, value):
         return self.field > value
 
@@ -77,6 +93,8 @@ class GreaterThanQueryFilter(QueryFilter):
 
 
 class GreaterThanEqualToQueryFilter(QueryFilter):
+    key = 'gte'
+
     def query(self, value):
         return self.field >= value
 
@@ -85,6 +103,11 @@ class GreaterThanEqualToQueryFilter(QueryFilter):
 
 
 class StartsWithQueryFilter(QueryFilter):
+    key = 'startswith'
+
+    def clean(self, value):
+        return value
+
     def query(self, value):
         return fn.Lower(fn.Substr(self.field, 1, len(value))) == value.lower()
 
@@ -93,6 +116,11 @@ class StartsWithQueryFilter(QueryFilter):
 
 
 class ContainsQueryFilter(QueryFilter):
+    key = 'contains'
+
+    def clean(self, value):
+        return value
+
     def query(self, value):
         return self.field ** ('%%%s%%' % value)
 
@@ -101,10 +129,13 @@ class ContainsQueryFilter(QueryFilter):
 
 
 class YearFilter(QueryFilter):
+    key = 'year'
     input_type = 'number'
 
+    def clean(self, value):
+        return int(value)
+
     def query(self, value):
-        value = int(value)
         return self.field.year == value
 
     def operation(self):
@@ -112,10 +143,13 @@ class YearFilter(QueryFilter):
 
 
 class MonthFilter(QueryFilter):
+    key = 'month'
     input_type = 'number'
 
+    def clean(self, value):
+        return int(value)
+
     def query(self, value):
-        value = int(value)
         return self.field.month == value
 
     def operation(self):
@@ -123,10 +157,13 @@ class MonthFilter(QueryFilter):
 
 
 class WithinDaysAgoFilter(QueryFilter):
+    key = 'within_days'
     input_type = 'number'
 
+    def clean(self, value):
+        return int(value)
+
     def query(self, value):
-        value = int(value)
         return self.field >= (
             datetime.date.today() - datetime.timedelta(days=value))
 
@@ -135,10 +172,13 @@ class WithinDaysAgoFilter(QueryFilter):
 
 
 class OlderThanDaysAgoFilter(QueryFilter):
+    key = 'older_days'
     input_type = 'number'
 
+    def clean(self, value):
+        return int(value)
+
     def query(self, value):
-        value = int(value)
         return self.field < (
             datetime.date.today() - datetime.timedelta(days=value))
 
@@ -147,17 +187,20 @@ class OlderThanDaysAgoFilter(QueryFilter):
 
 
 class BooleanEqualQueryFilter(EqualQueryFilter):
-    def query(self, value):
+    def clean(self, value):
         if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
-            value = False
-        return self.field == value
+            return False
+        return True
 
 
-class BooleanNotEqualQueryFilter(NotEqualQueryFilter):
+class BooleanNotEqualQueryFilter(BooleanEqualQueryFilter):
+    key = 'ne'
+
     def query(self, value):
-        if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
-            value = False
         return self.field != value
+
+    def operation(self):
+        return 'not equal to'
 
 
 class FilterMapping(object):
@@ -288,6 +331,9 @@ class FilterForm(object):
         self._field_tree = make_field_tree(model, fields, exclude)
 
         self._query_filters = self.load_query_filters()
+        self._filter_lookup = dict(
+            (field, dict((qf.key, qf) for qf in query_filters))
+            for field, query_filters in self._query_filters.items())
 
     def load_query_filters(self):
         query_filters = {}
@@ -303,14 +349,27 @@ class FilterForm(object):
 
     def get_operation_field(self, field):
         choices = []
-        for i, query_filter in enumerate(self._query_filters[field]):
+        for query_filter in self._query_filters[field]:
             if query_filter.input_type:
-                choices.append((str(i), query_filter.operation(),
+                choices.append((query_filter.key, query_filter.operation(),
                                 {'data-input-type': query_filter.input_type}))
             else:
-                choices.append((str(i), query_filter.operation()))
+                choices.append((query_filter.key, query_filter.operation()))
 
         return fields.SelectField(choices=choices, validators=[validators.Optional()], widget=SmallSelectWidget())
+
+    def get_query_filter(self, field, filter_key):
+        try:
+            return self._filter_lookup[field][filter_key]
+        except KeyError:
+            pass
+
+        # fall back to the old positional protocol, e.g. fo_username=2.
+        if filter_key.isdigit():
+            query_filters = self._query_filters[field]
+            idx = int(filter_key)
+            if idx < len(query_filters):
+                return query_filters[idx]
 
     def get_field_default(self, field):
         if isinstance(field, DateTimeField):
@@ -362,7 +421,7 @@ class FilterForm(object):
         # took to get there (joins)
         accum = {}
 
-        def _dfs(node, prefix, models, join_columns):
+        def _dfs(node, prefix, models, join_columns, path_names):
             for field in node.fields:
                 qf_select = self.field_operation_prefix.join((prefix, field.name))
                 qf_value = self.field_value_prefix.join((prefix, field.name))
@@ -376,17 +435,26 @@ class FilterForm(object):
                         join_columns,
                         qf_select,
                         qf_value,
+                        ' / '.join(path_names + [field.name]),
                     ))
 
             for child_prefix, child in node.children.items():
                 new_prefix = prefix + self.field_relation_prefix + child_prefix + self.separator
                 model_copy = list(models) + [child.model]
                 join_copy = list(join_columns) + [node.model._meta.fields[child_prefix]]
-                _dfs(child, new_prefix, model_copy, join_copy)
+                _dfs(child, new_prefix, model_copy, join_copy, path_names + [child_prefix])
 
-        _dfs(self._field_tree, '', [], [])
+        _dfs(self._field_tree, '', [], [], [])
 
         return accum
+
+    def resolve_form_field(self, form, name):
+        # fr_user-fo_username -> form['fr_user'].form['fo_username']
+        parts = name.split(self.separator)
+        obj = form
+        for part in parts[:-1]:
+            obj = obj[part].form
+        return obj[parts[-1]]
 
     def process_request(self, query):
         field_dict = self.get_field_dict()
@@ -397,19 +465,34 @@ class FilterForm(object):
         cleaned = []
 
         for field, filters in query_filters.items():
-            for (filter_idx_list, filter_value_list, path, join_path, qf_s, qf_v) in filters:
+            for (filter_key_list, filter_value_list, path, join_path, qf_s, qf_v, label) in filters:
                 query = query.switch(self.model)
                 for join, model in zip(join_path, path):
                     query = query.ensure_join(join.model, model, join)
 
                 q_objects = []
-                for filter_idx, filter_value in zip(filter_idx_list, filter_value_list):
-                    idx = int(filter_idx)
-                    cleaned.append((qf_s, idx, qf_v, filter_value))
-                    query_filter = self._query_filters[field][idx]
-                    q_objects.append(query_filter.query(field.db_value(filter_value)))
+                for filter_key, filter_value in zip(filter_key_list, filter_value_list):
+                    query_filter = self.get_query_filter(field, filter_key)
+                    if query_filter is None:
+                        continue
 
-                query = query.where(reduce(operator.or_, q_objects))
+                    try:
+                        value = query_filter.clean(filter_value)
+                    except (TypeError, ValueError):
+                        continue
+
+                    q_objects.append(query_filter.query(value))
+                    cleaned.append({
+                        'label': label,
+                        'key': query_filter.key,
+                        'value': filter_value,
+                        'input_type': query_filter.input_type,
+                        'op_field': self.resolve_form_field(form, qf_s),
+                        'value_field': self.resolve_form_field(form, qf_v),
+                    })
+
+                if q_objects:
+                    query = query.where(reduce(operator.or_, q_objects))
 
         return form, query, cleaned
 

@@ -539,6 +539,47 @@ class AdminTestCase(BaseAdminTestCase):
             expected_notes = notes[self.admin] + notes[self.normal]
             self.assertEqual(list(query.get_list()), expected_notes)
 
+            # named operations, equivalent to the positional lookups above
+            resp = c.get('/admin/user/?fo_username=eq&fv_username=admin')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [self.admin])
+
+            resp = c.get('/admin/user/?fo_username=startswith&fv_username=norm&ordering=-username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [norm2, self.normal])
+
+            active_filters = self.get_context('active_filters')
+            self.assertEqual(len(active_filters), 1)
+            self.assertEqual(active_filters[0]['key'], 'startswith')
+            self.assertEqual(active_filters[0]['value'], 'norm')
+            self.assertEqual(active_filters[0]['label'], 'username')
+
+            resp = c.get('/admin/user/?fo_join_date=within_days&fv_join_date=1&ordering=username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(query.get_list().count(), 4)
+
+            # unknown operations and un-coercible values are ignored
+            resp = c.get('/admin/user/?fo_username=bogus&fv_username=admin&ordering=username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(query.get_list().count(), 4)
+
+            resp = c.get('/admin/user/?fo_join_date=within_days&fv_join_date=xyz&ordering=username')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(query.get_list().count(), 4)
+
+            resp = c.get('/admin/note/?fo_user=eq&fv_user=not-a-pk')
+            self.assertEqual(resp.status_code, 200)
+
     def test_model_admin_index_pagination(self):
         users = self.create_users()
         notes = {}

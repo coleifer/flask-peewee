@@ -38,6 +38,16 @@ ChosenAjaxSelectWidget = AjaxSelectWidget
 
 
 class LimitedModelSelectField(ModelSelectField):
+    limit = 20
+
     def iter_choices(self):
-        for obj in self.query.limit(20):
+        found = False
+        for obj in self.query.limit(self.limit):
+            if obj == self.data:
+                found = True
             yield wtf_choice(obj._pk, self.get_label(obj), obj == self.data)
+
+        # ensure the selected object is present even when it falls outside
+        # the first `limit` rows.
+        if isinstance(self.data, self.model) and not found:
+            yield wtf_choice(self.data._pk, self.get_label(self.data), True)
