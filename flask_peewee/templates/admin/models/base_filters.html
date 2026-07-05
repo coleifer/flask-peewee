@@ -2,11 +2,9 @@
 
 {% block extra_script %}
   {{ super() }}
-  <script type="text/javascript">
-    $(function() {
-      var admin_filter = new Admin.ModelAdminFilter()
-        , extra = null;
-
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var admin_filter = new Admin.ModelAdminFilter();
       admin_filter.init();
 
       {% for qf_s, filter_idx, qf_v, filter_val in active_filters %}

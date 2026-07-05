@@ -1,18 +1,22 @@
 {% if model_admin.foreign_key_lookups %}
   {% for field_name, search in model_admin.foreign_key_lookups.items() %}
-    <div class="modal hide" id="modal-{{ field_name }}">
-      <div class="modal-header">
-        <a class="close" data-dismiss="modal">x</a>
-        <h3>Select a {{ field_name }}</h3>
-      </div>
-      <div class="modal-body">
-        <input class="fk-lookup-input" data-ajax-url="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ field_name }}" type="text" />
-        <ul class="result-list">
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <a class="btn disabled previous" href="#">Previous</a>
-        <a class="btn disabled next" href="#">Next</a>
+    <div class="modal fade" id="modal-{{ field_name }}" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Select a {{ field_name }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input class="fk-lookup-input form-control" data-ajax-url="{{ url_for(model_admin.get_url_name('ajax_list')) }}?field={{ field_name }}" type="text" placeholder="Type to search..." />
+            <ul class="result-list list-unstyled mt-3 mb-0">
+            </ul>
+          </div>
+          <div class="modal-footer justify-content-between">
+            <a class="btn btn-secondary btn-sm disabled previous" href="#">Previous</a>
+            <a class="btn btn-secondary btn-sm disabled next" href="#">Next</a>
+          </div>
+        </div>
       </div>
     </div>
   {% endfor %}

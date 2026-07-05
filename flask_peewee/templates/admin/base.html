@@ -6,73 +6,69 @@
   <title>{% block title %}{% endblock %}{% block title_branding %} | {{ admin.branding }}{% endblock %}</title>
 
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/bootstrap.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/bootstrap.min.responsive.css') }}">
-  <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/chosen.css') }}">
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin.css') }}">
 
-  <script src="{{ url_for(admin.get_url_name('static'), filename='js/jquery.min.js') }}"></script>
-  <script src="{{ url_for(admin.get_url_name('static'), filename='js/bootstrap.min.js') }}"></script>
-  <script src="{{ url_for(admin.get_url_name('static'), filename='js/chosen.jquery.min.js') }}"></script>
-  <script src="{{ url_for(admin.get_url_name('static'), filename='js/ajax-chosen.min.js') }}"></script>
-  <script src="{{ url_for(admin.get_url_name('static'), filename='js/admin.js') }}"></script>
+  <script src="{{ url_for(admin.get_url_name('static'), filename='js/bootstrap.bundle.min.js') }}" defer></script>
+  <script src="{{ url_for(admin.get_url_name('static'), filename='js/admin.js') }}" defer></script>
   {% block extra_script %}{% endblock %}
 </head>
 
 <body class="{% block body_class %}admin{% endblock %}">
-  <div class="navbar navbar-fixed-top">
-    <div class="navbar-inner">
-      <div class="container-fluid">
-        <a class="brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ admin.branding }}</a>
-        <ul class="nav">
-          <li class="active"><a href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
-          <li><a href="/">View site</a></li>
-        </ul>
+  <nav class="navbar navbar-expand navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ admin.branding }}</a>
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link active" href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="/">View site</a></li>
+      </ul>
 
-        <form action="{{ admin.get_logout_url() }}" class="navbar-form pull-right" method="get">
-          <button class="btn btn-danger">Logout</button>
-        </form>
-      </div>
+      <form action="{{ admin.get_logout_url() }}" method="get">
+        <button class="btn btn-danger btn-sm">Logout</button>
+      </form>
     </div>
-  </div>
+  </nav>
 
   <div class="container-fluid">
-    <div class="row-fluid">
-      <div class="span3">
-        <div class="well sidebar-nav">
-          <h3>Navigation</h3>
+    <div class="row">
+      <div class="col-md-3 col-lg-2">
+        <div class="card sidebar-nav">
+          <div class="card-header">Navigation</div>
           {% block sidebar %}
-            <ul id="nav" class="nav nav-list">
+            <div class="list-group list-group-flush" id="nav">
               {% for iter_admin in admin.get_model_admins() %}
-                <li{% if model_admin == iter_admin %} class="active"{% endif %}><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></li>
+                <a class="list-group-item list-group-item-action{% if model_admin == iter_admin %} active{% endif %}" href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a>
               {% endfor %}
-            </ul>
+            </div>
           {% endblock %}
         </div>
       </div><!-- /sidebar -->
 
-      <div class="span9">
+      <div class="col-md-9 col-lg-10">
         <div class="content">
           <div class="page-header">
-            <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
+            <h1>{% block content_title %}{% endblock %} <small class="text-body-secondary fs-5">{% block content_tagline %}{% endblock %}</small></h1>
           </div>
-          <ul class="breadcrumb">
-            <li><a href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
-            {% block breadcrumbs %}{% endblock %}
-          </ul>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
+              {% block breadcrumbs %}{% endblock %}
+            </ol>
+          </nav>
           {% for category, message in get_flashed_messages(with_categories=true) %}
-            <div class="alert alert-block alert-{{ category }}">
-              <a class="close" data-dismiss="alert" href="#">×</a>
-              <p>{{ message }}</p>
+            <div class="alert alert-{{ category }} alert-dismissible fade show">
+              <p class="mb-0">{{ message }}</p>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
           {% endfor %}
           {% block pre_content %}{% endblock %}
           {% block content %}{% endblock %}
         </div><!-- /content -->
-      </div><!-- /row -->
-      <hr />
-      <footer>
-        <p>{% block footer %}Site administration{% endblock %}</p>
-      </footer>
-  </div> <!-- /container-fluid -->
+        <hr>
+        <footer class="pb-4">
+          <p class="text-body-secondary">{% block footer %}Site administration{% endblock %}</p>
+        </footer>
+      </div><!-- /main column -->
+    </div><!-- /row -->
+  </div><!-- /container-fluid -->
 </body>
 </html>

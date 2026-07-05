@@ -17,7 +17,7 @@ from flask_peewee.filters import FilterForm
 from flask_peewee.filters import FilterMapping
 from flask_peewee.filters import FilterModelConverter
 from flask_peewee.forms import BaseModelConverter
-from flask_peewee.forms import ChosenAjaxSelectWidget
+from flask_peewee.forms import AjaxSelectWidget
 from flask_peewee.forms import LimitedModelSelectField
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
@@ -65,7 +65,7 @@ class AdminFilterModelConverter(FilterModelConverter):
     def handle_foreign_key(self, model, field, **kwargs):
         if field.name in (self.model_admin.foreign_key_lookups or ()):
             data_source = url_for(self.model_admin.get_url_name('ajax_list'))
-            widget = ChosenAjaxSelectWidget(data_source, field.name)
+            widget = AjaxSelectWidget(data_source, field.name)
             form_field = LimitedModelSelectField(model=field.rel_model, widget=widget, **kwargs)
         else:
             form_field = ModelSelectField(model=field.rel_model, **kwargs)

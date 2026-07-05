@@ -1,26 +1,30 @@
+{% macro field_class(field) -%}
+  {%- if 'Select' in field.type -%}form-select{%- elif field.type == 'BooleanField' -%}form-check-input{%- else -%}form-control{%- endif -%}
+{%- endmacro %}
+
 {% macro with_errors(field) %}
+  {% set css_class = field_class(field) + ' ' + kwargs.pop('class', '') %}
   {% if field.errors %}
-    {% set css_class = 'invalid ' + kwargs.pop('class', '') %}
-    {{ field(class=css_class, **kwargs) }}
-    {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
-    <ul class="errors">{% for error in field.errors %}<li>{{ error|e }}</li>{% endfor %}</ul>
+    {{ field(class=css_class + ' is-invalid', **kwargs) }}
+    {% if field.description %}<div class="form-text">{{ field.description|safe() }}</div>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error|e }}</div>{% endfor %}
   {% else %}
-    {{ field(**kwargs) }}
-    {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
+    {{ field(class=css_class, **kwargs) }}
+    {% if field.description %}<div class="form-text">{{ field.description|safe() }}</div>{% endif %}
   {% endif %}
 {% endmacro %}
 
 {% macro admin_field(field) %}
-  <div class="control-group{% if field.errors %} error{% endif %}">
-    {{ field.label(class="control-label") }}
-    <div class="controls">
-      {% set css_class = 'span8 ' + kwargs.pop('class', '') %}
+  <div class="row mb-3">
+    {{ field.label(class="col-sm-3 col-form-label") }}
+    <div class="col-sm-9">
+      {% set css_class = field_class(field) + ' ' + kwargs.pop('class', '') %}
       {% if field.errors %}
-        {% set css_class = 'error ' + css_class %}
+        {% set css_class = css_class + ' is-invalid' %}
       {% endif %}
       {{ field(class=css_class, **kwargs) }}
-      {% if field.description %}<span class="help-inline">{{ field.description|safe() }}</span>{% endif %}
-      {% for error in field.errors %}<span class="help-inline">{{ error|e }}</span>{% endfor %}
+      {% if field.description %}<div class="form-text">{{ field.description|safe() }}</div>{% endif %}
+      {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error|e }}</div>{% endfor %}
     </div>
   </div>
 {% endmacro %}

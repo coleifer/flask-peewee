@@ -16,22 +16,25 @@ class BaseModelConverter(ModelConverter):
         return field.name, BooleanSelectField(**kwargs)
 
 
-class ChosenAjaxSelectWidget(widgets.Select):
+class AjaxSelectWidget(widgets.Select):
+    """
+    Select whose options are (re)populated from the model admin's ajax_list
+    endpoint by a search input -- see Admin.ajaxSelect in admin.js.
+    """
     def __init__(self, data_source, data_param, *args, **kwargs):
         self.data_source = data_source
         self.data_param = data_param
-        super(ChosenAjaxSelectWidget, self).__init__(*args, **kwargs)
+        super(AjaxSelectWidget, self).__init__(*args, **kwargs)
 
     def __call__(self, field, **kwargs):
-        if field.allow_blank and not self.multiple:
-            kwargs['data-role'] = 'ajax-chosenblank'
-        else:
-            kwargs['data-role'] = 'ajax-chosen'
+        kwargs['data-role'] = 'ajax-select'
         kwargs['data-source'] = self.data_source
         kwargs['data-param'] = self.data_param
-        kwargs['data-placeholder'] = 'Type to search...'
+        return super(AjaxSelectWidget, self).__call__(field, **kwargs)
 
-        return super(ChosenAjaxSelectWidget, self).__call__(field, **kwargs)
+
+#: Backwards-compatible alias from the chosen.js era.
+ChosenAjaxSelectWidget = AjaxSelectWidget
 
 
 class LimitedModelSelectField(ModelSelectField):

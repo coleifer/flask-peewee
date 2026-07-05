@@ -3,13 +3,13 @@
 {% block tab_index_class %}active{% endblock %}
 
 {% block extra_tabs %}
-    <li class="dropdown" style="float:right">
-      <a class="dropdown-toggle" data-toggle="dropdown" href="#">With selected... <span class="caret" /></a>
-      <ul class="dropdown-menu pull-right">
-        {% block export_action %}<li><a href="#" onclick="Admin.index_submit('export');">Export</a></li>{% endblock %}
-        <li><a href="#" onclick="Admin.index_submit('delete');">Delete</a></li>
+    <li class="nav-item dropdown ms-auto">
+      <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">With selected...</a>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% block export_action %}<li><a class="dropdown-item" href="#" onclick="Admin.index_submit('export'); return false;">Export</a></li>{% endblock %}
+        <li><a class="dropdown-item" href="#" onclick="Admin.index_submit('delete'); return false;">Delete</a></li>
         {% if model_admin.actions %}{% for action in model_admin.actions %}
-          <li><a href="#" onclick="Admin.index_submit('{{ action.name }}');">{{ action.name }}</a></li>
+          <li><a class="dropdown-item" href="#" onclick="Admin.index_submit('{{ action.name }}'); return false;">{{ action.name }}</a></li>
         {% endfor %}{% endif %}
       </ul>
     </li>
@@ -19,12 +19,12 @@
 {% block content %}
   {% include "admin/includes/filter_widgets.html" %}
 
-  <form action="." class="form-horizontal" id="model-list" method="post"><input type="hidden" name="action" value="" />
+  <form action="." id="model-list" method="post"><input type="hidden" name="action" value="" />
   {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
   <table class="table table-bordered table-striped">
     <thead>
       <tr>
-        <th class="check first shrink"><input type="checkbox" name="xxx" onchange="$('td input[type=checkbox]').prop('checked', this.checked);" /></th>
+        <th class="check first shrink"><input class="form-check-input" type="checkbox" name="xxx" onchange="document.querySelectorAll('td input[type=checkbox]').forEach(cb => cb.checked = this.checked);" /></th>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
             {% if ordering == column %}
@@ -43,7 +43,7 @@
     <tbody>
     {% for object in query.get_list() %}
       <tr>
-        <td class="check"><input type="checkbox" name="id" value="{{ object._pk }}" /></td>
+        <td class="check"><input class="form-check-input" type="checkbox" name="id" value="{{ object._pk }}" /></td>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
             {% if loop.index == 1 %}
@@ -57,10 +57,10 @@
         {% endif %}
         <td class="last links">
           {% block object_actions scoped %}
-          <ul class="inline">
+          <ul class="list-inline mb-0">
             {% block object_action_links %}{% endblock %}
-            <li><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">Edit</a></li>
-            <li><a href="{{ url_for(model_admin.get_url_name('delete'), id=object._pk) }}">Delete</a></li>
+            <li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">Edit</a></li>
+            <li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('delete'), id=object._pk) }}">Delete</a></li>
           </ul>
           {% endblock %}
         </td>

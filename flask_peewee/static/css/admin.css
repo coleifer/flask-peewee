@@ -1,42 +1,40 @@
-html, body {
-  background-color: #fff;
-}
-body {
-  padding-top: 60px;
-}
-.container > footer p {
-  text-align: center; /* center align it with the container */
+body.admin {
+  --bs-body-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  padding-top: 76px;
 }
 
-/* The white background content wrapper */
-.content {
-  background-color: #fff;
-  -webkit-border-radius: 0 0 6px 6px;
-     -moz-border-radius: 0 0 6px 6px;
-          border-radius: 0 0 6px 6px;
+.sidebar-nav {
+  position: sticky;
+  top: 76px;
 }
 
 /* modeladmin filters */
-form.modeladmin-filters { margin: 0; }
-form.modeladmin-filters ul { list-style-type: none; }
-form.modeladmin-filters select { margin-right: 10px; }
-
-div.form-wrapper { width: 100%; overflow: auto; }
-
-form textarea { height: 150px; }
-form input.datetime-widget { width: 150px !important; margin-right: 10px; }
-
-div.sidebar li.active { font-weight: bold; }
-
-table.table-striped td.links .inline { margin: 0; }
-table.table-striped td.links .inline li { display: inline-block; }
-table.table-striped td.links .inline li a {
-  border-right: 1px solid #DDDDDD;
-  padding-right: 5px;
-}
-table.table-striped td.links .inline li:last-child a {
-  border-right: medium none;
+form.modeladmin-filters select,
+form.modeladmin-filters input {
+  display: inline-block;
 }
 
-/* helpers */
-.hidden { display: none; }
+/* the split date + time inputs of a datetime field sit side by side */
+form input.datetime-widget {
+  width: auto;
+  display: inline-block;
+  margin-right: 10px;
+}
+
+form textarea {
+  height: 150px;
+}
+
+/* keep checkbox/actions columns narrow in list tables */
+table th.shrink,
+table td.check,
+table td.links,
+table td.last {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.fk-lookup-input + ul.result-list li {
+  padding: .25rem 0;
+}

@@ -2,22 +2,24 @@
 
 {% block breadcrumbs %}
  {{ super() }}
- <li><span class="divider">/</span> <a href=".">Export</a></li>
+ <li class="breadcrumb-item"><a href=".">Export</a></li>
 {% endblock %}
 
 {% block tab_export_class %}active{% endblock %}
 
 {% block extra_tabs %}
-    {% include "admin/includes/filter_dropdown.html" %}
+    {% with filter_dropdown_class='ms-auto' %}
+      {% include "admin/includes/filter_dropdown.html" %}
+    {% endwith %}
 {% endblock %}
 
 {% block content %}
   {% include "admin/includes/filter_widgets.html" %}
 
-  <div class="well">
-    <h4 id="export-summary">Currently {{ query.count() }} records are scheduled for export <small><a href="#" onclick="$('#export-details').toggle();">details</a></small></h4>
-    <div id="export-details" style="display:none;">
-      <pre>SQL:
+  <div class="card card-body mb-3">
+    <h4 id="export-summary" class="mb-0">Currently {{ query.count() }} records are scheduled for export <small><a href="#" onclick="document.getElementById('export-details').classList.toggle('d-none'); return false;">details</a></small></h4>
+    <div id="export-details" class="d-none">
+      <pre class="mb-0 mt-3">SQL:
 {{ sql[0] }}
 
 PARAMS:
@@ -25,38 +27,40 @@ PARAMS:
     </div>
   </div>
 
-  <form action="./?{{ request.query_string.decode('utf8') }}" class="form-horizontal" method="post">
+  <form action="./?{{ request.query_string.decode('utf8') }}" method="post">
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Select fields to export</legend>
-      <div class="control-group">
-        <label class="control-label">Fields on {{ model.__name__ }}</label>
-        <div class="controls">
+      <div class="row mb-3">
+        <label class="col-sm-3 col-form-label">Fields on {{ model.__name__ }}</label>
+        <div class="col-sm-9">
           {% for field in model._meta.sorted_fields %}
-            <label class="checkbox">
-              <input type="checkbox" name="fields" value="{{ field.name }}" checked="checked" /> {{ field.name }}
-            </label>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="fields" value="{{ field.name }}" id="export-{{ field.name }}" checked="checked" />
+              <label class="form-check-label" for="export-{{ field.name }}">{{ field.name }}</label>
+            </div>
           {% endfor %}
         </div>
       </div>
 
       {% for (model, path), fields in related_fields.items() %}
         <legend>Select related fields to export</legend>
-        <div class="control-group">
-          <label class="control-label">Fields on {{ model.__name__ }}</label>
-          <div class="controls">
+        <div class="row mb-3">
+          <label class="col-sm-3 col-form-label">Fields on {{ model.__name__ }}</label>
+          <div class="col-sm-9">
             {% for field in fields %}
-              <label class="checkbox">
-                <input type="checkbox" name="fields" value="{{ path }}__{{ field.name }}" /> {{ field.name }}
-              </label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="fields" value="{{ path }}__{{ field.name }}" id="export-{{ path }}__{{ field.name }}" />
+                <label class="form-check-label" for="export-{{ path }}__{{ field.name }}">{{ field.name }}</label>
+              </div>
             {% endfor %}
           </div>
         </div>
       {% endfor %}
 
-      <div class="form-actions">
+      <div class="form-actions d-flex gap-2">
         <button class="btn btn-primary" type="submit">Export JSON</button>
-        <a class="btn" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">Cancel</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">Cancel</a>
       </div>
     </fieldset>
   </form>

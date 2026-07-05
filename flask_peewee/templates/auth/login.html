@@ -9,19 +9,11 @@
     <input type="hidden" name="next" value="{{ next or '' }}" />
     {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
     {% for field in form %}
-      <div class="clearfix{% if field.errors %} error{% endif %}">
-        {{ field.label }}
-        <div class="input">
-          {% set css_class = 'span6 ' %}
-          {% if field.errors %}
-            {% set css_class = 'error ' + css_class %}
-          {% endif %}
-          {{ field(class=css_class) }}
-          {% if field.description %}<span class="help-inline">{{ field.description|safe() }}</span>{% endif %}
-          {% for error in field.errors %}<span class="help-inline">{{ error }}</span>{% endfor %}
-        </div>
+      <div class="mb-3">
+        {{ field.label(class="form-label") }}
+        {{ with_errors(field) }}
       </div>
     {% endfor %}
-    <div class="actions"><button class="btn primary" type="submit">Log in</button></div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Log in</button></div>
   </form>
 {% endblock %}

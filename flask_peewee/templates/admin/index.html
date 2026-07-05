@@ -6,7 +6,7 @@
 
 {% block content %}
   {% if panels %}
-    <div class="row-fluid">
+    <div class="row">
     {% for panel in panels %}
       {{ panel.render()|safe() }}
     {% endfor %}
@@ -27,9 +27,9 @@
           <td><span class="show"><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></span></td>
           <td><span>{{ iter_admin.get_query().count() }}</span></td>
           <td class="links">
-            <ul class="inline">
-              <li><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
-              <li><a href="{{ url_for(iter_admin.get_url_name('export')) }}">Export</a></li>
+            <ul class="list-inline mb-0">
+              <li class="list-inline-item"><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
+              <li class="list-inline-item"><a href="{{ url_for(iter_admin.get_url_name('export')) }}">Export</a></li>
             </ul>
           </td>
         </tr>

@@ -9,14 +9,14 @@
 {% block content_title %}{{ admin.fix_underscores(model_admin.get_display_name()) }} Admin{% endblock %}
 
 {% block breadcrumbs %}
-  <li><span class="divider">/</span> <a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ admin.fix_underscores(model_admin.get_display_name()) }}</a></li>
+  <li class="breadcrumb-item"><a href="{{ url_for(model_admin.get_url_name('index')) }}">{{ admin.fix_underscores(model_admin.get_display_name()) }}</a></li>
 {% endblock %}
 
 {% block pre_content %}
-  <ul class="nav nav-tabs">
-    <li class="{% block tab_index_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">{{ admin.fix_underscores(model_admin.get_display_name()) }} ({{ model_admin.get_query().count() }})</a></li>
-    <li class="{% block tab_add_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a></li>
-    {% block export_tab %}<li class="{% block tab_export_class %}{% endblock %}"><a href="{{ url_for(model_admin.get_url_name('export')) }}?{{ request.query_string.decode('utf8') }}">Export</a></li>{% endblock %}
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link {% block tab_index_class %}{% endblock %}" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">{{ admin.fix_underscores(model_admin.get_display_name()) }} ({{ model_admin.get_query().count() }})</a></li>
+    <li class="nav-item"><a class="nav-link {% block tab_add_class %}{% endblock %}" href="{{ url_for(model_admin.get_url_name('add')) }}">Add new</a></li>
+    {% block export_tab %}<li class="nav-item"><a class="nav-link {% block tab_export_class %}{% endblock %}" href="{{ url_for(model_admin.get_url_name('export')) }}?{{ request.query_string.decode('utf8') }}">Export</a></li>{% endblock %}
     {% block extra_tabs %}{% endblock %}
   </ul>
 {% endblock %}

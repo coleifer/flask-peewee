@@ -1,7 +1,7 @@
 {% macro list_fields(node, prefix) %}
   {% for field in node.fields %}
     <li><a
-        class="field-filter"
+        class="dropdown-item field-filter"
         data-field="{{ field.name|apply_prefix(prefix, 'fv_') }}"
         data-select="{{ field.name|apply_prefix(prefix, 'fo_') }}"
         id="filter-{{ field.name|apply_prefix(prefix, 'fo_') }}"
@@ -12,9 +12,9 @@
     {{ list_fields(child, prefix + [child_prefix]) }}
   {% endfor %}
 {% endmacro %}
-    <li class="dropdown" style="float:right">
-      <a class="dropdown-toggle" data-toggle="dropdown" href="#">Add filter... <span class="caret" /></a>
-      <ul class="dropdown-menu pull-right" id="filters">
+    <li class="nav-item dropdown{{ ' ' + filter_dropdown_class if filter_dropdown_class else '' }}">
+      <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">Add filter...</a>
+      <ul class="dropdown-menu dropdown-menu-end" id="filters">
         {{ list_fields(field_tree, []) }}
       </ul>
     </li>

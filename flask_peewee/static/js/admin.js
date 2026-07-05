@@ -1,229 +1,220 @@
 var Admin = window.Admin || {};
 
-(function(A, $) {
+(function(A) {
+
+  function getJSON(url, cb) {
+    fetch(url, {credentials: 'same-origin'})
+      .then(function(resp) { return resp.json(); })
+      .then(cb);
+  }
+
+  function debounce(fn, wait) {
+    var timer = null;
+    return function() {
+      var args = arguments, self = this;
+      clearTimeout(timer);
+      timer = setTimeout(function() { fn.apply(self, args); }, wait);
+    };
+  }
 
   /* paginated list of models displayed in a modal window */
-  function ModelAdminAjaxList() {
-    this.autocomplete_selector = '.fk-lookup-input';
-  }
-
-  ModelAdminAjaxList.prototype.init = function(click_cb_factory) {
+  function AjaxModalList(modal_elem, on_select) {
     var self = this;
+    this.modal_elem = modal_elem;
+    this.modal = new bootstrap.Modal(modal_elem);
+    this.input = modal_elem.querySelector('.fk-lookup-input');
+    this.list = modal_elem.querySelector('ul.result-list');
+    this.next_btn = modal_elem.querySelector('a.next');
+    this.prev_btn = modal_elem.querySelector('a.previous');
+    this.on_select = on_select;
 
-    /* bind keyboard handler for input */
-    $(this.autocomplete_selector).keyup(function(e) {
-      var elem = $(this)
-        , target = elem.siblings('ul.result-list')
-        , modal = elem.parents('.modal');
+    this.input.addEventListener('keyup', debounce(function() {
+      self.load(self.input.dataset.ajaxUrl);
+    }, 200));
 
-      self.show(elem.data('ajax-url'), elem.val(), target, click_cb_factory(modal));
-    });
-
-    /* bind next/prev buttons */
-    $('.modal a.next, .modal a.previous').click(function(e) {
-      var elem = $(this)
-        , modal = elem.parents('.modal')
-        , input_elem = modal.find(self.autocomplete_selector)
-        , target = input_elem.siblings('ul.result-list')
-        , page = elem.data('page');
-
-      if (!elem.hasClass('disabled')) {
-        self.show(input_elem.data('ajax-url')+'&page='+page, input_elem.val(), target, click_cb_factory(modal));
-      }
-    });
-  }
-
-  ModelAdminAjaxList.prototype.show = function(url, query, target, click_cb) {
-    var modal = target.parents('.modal')
-      , next_btn = modal.find('a.next')
-      , prev_btn = modal.find('a.previous')
-      , self = this;
-
-    $.get(url+'&query='+query, function(data) {
-      target.empty();
-      for (var i=0, l=data.object_list.length; i < l; i++) {
-        var o = data.object_list[i];
-        var link = $('<a href="#"></a>').attr('data-object-id', o.id).text(o.repr);
-        target.append($('<li></li>').append(link));
-      }
-
-      if (data.prev_page) {
-        prev_btn.removeClass('disabled');
-        prev_btn.data('page', data.prev_page);
-      } else {
-        prev_btn.addClass('disabled');
-      }
-      if (data.next_page) {
-        next_btn.removeClass('disabled');
-        next_btn.data('page', data.next_page);
-      } else {
-        next_btn.addClass('disabled');
-      }
-
-      target.find('a').click(function(e) {
-        var data = $(this).data('object-id')
-          , repr = $(this).text()
-          , html = $(this).html()
-          , sender = modal.data('sender');
-
-        click_cb(sender, repr, data, html);
-        target.parents('.modal').modal('hide');
+    [this.prev_btn, this.next_btn].forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (!btn.classList.contains('disabled') && btn.dataset.page) {
+          self.load(self.input.dataset.ajaxUrl + '&page=' + btn.dataset.page);
+        }
       });
     });
   }
 
-  var ModelAdminRawIDField = function(field_name) {
-    this.field_name = field_name;
-    this.selector = 'input#'+this.field_name;
-  }
+  AjaxModalList.prototype.load = function(url) {
+    var self = this;
+    getJSON(url + '&query=' + encodeURIComponent(this.input.value), function(data) {
+      self.list.innerHTML = '';
+      data.object_list.forEach(function(o) {
+        var link = document.createElement('a');
+        link.href = '#';
+        link.textContent = o.repr;
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          self.on_select(o);
+          self.modal.hide();
+        });
+        var li = document.createElement('li');
+        li.appendChild(link);
+        self.list.appendChild(li);
+      });
 
-  ModelAdminRawIDField.prototype.init = function(repr) {
-    var self = this
-      , repr = repr || 'Select...'
-      , hidden_elem = $(this.selector)
-      , new_elem = $('<a class="btn btn-primary" href="#">'+repr+'</a>');
-
-    /* bind the ajax list */
-    this.ajax_list = new ModelAdminAjaxList();
-    this.ajax_list.init(function(modal) {return self.on_click});
-
-    new_elem.click(function(e) {
-      e.preventDefault();
-      var modal = $('#modal-' + self.field_name)
-        , modal_input = modal.find('.fk-lookup-input')
-        , target = modal.find('ul.result-list');
-
-      self.ajax_list.show(modal_input.data('ajax-url'), '', target, self.on_click);
-      modal.data('sender', $(this));
-      modal.modal('show');
+      [[self.prev_btn, data.prev_page], [self.next_btn, data.next_page]].forEach(function(pair) {
+        pair[0].classList.toggle('disabled', !pair[1]);
+        pair[0].dataset.page = pair[1] || '';
+      });
     });
-    hidden_elem.after(new_elem);
-  }
+  };
 
-  ModelAdminRawIDField.prototype.on_click = function(sender, repr, data, html) {
-    if (repr) {
-      sender.text(repr);
-    } else {
-      sender.html(html);
-    }
-    sender.parent().find('input[type="hidden"]').val(data);
-  }
+  AjaxModalList.prototype.open = function() {
+    this.load(this.input.dataset.ajaxUrl);
+    this.modal.show();
+  };
+
+  /* raw-id foreign key: hidden input + button that opens a lookup modal */
+  A.ModelAdminRawIDField = function(field_name) {
+    this.field_name = field_name;
+  };
+
+  A.ModelAdminRawIDField.prototype.init = function(repr) {
+    var hidden_elem = document.getElementById(this.field_name),
+        modal_elem = document.getElementById('modal-' + this.field_name),
+        btn = document.createElement('a');
+
+    btn.className = 'btn btn-outline-primary';
+    btn.href = '#';
+    btn.textContent = repr || 'Select...';
+
+    var list = new AjaxModalList(modal_elem, function(o) {
+      btn.textContent = o.repr;
+      hidden_elem.value = o.id;
+    });
+
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      list.open();
+    });
+    hidden_elem.insertAdjacentElement('afterend', btn);
+  };
+
+  /* upgrade an ajax-select: a search input that repopulates the select's
+     options from the model admin's ajax_list endpoint */
+  A.ajaxSelect = function(select) {
+    var search = document.createElement('input');
+    search.type = 'text';
+    search.placeholder = 'Type to search...';
+    search.className = 'form-control form-control-sm w-auto';
+
+    search.addEventListener('input', debounce(function() {
+      var url = select.dataset.source +
+        '?field=' + encodeURIComponent(select.dataset.param) +
+        '&query=' + encodeURIComponent(search.value);
+      getJSON(url, function(data) {
+        select.innerHTML = '';
+        data.object_list.forEach(function(o) {
+          var opt = document.createElement('option');
+          opt.value = o.id;
+          opt.textContent = o.repr;
+          select.appendChild(opt);
+        });
+      });
+    }, 200));
+
+    select.insertAdjacentElement('beforebegin', search);
+  };
 
   /* filter class */
-  var ModelAdminFilter = function() {
-    this.wrapper = '#filter-wrapper'; /* wrapper around the form that submits filters */
-    this.add_selector = 'a.field-filter'; /* links to add filters (in the navbar) */
-    this.lookups_wrapper = '#filter-fields'; /* wrapper around the filter fields */
-  }
+  A.ModelAdminFilter = function() {
+    this.wrapper = document.getElementById('filter-wrapper');
+    this.lookups_elem = document.getElementById('filter-fields');
+    this.filter_list = this.wrapper && this.wrapper.querySelector('.filter-list');
+  };
 
-  ModelAdminFilter.prototype.init = function() {
+  A.ModelAdminFilter.prototype.init = function() {
     var self = this;
-
-    this.filter_list = $(this.wrapper + ' form div.filter-list');
-    this.lookups_elem = $(this.lookups_wrapper);
-
-    /* bind the "add filter" click behavior */
-    $(this.add_selector).click(function(e) {
-      e.preventDefault();
-      self.add_filter($(this));
+    document.querySelectorAll('a.field-filter').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        self.add_row(link.dataset.field, link.dataset.select);
+      });
     });
-  }
+  };
 
-  ModelAdminFilter.prototype.chosen_handler = function(data) {
-    var results = {}
-      , object_list = data.object_list;
-    for (var i = 0, l = object_list.length; i < l; i++) {
-      var item = object_list[i];
-      results[item['id']] = item['repr']
-    }
-    return results;
-  }
+  A.ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
+    var select_clone = this.lookups_elem.querySelector('#' + CSS.escape(qf_s)).cloneNode(true),
+        input_clone = this.lookups_elem.querySelector('#' + CSS.escape(qf_v)).cloneNode(true),
+        field_label = document.getElementById('filter-' + qf_s).textContent.trim();
 
-  ModelAdminFilter.prototype.add_row = function(qf_v, qf_s, ival, sval) {
-    var select_elem = this.lookups_elem.find('#'+qf_s),
-        input_elem = this.lookups_elem.find('#'+qf_v),
-        field_label = $('#filter-'+qf_s).text();
+    select_clone.removeAttribute('id');
+    input_clone.removeAttribute('id');
+    input_clone.classList.add(
+      input_clone.tagName === 'SELECT' ? 'form-select' : 'form-control',
+      input_clone.tagName === 'SELECT' ? 'form-select-sm' : 'form-control-sm',
+      'w-auto');
 
-    var self = this,
-        select_clone = select_elem.clone(),
-        input_clone = input_elem.clone(),
-        row = [
-          , '<div class="clearfix control-group">'
-          , '<a class="btn btn-close btn-danger" href="#" title="click to remove">'
-          , field_label
-          , '</a> </div>'
-        ].join('\n'),
-        row_elem = $(row).append(select_clone).append(input_clone);
+    var row = document.createElement('div');
+    row.className = 'filter-row d-flex align-items-center gap-2 mb-2';
+
+    var remove_btn = document.createElement('a');
+    remove_btn.className = 'btn btn-danger btn-sm';
+    remove_btn.href = '#';
+    remove_btn.title = 'click to remove';
+    remove_btn.textContent = field_label;
+    remove_btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      row.remove();
+    });
+
+    row.appendChild(remove_btn);
+    row.appendChild(select_clone);
+    row.appendChild(input_clone);
 
     if (ival && sval) {
-        select_clone.val(sval);
+      select_clone.value = sval;
     }
 
     /* certain operations want a different input type than the field's
        default, e.g. "within X days ago" takes a number, not a date */
-    if (input_clone.is('input')) {
-      var original_type = input_clone.prop('type');
+    if (input_clone.tagName === 'INPUT') {
+      var original_type = input_clone.type;
       var sync_input_type = function() {
-        var input_type = select_clone.find('option:selected').data('input-type');
-        input_clone.prop('type', input_type || original_type);
+        var opt = select_clone.selectedOptions[0];
+        input_clone.type = (opt && opt.dataset.inputType) || original_type;
       };
-      select_clone.change(sync_input_type);
+      select_clone.addEventListener('change', sync_input_type);
       sync_input_type();
     }
 
     if (ival && sval) {
-        input_clone.val(ival);
+      input_clone.value = ival;
     }
 
-    row_elem.find('a.btn-close').click(function(e) {
-      row_elem.remove();
-    });
-
-    this.filter_list.prepend(row_elem);
-
-    /* reload our jquery plugin stuff */
-    if (input_clone.data('role') === 'chosen') {
-      input_clone.chosen();
-    } else if (input_clone.data('role') === 'ajax-chosen') {
-      input_clone.ajaxChosen({
-          type: 'GET',
-          url: input_clone.data('source'),
-          jsonTermKey: 'query',
-          dataType: 'json',
-          data: {'field': input_clone.data('param')},
-          minTermLength: 2
-      }, this.chosen_handler);
+    if (input_clone.dataset.role === 'ajax-select') {
+      A.ajaxSelect(input_clone);
     }
 
-    $(this.wrapper).show();
+    this.filter_list.prepend(row);
+    this.wrapper.classList.remove('d-none');
 
-    /* twitter bootfap doesn't wanna close the dropdown */
-    $('.dropdown.open .dropdown-toggle').dropdown('toggle');
-
-    return row_elem;
-  }
+    return row;
+  };
 
   /* add a filter of a given type */
-  ModelAdminFilter.prototype.add_filter = function(elem) {
-    return this.add_row(elem.data('field'), elem.data('select'));
-  }
+  A.ModelAdminFilter.prototype.add_filter = function(elem) {
+    return this.add_row(elem.dataset.field, elem.dataset.select);
+  };
 
   /* pull request data and simulate adding a filter */
-  ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val) {
-    return this.add_row(qf_v, qf_s, filter_val, filter_idx);
-  }
+  A.ModelAdminFilter.prototype.add_filter_request = function(qf_s, filter_idx, qf_v, filter_val) {
+    return this.add_row(qf_v, qf_s, filter_val, '' + filter_idx);
+  };
 
-  /* export */
-  A.ModelAdminRawIDField = ModelAdminRawIDField;
-  A.ModelAdminFilter = ModelAdminFilter;
-
-  /* bind a simple listener */
+  /* bulk action helper for the model list */
   A.index_submit = function(action) {
-    $('form#model-list input[name=action]').val(action);
-    $('form#model-list').submit();
-  }
-})(Admin, jQuery);
+    var form = document.getElementById('model-list');
+    form.querySelector('input[name=action]').value = action;
+    form.submit();
+  };
 
-jQuery(function() {
-  jQuery(".alert").alert()
-});
+})(Admin);
