@@ -697,12 +697,20 @@ class Export(object):
             else:
                 return query
 
+        extra_pks = []
+
         for lookup in self.fields:
             # lookup may be something like "content" or "user__user_name"
             if '__' in lookup:
                 path, column = lookup.rsplit('__', 1)
                 model = self.alias_to_model[path]
                 clone = ensure_join(clone, model, path)
+
+                # the related model's primary key must be selected for the
+                # instance to be reconstructed and traversed when serializing.
+                pk = model._meta.primary_key
+                if not any(f is pk for f in extra_pks):
+                    extra_pks.append(pk)
             else:
                 model = self.query.model
                 column = lookup
@@ -710,14 +718,17 @@ class Export(object):
             field = model._meta.fields[column]
             select.append(field)
 
-        clone._select = select
-        return clone
+        if select:
+            columns = select + [pk for pk in extra_pks
+                                if not any(f is pk for f in select)]
+            clone = clone.columns(*columns)
+        return clone, select
 
     def json_response(self, filename='export.json'):
         serializer = Serializer()
-        prepared_query = self.prepare_query()
+        prepared_query, selected = self.prepare_query()
         field_dict = {}
-        for field in prepared_query._select:
+        for field in selected:
             field_dict.setdefault(field.model, [])
             field_dict[field.model].append(field.name)
 

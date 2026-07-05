@@ -1,5 +1,6 @@
 
 import datetime
+import json
 
 from flask import g
 from flask import request
@@ -579,6 +580,44 @@ class AdminTestCase(BaseAdminTestCase):
 
             resp = c.get('/admin/note/?fo_user=eq&fv_user=not-a-pk')
             self.assertEqual(resp.status_code, 200)
+
+    def test_export(self):
+        users = self.create_users()
+        for user in users:
+            Note.create(user=user, message='note-%s' % user.username)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            resp = c.post('/admin/user/export/', data={
+                'fields': ['username', 'email']})
+            self.assertEqual(resp.status_code, 200)
+
+            data = json.loads(resp.data)
+            self.assertEqual(len(data), 3)
+            for row in data:
+                self.assertEqual(sorted(row), ['email', 'username'])
+            self.assertEqual(
+                sorted(row['username'] for row in data),
+                ['admin', 'inactive', 'normal'])
+
+            # exporting fields spanning a relation.
+            resp = c.post('/admin/note/export/', data={
+                'fields': ['message', 'user', 'user__username']})
+            self.assertEqual(resp.status_code, 200)
+
+            data = json.loads(resp.data)
+            self.assertEqual(len(data), 3)
+            for row in data:
+                self.assertEqual(sorted(row), ['message', 'user'])
+                self.assertEqual(list(row['user']), ['username'])
+                self.assertEqual(row['message'], 'note-%s' % row['user']['username'])
+
+            # exported records respect filters in the query-string.
+            resp = c.post('/admin/user/export/?fo_username=eq&fv_username=admin',
+                          data={'fields': ['username']})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(json.loads(resp.data), [{'username': 'admin'}])
 
     def test_model_admin_index_pagination(self):
         users = self.create_users()
