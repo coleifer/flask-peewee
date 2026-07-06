@@ -68,6 +68,12 @@ body.admin {
   --bs-list-group-action-hover-color: var(--fp-accent-dark);
   --bs-list-group-action-active-bg: rgba(42, 111, 111, .2);
 }
+.dropdown-menu {
+  --bs-dropdown-link-hover-bg: rgba(42, 111, 111, .12);
+  --bs-dropdown-link-hover-color: var(--fp-accent-dark);
+  --bs-dropdown-link-active-bg: var(--fp-accent);
+  --bs-dropdown-link-active-color: #fff;
+}
 
 .btn-primary {
   --bs-btn-bg: var(--fp-accent);
@@ -178,7 +184,25 @@ table td.last {
 table.list-view td {
   overflow-wrap: anywhere;
   max-width: 28rem;
-  vertical-align: middle;
+  vertical-align: top;
+}
+table.list-view tbody td {
+  font-size: .8125rem;
+}
+
+/* rich-content columns render markdown (<p>, <ul>, <ol>) whose default block
+   margins/padding make list rows bulky — tighten them inside cells. */
+table.list-view td > p,
+table.list-view td ul,
+table.list-view td ol {
+  margin-bottom: .25rem;
+}
+table.list-view td ul,
+table.list-view td ol {
+  padding-left: 1.15rem;
+}
+table.list-view td > :last-child {
+  margin-bottom: 0;
 }
 
 /* a column that renders rich content (markdown, HTML) can embed full-size
@@ -204,13 +228,9 @@ table.list-view td.links .list-inline-item {
   margin: 0;
 }
 table.list-view td.links .list-inline-item + .list-inline-item::before {
-  content: "";
-  display: inline-block;
-  width: 1px;
-  height: .8em;
-  margin: 0 .55rem;
-  vertical-align: -.05em;
-  background: var(--bs-border-color);
+  content: "\00b7"; /* middot — matches the "Add new · Export" divider on the dashboard */
+  color: var(--bs-secondary-color);
+  margin: 0 .3rem;
 }
 table.list-view td.links a {
   text-decoration: none;

@@ -34,7 +34,7 @@
   <form action="." id="model-list" method="post"><input type="hidden" name="action" value="" />
   {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
   <div class="table-responsive">
-  <table class="table table-striped list-view align-middle">
+  <table class="table table-striped list-view">
     <thead>
       <tr>
         <th class="check first shrink"><input class="form-check-input" type="checkbox" name="xxx" onchange="document.querySelectorAll('td input[type=checkbox]').forEach(cb => cb.checked = this.checked);" /></th>
