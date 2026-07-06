@@ -69,6 +69,7 @@ body.admin {
   --bs-list-group-action-active-bg: rgba(42, 111, 111, .2);
 }
 .dropdown-menu {
+  --bs-dropdown-font-size: .9rem; /* Bootstrap defaults this to 1rem, larger than the rest of the admin */
   --bs-dropdown-link-hover-bg: rgba(42, 111, 111, .12);
   --bs-dropdown-link-hover-color: var(--fp-accent-dark);
   --bs-dropdown-link-active-bg: var(--fp-accent);
