@@ -13,24 +13,24 @@
     </div>
   {% endif %}
 
-  <table class="table table-bordered table-striped">
+  <h2 class="section-heading">Models</h2>
+  <table class="table table-hover align-middle">
     <thead>
       <tr>
-        <th class="shrink model-name">Model name</th>
-        <th class="records">Records</th>
+        <th class="model-name">Model</th>
+        <th class="records text-end">Records</th>
         <th class="shrink controls"></th>
       </tr>
     </thead>
     <tbody>
       {% for iter_admin in model_admins %}
-        <tr class="link">
-          <td><span class="show"><a href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></span></td>
-          <td><span>{{ iter_admin.get_query().count() }}</span></td>
-          <td class="links">
-            <ul class="list-inline mb-0">
-              <li class="list-inline-item"><a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a></li>
-              <li class="list-inline-item"><a href="{{ url_for(iter_admin.get_url_name('export')) }}">Export</a></li>
-            </ul>
+        <tr>
+          <td><a class="fw-semibold" href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></td>
+          <td class="records text-end" style="font-variant-numeric: tabular-nums;">{{ iter_admin.get_query().count() }}</td>
+          <td class="links text-end">
+            <a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a>
+            <span class="text-body-secondary mx-1">&middot;</span>
+            <a href="{{ url_for(iter_admin.get_url_name('export')) }}">Export</a>
           </td>
         </tr>
       {% endfor %}

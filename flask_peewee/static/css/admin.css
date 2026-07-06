@@ -75,6 +75,17 @@ body.admin {
   --bs-pagination-active-border-color: var(--fp-accent);
 }
 
+.section-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fp-muted, #5a6b69);
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: .5rem;
+  margin: 1.5rem 0 1rem;
+}
+
 .nav-tabs .nav-link.active {
   font-weight: 600;
 }
@@ -97,6 +108,24 @@ body.admin {
 .form-check-input:focus {
   border-color: #7fadad;
   box-shadow: 0 0 0 .25rem rgba(42, 111, 111, .2);
+}
+
+/* keep object forms readable instead of stretching edge-to-edge, and pull
+   the field back toward its label on wide screens */
+.content fieldset {
+  max-width: 780px;
+}
+.content fieldset legend {
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: .4rem;
+  margin-bottom: 1rem;
+}
+.content .form-actions {
+  border-top: 1px solid var(--bs-border-color);
+  padding-top: 1rem;
+  margin-top: 1.25rem;
 }
 
 /* modeladmin filters */
@@ -125,6 +154,26 @@ table td.last {
   white-space: nowrap;
 }
 
+/* list view: let a long, unbreakable value (e.g. a tracker URL) wrap inside
+   its column instead of forcing the whole table wide. `overflow-wrap:
+   anywhere` (unlike word-break) also lets the column shrink to fit, and the
+   cap keeps one long-text column from crowding out the others. The
+   .table-responsive wrapper scrolls the table itself if it's still too wide,
+   so the page body never scrolls sideways. */
+table.list-view td {
+  overflow-wrap: anywhere;
+  max-width: 28rem;
+}
+
 .fk-lookup-input + ul.result-list li {
   padding: .25rem 0;
+}
+
+/* delete confirmation dependency list */
+ul.delete-deps {
+  list-style: none;
+  padding-left: 0;
+}
+ul.delete-deps li {
+  padding: .1rem 0;
 }

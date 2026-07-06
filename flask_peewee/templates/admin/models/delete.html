@@ -10,40 +10,51 @@
 {% endblock %}
 
 {% block content %}
-  <form action="." method="post">
+  <form action="." method="post" class="delete-confirm">
     {% for object in query %}<input type="hidden" name="id" value="{{ object._pk }}" />{% endfor %}
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Confirm delete</legend>
-      <ul>
+
+      <div class="alert alert-warning">
+        You are about to permanently delete the following
+        {{ model_admin.get_display_name() }} record{{ query.count() != 1 and 's' or '' }}.
+        {% if model_admin.delete_recursive %}Related records shown beneath each item will be deleted too.{% endif %}
+        This cannot be undone.
+      </div>
+
+      <div class="list-group mb-3">
         {% for object in query %}
-          <li>
-            {% if admin.get_admin_url(object) %}
-              <a href="{{ admin.get_admin_url(object) }}">{{ object }}</a>
-            {% else %}
-              <span>{{ object }}</span>
-            {% endif %}
-            {% if collected and object._pk in collected %}
-              <ul>
+          <div class="list-group-item">
+            <div class="fw-semibold">
+              {% if admin.get_admin_url(object) %}
+                <a href="{{ admin.get_admin_url(object) }}">{{ object }}</a>
+              {% else %}
+                {{ object }}
+              {% endif %}
+            </div>
+            {% if collected and object._pk in collected and collected[object._pk] %}
+              <ul class="delete-deps text-body-secondary small mt-2 mb-0">
                 {% for depth, model, collected_objects in collected[object._pk] %}
                   {% for sub_object in collected_objects %}
-                    <li><span>{{ admin.get_model_name(model) }}:</span>
+                    <li>
+                      <span class="badge text-bg-light border me-1">{{ admin.get_model_name(model) }}</span>
                       {% if admin.get_admin_url(sub_object) %}
                         <a href="{{ admin.get_admin_url(sub_object) }}">{{ sub_object }}</a>
                       {% else %}
-                        <span>{{ sub_object }}</span>
+                        {{ sub_object }}
                       {% endif %}
                     </li>
                   {% endfor %}
                 {% endfor %}
               </ul>
             {% endif %}
-          </li>
+          </div>
         {% endfor %}
-      </ul>
+      </div>
 
       <div class="form-actions d-flex gap-2">
-        <button class="btn btn-danger" type="submit">Confirm Delete</button>
+        <button class="btn btn-danger" type="submit">Confirm delete</button>
         <a class="btn btn-outline-secondary" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
       </div>
     </fieldset>
