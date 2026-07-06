@@ -107,6 +107,24 @@ body.admin .form-select-sm {
   --bs-dropdown-link-active-color: #fff;
 }
 
+/* Bootstrap leaves a variant-less .btn transparent and borderless — give it a
+   neutral default so a bare .btn (e.g. in a panel) still looks like a button.
+   The :where() guard keeps this off any button that carries a color variant. */
+body.admin .btn:where(:not(.btn-primary):not(.btn-secondary):not(.btn-success):not(.btn-danger):not(.btn-warning):not(.btn-info):not(.btn-light):not(.btn-dark):not(.btn-link):not([class*="btn-outline-"])) {
+  --bs-btn-color: #1c2b2b;
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #b9c6c5;
+  --bs-btn-hover-color: #1c2b2b;
+  --bs-btn-hover-bg: #edf2f2;
+  --bs-btn-hover-border-color: #a3b4b3;
+  --bs-btn-active-color: #1c2b2b;
+  --bs-btn-active-bg: #e1eaea;
+  --bs-btn-active-border-color: #a3b4b3;
+  --bs-btn-disabled-color: #7a8a89;
+  --bs-btn-disabled-bg: #fff;
+  --bs-btn-disabled-border-color: #cdd8d7;
+}
+
 .btn-primary {
   --bs-btn-bg: var(--fp-accent);
   --bs-btn-border-color: var(--fp-accent);

@@ -125,20 +125,23 @@ class AdminTestCase(BaseAdminTestCase):
         self.create_users()
         self.login()
 
+        # no theme by default, just the base stylesheet
         resp = self.app.get('/admin/')
         body = resp.data.decode('utf-8')
         self.assertTrue('css/admin.css' in body)
-        self.assertFalse('css/admin-crisp.css' in body)
+        self.assertFalse('css/admin-' in body)
 
-        admin.theme = 'crisp'
-        body = self.app.get('/admin/').data.decode('utf-8')
-        self.assertTrue('css/admin.css' in body)
-        self.assertTrue('css/admin-crisp.css' in body)
+        try:
+            admin.theme = 'crisp'
+            body = self.app.get('/admin/').data.decode('utf-8')
+            self.assertTrue('css/admin.css' in body)
+            self.assertTrue('css/admin-crisp.css' in body)
 
-        admin.theme = 'plastic'
-        body = self.app.get('/admin/').data.decode('utf-8')
-        self.assertTrue('css/admin-plastic.css' in body)
-        admin.theme = None
+            admin.theme = 'plastic'
+            body = self.app.get('/admin/').data.decode('utf-8')
+            self.assertTrue('css/admin-plastic.css' in body)
+        finally:
+            admin.theme = None
 
     def test_model_admin_add(self):
         self.create_users()

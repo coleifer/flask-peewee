@@ -43,8 +43,8 @@ Admin
     :param name: name of the admin blueprint, defaults to ``admin``
     :param branding: display name shown in the navbar and page titles
     :param theme: name of an admin theme stylesheet; ``'<theme>'`` loads
-        ``static/css/admin-<theme>.css`` on top of the base ``admin.css``.
-        Defaults to ``'crisp'``. Pass ``None`` to serve the unthemed base
+        ``static/css/admin-<theme>.css`` on top of the base ``admin.css``,
+        e.g. ``theme='crisp'``. Defaults to ``None``, which serves the base
         stylesheet only. For full control (e.g. a stylesheet hosted outside
         the admin's static folder), override the ``theme_css`` block in
         ``admin/base.html`` instead.
