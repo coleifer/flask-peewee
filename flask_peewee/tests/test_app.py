@@ -165,6 +165,7 @@ class DAdmin(ModelAdmin):
 
 class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
+    search_fields = ('content', 'user__username',)
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)

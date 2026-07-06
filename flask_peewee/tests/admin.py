@@ -9,6 +9,7 @@ from flask import url_for
 
 from flask_peewee.admin import AdminPanel
 from flask_peewee.admin import ModelAdmin
+from flask_peewee.utils import PaginatedQuery
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import BDetails
@@ -618,6 +619,74 @@ class AdminTestCase(BaseAdminTestCase):
                           data={'fields': ['username']})
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(json.loads(resp.data), [{'username': 'admin'}])
+
+    def test_export_excludes_sensitive_fields(self):
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # the password field is export_exclude'd, so it isn't offered...
+            resp = c.get('/admin/user/export/')
+            self.assertEqual(resp.status_code, 200)
+            self.assertNotIn(b'value="password"', resp.data)
+            self.assertIn(b'value="username"', resp.data)
+
+            # ...and can't be dumped by posting the field name directly.
+            resp = c.post('/admin/user/export/', data={
+                'fields': ['username', 'password']})
+            self.assertEqual(resp.status_code, 200)
+            data = json.loads(resp.data)
+            self.assertTrue(data)
+            for row in data:
+                self.assertEqual(list(row), ['username'])
+
+    def test_admin_search(self):
+        users = self.create_users()
+        for user in users:
+            self.create_message(user, 'msg from %s' % user.username)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # search on a direct field (content)
+            resp = c.get('/admin/message/?q=from+admin')
+            self.assertEqual(resp.status_code, 200)
+            results = list(self.get_context('query').get_list())
+            self.assertEqual([m.content for m in results], ['msg from admin'])
+
+            # search traversing a foreign key (user__username), case-insensitive
+            resp = c.get('/admin/message/?q=NORMAL')
+            self.assertEqual(resp.status_code, 200)
+            results = list(self.get_context('query').get_list())
+            self.assertEqual([m.user.username for m in results], ['normal'])
+
+            # empty search returns everything
+            resp = c.get('/admin/message/?q=')
+            results = list(self.get_context('query').get_list())
+            self.assertEqual(len(results), 3)
+
+    def test_pagination_page_range(self):
+        user = self.create_user('paginate', 'paginate')
+        for i in range(95):
+            Note.create(user=user, message='n%d' % i)
+
+        # 95 notes / 20 per page = 5 pages; window around the current page.
+        with self.flask_app.test_request_context('/?page=1'):
+            pq = PaginatedQuery(Note.select(), 20)
+            self.assertEqual(pq.get_count(), 95)
+            self.assertEqual(pq.get_pages(), 5)
+            self.assertEqual(pq.get_page_range(), [1, 2, 3, 4, 5])
+
+        for i in range(300):
+            Note.create(user=user, message='m%d' % i)
+
+        # 395 notes -> 20 pages; middle page shows ellipsis gaps on both sides.
+        with self.flask_app.test_request_context('/?page=10'):
+            pq = PaginatedQuery(Note.select(), 20)
+            self.assertEqual(pq.get_pages(), 20)
+            self.assertEqual(pq.get_page_range(),
+                             [1, None, 7, 8, 9, 10, 11, 12, 13, None, 20])
 
     def test_model_admin_index_pagination(self):
         users = self.create_users()

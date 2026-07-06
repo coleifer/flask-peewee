@@ -68,6 +68,24 @@ class PaginatedQuery(object):
     def get_list(self):
         return self.query.paginate(self.get_page(), self.paginate_by)
 
+    def get_page_range(self, window=3):
+        # a windowed list of page numbers around the current page, with None
+        # marking gaps (rendered as an ellipsis), e.g. [1, None, 4, 5, 6, None, 20].
+        total = self.get_pages()
+        current = min(self.get_page(), total)
+        pages = sorted(set(
+            [1, total] +
+            list(range(max(1, current - window), min(total, current + window) + 1))
+        ))
+        result = []
+        prev = 0
+        for page in pages:
+            if page > prev + 1:
+                result.append(None)
+            result.append(page)
+            prev = page
+        return result
+
 
 def get_next():
     if not request.query_string:

@@ -85,6 +85,9 @@ class Auth(object):
             columns = getattr(model_admin, 'columns') or (
                     ['username', 'email', 'active', 'admin'])
 
+            # never expose the password hash through data export.
+            export_exclude = ('password',)
+
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
 

@@ -300,14 +300,18 @@ class RestResource(object):
         d = self.get_deserializer()
         return d.deserialize_object(instance, data)
 
+    def response_error(self, message, status):
+        return Response(json.dumps({'error': message}), status=status,
+                        mimetype='application/json')
+
     def response_forbidden(self):
-        return Response('Forbidden', 403)
+        return self.response_error('Forbidden', 403)
 
     def response_bad_method(self):
-        return Response('Unsupported method "%s"' % (request.method), 405)
+        return self.response_error('Unsupported method "%s"' % request.method, 405)
 
-    def response_bad_request(self):
-        return Response('Bad request', 400)
+    def response_bad_request(self, message='Bad request'):
+        return self.response_error(message, 400)
 
     def response(self, data):
         return Response(json.dumps(data), mimetype='application/json')
@@ -400,6 +404,7 @@ class RestResource(object):
             'model': self.get_api_name(),
             'page': current_page,
             'page_count': paginated_query.get_pages(),
+            'object_count': paginated_query.get_count(),
             'previous': previous,
             'next': next,
         }
@@ -457,16 +462,23 @@ class RestResource(object):
         else:
             return dict(request.form)
 
+    def persist_object(self, instance, data):
+        # deserialize + save, translating validation/integrity problems into a
+        # 400 (see create/edit) rather than letting them surface as a 500.
+        obj, models = self.deserialize_object(data, instance)
+        self.save_related_objects(obj, data)
+        return self.save_object(obj, data)
+
     def create(self):
         try:
             data = self.read_request_data()
         except ValueError:
-            return self.response_bad_request()
+            return self.response_bad_request('Request body is not valid JSON.')
 
-        obj, models = self.deserialize_object(data, self.model())
-
-        self.save_related_objects(obj, data)
-        obj = self.save_object(obj, data)
+        try:
+            obj = self.persist_object(self.model(), data)
+        except (IntegrityError, DataError, ValueError, TypeError) as exc:
+            return self.response_bad_request(str(exc))
 
         return self.response(self.serialize_object(obj))
 
@@ -474,12 +486,12 @@ class RestResource(object):
         try:
             data = self.read_request_data()
         except ValueError:
-            return self.response_bad_request()
+            return self.response_bad_request('Request body is not valid JSON.')
 
-        obj, models = self.deserialize_object(data, obj)
-
-        self.save_related_objects(obj, data)
-        obj = self.save_object(obj, data)
+        try:
+            obj = self.persist_object(obj, data)
+        except (IntegrityError, DataError, ValueError, TypeError) as exc:
+            return self.response_bad_request(str(exc))
 
         return self.response(self.serialize_object(obj))
 

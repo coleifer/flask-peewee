@@ -101,6 +101,10 @@ class ModelAdmin(object):
     filter_exclude = None
     filter_fields = None
 
+    # char/text field names for the quick-search box. supports "__" traversal
+    # into related models, e.g. 'user__username'. empty -> no search box.
+    search_fields = None
+
     # form parameters, lists of fields
     exclude = None
     fields = None
@@ -116,6 +120,12 @@ class ModelAdmin(object):
     # delete behavior
     delete_collect_objects = True
     delete_recursive = True
+
+    # restrict which fields may be exported. export_fields is a whitelist of
+    # field names; export_exclude a blacklist. Related models are restricted
+    # by their own registered ModelAdmin's settings.
+    export_fields = None
+    export_exclude = None
 
     filter_mapping = FilterMapping
     filter_converter = AdminFilterModelConverter
@@ -224,6 +234,38 @@ class ModelAdmin(object):
     def get_extra_context(self):
         return {}
 
+    def get_search_fields(self):
+        return self.search_fields or []
+
+    def _resolve_search_field(self, name):
+        # resolve a possibly-dotted search field to its Field object plus the
+        # foreign keys that must be joined to reach it.
+        model = self.model
+        joins = []
+        parts = name.split('__')
+        for attr in parts[:-1]:
+            fk = model._meta.fields[attr]
+            joins.append((fk, fk.rel_model))
+            model = fk.rel_model
+        return model._meta.fields[parts[-1]], joins
+
+    def apply_search(self, query, term):
+        term = (term or '').strip()
+        search_fields = self.get_search_fields()
+        if not term or not search_fields:
+            return query
+
+        clauses = []
+        for name in search_fields:
+            field, joins = self._resolve_search_field(name)
+            query = query.switch(self.model)
+            for fk, rel_model in joins:
+                query = query.ensure_join(fk.model, rel_model, fk)
+            # ** is peewee's ILIKE operator (case-insensitive contains).
+            clauses.append(field ** ('%%%s%%' % term))
+
+        return query.switch(self.model).where(functools.reduce(operator.or_, clauses))
+
     def get_form_data(self):
         # combine files with form data so file-upload fields (e.g. blobs)
         # receive their uploads.
@@ -260,6 +302,10 @@ class ModelAdmin(object):
         # process the filters from the request
         filter_form, query, cleaned, field_tree = self.process_filters(query)
 
+        # apply the quick-search term, if any
+        search_query = request.args.get('q') or ''
+        query = self.apply_search(query, search_query)
+
         # create a paginated query out of our filtered results
         pq = PaginatedQuery(query, self.paginate_by)
 
@@ -268,6 +314,7 @@ class ModelAdmin(object):
             model_admin=self,
             query=pq,
             ordering=ordering,
+            search_query=search_query,
             filter_form=filter_form,
             field_tree=field_tree,
             active_filters=cleaned,
@@ -378,6 +425,29 @@ class ModelAdmin(object):
             **self.get_extra_context()
         ))
 
+    def get_export_fields(self, model=None):
+        # the set of field names that may be exported for `model` -- the base
+        # model uses this admin's settings, related models defer to their own
+        # registered ModelAdmin (falling back to all fields when unregistered).
+        model = model or self.model
+        if model is self.model:
+            include, exclude = self.export_fields, self.export_exclude
+        else:
+            rel_admin = self.admin.get_admin_for(model)
+            if rel_admin is not None:
+                include, exclude = rel_admin.export_fields, rel_admin.export_exclude
+            else:
+                include, exclude = None, None
+
+        names = list(include) if include else list(model._meta.sorted_field_names)
+        exclude = set(exclude or ())
+        return [name for name in names if name not in exclude]
+
+    def get_export_field_objects(self, model=None):
+        model = model or self.model
+        allowed = self.get_export_fields(model)
+        return [model._meta.fields[name] for name in allowed]
+
     def collect_related_fields(self, model, accum, path, seen=None):
         seen = seen or set()
         path_str = '__'.join(path)
@@ -385,11 +455,20 @@ class ModelAdmin(object):
             if isinstance(field, ForeignKeyField) and field not in seen:
                 seen.add(field)
                 self.collect_related_fields(field.rel_model, accum, path + [field.name], seen)
-            elif model != self.model:
+            elif model != self.model and field.name in self.get_export_fields(model):
                 accum.setdefault((model, path_str), [])
                 accum[(model, path_str)].append(field)
 
         return accum
+
+    def get_exportable_lookups(self, related):
+        # every field lookup ("content", "user__username") the current
+        # configuration permits -- used to reject anything else on POST.
+        allowed = set(self.get_export_fields(self.model))
+        for (model, path), fields in related.items():
+            for field in fields:
+                allowed.add('%s__%s' % (path, field.name))
+        return allowed
 
     def export(self):
         query = self.get_query()
@@ -407,7 +486,10 @@ class ModelAdmin(object):
             query = query.where(self.pk << id_list)
 
         if request.method == 'POST':
-            raw_fields = request.form.getlist('fields')
+            # enforce the export allowlist server-side so restricted fields
+            # cannot be dumped by posting field names directly.
+            allowed = self.get_exportable_lookups(related)
+            raw_fields = [f for f in request.form.getlist('fields') if f in allowed]
             export = Export(query, related, raw_fields)
             return export.json_response('export-%s.json' % self.get_admin_name())
 
@@ -419,6 +501,7 @@ class ModelAdmin(object):
             filter_form=filter_form,
             field_tree=field_tree,
             active_filters=cleaned,
+            export_fields=self.get_export_field_objects(),
             related_fields=related,
             sql=query.sql(),
             **self.get_extra_context()

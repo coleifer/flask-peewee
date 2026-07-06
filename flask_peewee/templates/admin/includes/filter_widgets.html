@@ -13,6 +13,7 @@
     </div>
     <form action="." class="modeladmin-filters" method="get">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
+      {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}" />{% endif %}
       <div class="d-flex align-items-start">
         <div class="filter-list flex-grow-1">
           {% for f in active_filters %}

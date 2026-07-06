@@ -34,7 +34,7 @@ PARAMS:
       <div class="row mb-3">
         <label class="col-sm-3 col-form-label">Fields on {{ model.__name__ }}</label>
         <div class="col-sm-9">
-          {% for field in model._meta.sorted_fields %}
+          {% for field in export_fields %}
             <div class="form-check">
               <input class="form-check-input" type="checkbox" name="fields" value="{{ field.name }}" id="export-{{ field.name }}" checked="checked" />
               <label class="form-check-label" for="export-{{ field.name }}">{{ field.name }}</label>

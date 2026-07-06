@@ -49,7 +49,12 @@ class RestApiTestCase(FlaskPeeweeTestCase):
         self.assertEqual(body, resp_json['objects'])
 
     def assertAPIMeta(self, resp_json, meta):
-        self.assertEqual(meta, resp_json['meta'])
+        actual = dict(resp_json['meta'])
+        # object_count is asserted explicitly where relevant; ignore it here
+        # unless the expectation opts in.
+        if 'object_count' not in meta:
+            actual.pop('object_count', None)
+        self.assertEqual(meta, actual)
 
     def assertAPIUser(self, json_data, user):
         self.assertEqual(json_data, {
@@ -284,6 +289,21 @@ class RestApiResourceTestCase(RestApiTestCase):
             'f_field': 'fz',
             'e': None,
         })
+
+    def test_create_invalid_returns_400(self):
+        # malformed JSON body -> 400 with a JSON error, not a 500.
+        resp = self.app.post('/api/amodel/', data='{not json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.mimetype, 'application/json')
+        self.assertIn('error', json.loads(resp.data.decode('utf8')))
+        self.assertEqual(AModel.select().count(), 0)
+
+        # missing required column (b_field / a) -> IntegrityError surfaced as 400.
+        resp = self.post_to('/api/bmodel/', {'b_field': 'orphan'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.mimetype, 'application/json')
+        self.assertIn('error', json.loads(resp.data.decode('utf8')))
+        self.assertEqual(BModel.select().count(), 0)
 
     def test_resources_edit(self):
         self.create_test_models()

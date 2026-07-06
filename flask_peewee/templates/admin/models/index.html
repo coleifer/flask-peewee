@@ -17,6 +17,18 @@
 {% endblock %}
 
 {% block content %}
+  {% if model_admin.get_search_fields() %}
+    <form action="." method="get" class="admin-search input-group mb-3">
+      {# preserve active filters/ordering when searching, but reset paging #}
+      {% for key, value in request.args.items(multi=True) %}
+        {% if key not in ('q', 'page') %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endif %}
+      {% endfor %}
+      <input type="search" name="q" class="form-control" placeholder="Search {{ model_admin.get_display_name() }}..." value="{{ search_query }}" />
+      <button class="btn btn-primary" type="submit">Search</button>
+      {% if search_query %}<a class="btn btn-outline-secondary" href="./?{{ admin.update_querystring(request.query_string, 'q', '')|safe() }}">Clear</a>{% endif %}
+    </form>
+  {% endif %}
+
   {% include "admin/includes/filter_widgets.html" %}
 
   <form action="." id="model-list" method="post"><input type="hidden" name="action" value="" />

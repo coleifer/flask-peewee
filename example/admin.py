@@ -52,13 +52,18 @@ class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
     foreign_key_lookups = {'user': 'username'}
     filter_fields = ('user', 'content', 'pub_date', 'user__username')
+    search_fields = ('content', 'user__username')
 
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
     exclude = ('created_date',)
 
 
-auth.register_admin(admin)
+class UserAdmin(ModelAdmin):
+    search_fields = ('username', 'email')
+
+
+auth.register_admin(admin, UserAdmin)
 admin.register(Relationship)
 admin.register(Message, MessageAdmin)
 admin.register(Note, NoteAdmin)
