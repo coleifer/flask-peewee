@@ -128,19 +128,17 @@ class AdminTestCase(BaseAdminTestCase):
         resp = self.app.get('/admin/')
         body = resp.data.decode('utf-8')
         self.assertTrue('css/admin.css' in body)
+        self.assertFalse('css/admin-crisp.css' in body)
+
+        admin.theme = 'crisp'
+        body = self.app.get('/admin/').data.decode('utf-8')
+        self.assertTrue('css/admin.css' in body)
         self.assertTrue('css/admin-crisp.css' in body)
 
-        try:
-            admin.theme = None
-            body = self.app.get('/admin/').data.decode('utf-8')
-            self.assertTrue('css/admin.css' in body)
-            self.assertFalse('css/admin-' in body)
-
-            admin.theme = 'plastic'
-            body = self.app.get('/admin/').data.decode('utf-8')
-            self.assertTrue('css/admin-plastic.css' in body)
-        finally:
-            admin.theme = 'crisp'
+        admin.theme = 'plastic'
+        body = self.app.get('/admin/').data.decode('utf-8')
+        self.assertTrue('css/admin-plastic.css' in body)
+        admin.theme = None
 
     def test_model_admin_add(self):
         self.create_users()
