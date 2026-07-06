@@ -3,6 +3,7 @@ import operator
 
 from flask import request
 from peewee import *
+from werkzeug.datastructures import MultiDict
 from wtforms import fields
 from wtforms import form
 from wtforms import validators
@@ -471,7 +472,7 @@ class FilterForm(object):
                 for join, model in zip(join_path, path):
                     query = query.ensure_join(join.model, model, join)
 
-                q_objects = []
+                op_groups = {}
                 for filter_key, filter_value in zip(filter_key_list, filter_value_list):
                     query_filter = self.get_query_filter(field, filter_key)
                     if query_filter is None:
@@ -482,18 +483,28 @@ class FilterForm(object):
                     except (TypeError, ValueError):
                         continue
 
-                    q_objects.append(query_filter.query(value))
+                    op_groups.setdefault(query_filter.key, []).append(
+                        query_filter.query(value))
+
+                    # `form` only binds the first occurrence of each
+                    # parameter, so give each row its own form bound to just
+                    # that row's operation and value.
+                    row_form = FormClass(MultiDict([
+                        (qf_s, query_filter.key), (qf_v, filter_value)]))
                     cleaned.append({
                         'label': label,
                         'key': query_filter.key,
                         'value': filter_value,
                         'input_type': query_filter.input_type,
-                        'op_field': self.resolve_form_field(form, qf_s),
-                        'value_field': self.resolve_form_field(form, qf_v),
+                        'op_field': self.resolve_form_field(row_form, qf_s),
+                        'value_field': self.resolve_form_field(row_form, qf_v),
                     })
 
-                if q_objects:
-                    query = query.where(reduce(operator.or_, q_objects))
+                # repeated uses of one operation are OR'd together, e.g.
+                # eq a, eq b -> "a or b" -- while distinct operations are
+                # AND'd, e.g. gt 8, lt 12 -> a range.
+                for exprs in op_groups.values():
+                    query = query.where(reduce(operator.or_, exprs))
 
         return form, query, cleaned
 

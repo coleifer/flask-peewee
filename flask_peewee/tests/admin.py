@@ -1,6 +1,7 @@
 
 import datetime
 import json
+import re
 
 from flask import g
 from flask import request
@@ -581,6 +582,65 @@ class AdminTestCase(BaseAdminTestCase):
 
             resp = c.get('/admin/note/?fo_user=eq&fv_user=not-a-pk')
             self.assertEqual(resp.status_code, 200)
+
+            # two different operations on one field are AND'd together, e.g.
+            # a range, while repeated uses of one operation are OR'd.
+            resp = c.get('/admin/user/?fo_id=gt&fv_id=%s&fo_id=lt&fv_id=%s&ordering=id' % (
+                self.admin.id, norm2.id))
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [self.normal, self.inactive])
+
+            resp = c.get('/admin/user/?fo_id=eq&fv_id=%s&fo_id=eq&fv_id=%s&fo_id=gt&fv_id=%s&ordering=id' % (
+                self.admin.id, self.normal.id, self.admin.id))
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [self.normal])
+
+    def test_model_admin_index_filter_rendering(self):
+        self.create_users()
+        for user in (self.admin, self.normal, self.inactive):
+            Note.create(user=user, message='note-%s' % user.username)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            def assert_selected(html, value):
+                options = re.findall(r'<option[^>]*\bselected\b[^>]*>', html)
+                self.assertEqual(len(options), 1)
+                self.assertTrue('value="%s"' % value in options[0])
+
+            # each row renders with its own operation and value, even when
+            # several filters reference the same field.
+            resp = c.get('/admin/user/?fo_username=startswith&fv_username=no&'
+                         'fo_username=contains&fv_username=mal')
+            self.assertEqual(resp.status_code, 200)
+
+            query = self.get_context('query')
+            self.assertEqual(list(query.get_list()), [self.normal])
+
+            active_filters = self.get_context('active_filters')
+            self.assertEqual([(f['key'], f['value']) for f in active_filters], [
+                ('startswith', 'no'),
+                ('contains', 'mal')])
+
+            for f in active_filters:
+                assert_selected(f['op_field'](), f['key'])
+                self.assertTrue('value="%s"' % f['value'] in f['value_field']())
+
+            # select-type value fields (e.g. foreign keys) also render with
+            # their own row's value selected.
+            resp = c.get('/admin/note/?fo_user=eq&fv_user=%s&fo_user=eq&fv_user=%s' % (
+                self.admin.id, self.inactive.id))
+            self.assertEqual(resp.status_code, 200)
+
+            active_filters = self.get_context('active_filters')
+            self.assertEqual(len(active_filters), 2)
+            for f in active_filters:
+                assert_selected(f['op_field'](), 'eq')
+                assert_selected(f['value_field'](), f['value'])
 
     def test_export(self):
         users = self.create_users()
