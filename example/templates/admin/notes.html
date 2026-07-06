@@ -7,6 +7,6 @@
   <form method="post" action="{{ url_for(panel.get_url_name('create')) }}">
     <input type="hidden" value="{{ request.url }}" />
     <p><textarea name="message" class="form-control"></textarea></p>
-    <p><button type="submit" class="btn btn-secondary btn-sm">Save</button></p>
+    <button type="submit" class="btn btn-secondary btn-sm">Save</button>
   </form>
 {% endblock %}
