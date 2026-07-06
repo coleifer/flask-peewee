@@ -576,8 +576,7 @@ class AdminPanel(object):
 
 
 class Admin(object):
-    def __init__(self, app, auth, prefix='/admin', name='admin', branding='flask-peewee',
-                 theme='crisp'):
+    def __init__(self, app, auth, prefix='/admin', name='admin', branding='flask-peewee', theme=None):
         self.app = app
         self.auth = auth
 

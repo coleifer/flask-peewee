@@ -4,6 +4,22 @@
    pinstriped machine surfaces. Relief: raised = clickable, sunken = input,
    ridge = window frame. Remove this sheet to get the flat admin back. */
 
+/* Iosevka (SIL OFL, see ../fonts/IOSEVKA-LICENSE.txt) — narrow monospace */
+@font-face {
+  font-family: Iosevka;
+  src: url("../fonts/iosevka.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Iosevka;
+  src: url("../fonts/iosevka-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 body.admin {
   --desk: #4a496b;
   --putty: #ccc6b7;
@@ -34,10 +50,11 @@ body.admin {
   --sel: #404237;
   --sel-text: #e5e3d4;
 
-  --bs-body-font-family: "DejaVu Sans Mono", "Liberation Mono", Menlo,
+  --bs-body-font-family: Iosevka, "DejaVu Sans Mono", "Liberation Mono", Menlo,
       Consolas, "Cascadia Mono", monospace;
-  --bs-body-font-size: .8125rem;
-  --bs-body-line-height: 1.45;
+  --bs-body-font-size: 14px;
+  --bs-body-line-height: 1.5;
+  font-variant-ligatures: none;
   --bs-body-bg: var(--desk);
   --bs-body-color: var(--ink);
   --bs-body-color-rgb: 46, 51, 48;
@@ -47,7 +64,7 @@ body.admin {
   --bs-link-hover-color-rgb: 46, 67, 64;
   --bs-border-color: var(--paper-line);
 
-  font-size: .8125rem;
+  font-size: 14px;
   background-color: var(--desk);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='3'%3E%3Crect width='1' height='1' fill='%23484769'/%3E%3C/svg%3E");
   padding: 14px 8px 64px;
@@ -61,7 +78,7 @@ body.admin *::after {
 
 body.admin h1, body.admin h2, body.admin h3,
 body.admin h4, body.admin h5, body.admin h6 {
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   margin-bottom: .25rem;
 }
@@ -91,7 +108,7 @@ body.admin .btn-sm,
 body.admin .form-control-sm,
 body.admin .form-select-sm,
 body.admin .dropdown-menu {
-  font-size: .8125rem;
+  font-size: 14px;
   font-family: var(--bs-body-font-family);
 }
 
@@ -100,7 +117,7 @@ body.admin button:not([class]),
 body.admin input[type="submit"]:not([class]),
 body.admin input[type="button"]:not([class]) {
   --bs-btn-border-width: 1px;
-  font-size: .8125rem;
+  font-size: 14px;
   font-family: var(--bs-body-font-family);
   padding: 2px 10px 3px;
   color: var(--paper);
@@ -231,7 +248,7 @@ body.admin input[type="button"]:not([class]):active {
   box-shadow: inset 1px 1px 0 #55605d, inset -1px -1px 0 #202422;
   padding: 2px 12px 3px;
   margin: 0;
-  font-size: .8125rem;
+  font-size: 14px;
 }
 .navbar-brand {
   font-weight: 700;
@@ -288,7 +305,7 @@ body.admin input[type="button"]:not([class]):active {
 }
 .page-header h1 {
   margin: 0;
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   color: var(--peach);
   text-transform: lowercase;
@@ -296,7 +313,7 @@ body.admin input[type="button"]:not([class]):active {
 }
 .page-header h1 small {
   color: var(--khaki);
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 400;
 }
 .page-header::before {
@@ -337,7 +354,7 @@ body.admin input[type="button"]:not([class]):active {
 .card-header h5 {
   margin: 0;
   color: inherit;
-  font-size: .8125rem;
+  font-size: 14px;
 }
 .admin-panel .card-header {
   color: var(--peach);
@@ -382,7 +399,7 @@ body.admin input[type="button"]:not([class]):active {
   padding: 0;
   background: var(--lavender);
   border-bottom: 1px solid #8d7bb8;
-  font-size: .8125rem;
+  font-size: 14px;
 }
 .breadcrumb-item {
   padding: 2px 10px 3px;
@@ -454,7 +471,7 @@ body.admin input[type="button"]:not([class]):active {
   --bs-dropdown-link-hover-color: var(--sel-text);
   --bs-dropdown-link-active-bg: var(--sel);
   --bs-dropdown-link-active-color: var(--sel-text);
-  --bs-dropdown-font-size: .8125rem;
+  --bs-dropdown-font-size: 14px;
   --bs-dropdown-padding-y: 2px;
   --bs-dropdown-item-padding-y: .2rem;
   border: 1px solid var(--putty-edge);
@@ -512,7 +529,7 @@ input.datetime-widget {
 }
 .form-text {
   color: var(--ink-soft);
-  font-size: .8125rem;
+  font-size: 14px;
 }
 .form-control.is-invalid, .form-select.is-invalid {
   border-color: var(--brick);
@@ -520,11 +537,11 @@ input.datetime-widget {
 }
 .invalid-feedback {
   color: var(--brick);
-  font-size: .8125rem;
+  font-size: 14px;
 }
 
 .content fieldset legend {
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   text-transform: lowercase;
   letter-spacing: .5px;
@@ -541,7 +558,7 @@ input.datetime-widget {
 }
 
 .section-heading {
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   text-transform: lowercase;
   letter-spacing: .5px;
@@ -571,7 +588,7 @@ input.datetime-widget {
 .table thead th {
   background: var(--putty);
   color: var(--ink);
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   text-transform: lowercase;
   letter-spacing: .5px;
@@ -580,6 +597,9 @@ input.datetime-widget {
 .table thead th a {
   color: var(--teal);
   text-decoration: underline;
+}
+table.list-view tbody td {
+  font-size: 14px;
 }
 
 table.list-view tbody tr:has(td.check input:checked) > * {
@@ -603,7 +623,7 @@ table.list-view td video {
 .pagination {
   --bs-pagination-padding-x: .6rem;
   --bs-pagination-padding-y: .1rem;
-  --bs-pagination-font-size: .8125rem;
+  --bs-pagination-font-size: 14px;
   gap: 4px;
 }
 .page-link {
@@ -653,7 +673,7 @@ table.list-view td video {
   color: var(--teal);
   background: transparent;
   border: 0;
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 400;
   padding: 0;
 }
@@ -668,7 +688,7 @@ body.admin pre {
   border: 1px solid #1b1818;
   box-shadow: 0 0 0 1px #352c2c, 0 0 0 2px #1b1818;
   padding: 8px 10px;
-  font-size: .8125rem;
+  font-size: 14px;
   margin: 4px 2px;
 }
 
@@ -685,7 +705,7 @@ body.admin pre {
   justify-content: center;
 }
 .modal-header .modal-title {
-  font-size: .8125rem;
+  font-size: 14px;
   font-weight: 700;
   text-transform: lowercase;
   letter-spacing: .5px;

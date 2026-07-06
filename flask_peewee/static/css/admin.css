@@ -283,3 +283,5 @@ ul.delete-deps {
 ul.delete-deps li {
   padding: .1rem 0;
 }
+
+p { margin-bottom: .5rem; }
