@@ -12,6 +12,7 @@ body.admin {
   --bs-link-color-rgb: 42, 111, 111;
   --bs-link-hover-color-rgb: 29, 88, 88;
   padding-top: 76px;
+  font-size: .9rem;
 }
 
 .navbar {
@@ -20,6 +21,17 @@ body.admin {
 }
 .navbar-brand {
   font-weight: 700;
+}
+.navbar-dark .nav-link {
+  --bs-nav-link-color: rgba(255, 255, 255, .7);
+}
+.navbar-dark .nav-link:hover,
+.navbar-dark .nav-link:focus {
+  color: #fff;
+}
+.navbar-dark .nav-link.active {
+  color: #fff;
+  border-bottom: 2px solid var(--fp-accent);
 }
 
 .content {
@@ -52,6 +64,9 @@ body.admin {
 .list-group {
   --bs-list-group-active-bg: var(--fp-accent);
   --bs-list-group-active-border-color: var(--fp-accent);
+  --bs-list-group-action-hover-bg: rgba(42, 111, 111, .13);
+  --bs-list-group-action-hover-color: var(--fp-accent-dark);
+  --bs-list-group-action-active-bg: rgba(42, 111, 111, .2);
 }
 
 .btn-primary {
@@ -163,6 +178,45 @@ table td.last {
 table.list-view td {
   overflow-wrap: anywhere;
   max-width: 28rem;
+  vertical-align: middle;
+}
+
+/* a column that renders rich content (markdown, HTML) can embed full-size
+   media that balloons row height. Keep any media in a list cell down to a
+   scannable thumbnail so rows stay compact. */
+table.list-view td img,
+table.list-view td svg,
+table.list-view td video {
+  max-height: 150px;
+  max-width: 300px;
+  width: auto;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* row action links (Edit / Delete / ...): a tidy, evenly-divided group
+   instead of loosely-spaced links */
+table.list-view td.links ul.list-inline {
+  white-space: nowrap;
+  text-align: right;
+}
+table.list-view td.links .list-inline-item {
+  margin: 0;
+}
+table.list-view td.links .list-inline-item + .list-inline-item::before {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: .8em;
+  margin: 0 .55rem;
+  vertical-align: -.05em;
+  background: var(--bs-border-color);
+}
+table.list-view td.links a {
+  text-decoration: none;
+}
+table.list-view td.links a:hover {
+  text-decoration: underline;
 }
 
 .fk-lookup-input + ul.result-list li {
