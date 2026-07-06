@@ -12,7 +12,29 @@ body.admin {
   --bs-link-color-rgb: 42, 111, 111;
   --bs-link-hover-color-rgb: 29, 88, 88;
   padding-top: 76px;
+  --bs-body-font-size: .9rem;
   font-size: .9rem;
+}
+
+/* Bootstrap hardcodes form controls, buttons and dropdowns to 1rem — larger
+   than the admin's .9rem base. Pull the whole interactive type scale in line
+   so nothing renders bigger than the surrounding text. */
+body.admin .form-control,
+body.admin .form-select,
+body.admin .form-label,
+body.admin .col-form-label,
+body.admin .input-group-text,
+body.admin input.datetime-widget {
+  font-size: .9rem;
+}
+body.admin .btn {
+  --bs-btn-font-size: .9rem;
+}
+body.admin .btn-sm,
+body.admin .form-control-sm,
+body.admin .form-select-sm {
+  --bs-btn-font-size: .8125rem;
+  font-size: .8125rem;
 }
 
 .navbar {
@@ -138,7 +160,7 @@ body.admin {
   max-width: 780px;
 }
 .content fieldset legend {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   border-bottom: 1px solid var(--bs-border-color);
   padding-bottom: .4rem;
