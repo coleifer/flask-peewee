@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin.css') }}">
-  {% block theme_css %}<link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin-crisp.css') }}">{% endblock %}
+  {% block theme_css %}{% if admin.theme %}<link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin-' ~ admin.theme ~ '.css') }}">{% endif %}{% endblock %}
 
   <script src="{{ url_for(admin.get_url_name('static'), filename='js/bootstrap.bundle.min.js') }}" defer></script>
   <script src="{{ url_for(admin.get_url_name('static'), filename='js/admin.js') }}" defer></script>

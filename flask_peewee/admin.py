@@ -576,7 +576,8 @@ class AdminPanel(object):
 
 
 class Admin(object):
-    def __init__(self, app, auth, prefix='/admin', name='admin', branding='flask-peewee'):
+    def __init__(self, app, auth, prefix='/admin', name='admin', branding='flask-peewee',
+                 theme='crisp'):
         self.app = app
         self.auth = auth
 
@@ -587,6 +588,7 @@ class Admin(object):
         self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
         self.branding = branding
+        self.theme = theme
 
         self.prepare_template_environment()
 

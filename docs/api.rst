@@ -6,7 +6,7 @@ API
 Admin
 -----
 
-.. py:class:: Admin(app, auth[, blueprint_factory[, prefix]])
+.. py:class:: Admin(app, auth[, prefix[, name[, branding[, theme]]]])
 
     Class used to expose an admin area at a certain url in your application.  The
     Admin object implements a flask blueprint and acts as the central registry
@@ -39,8 +39,15 @@ Admin
 
     :param app: flask application to bind admin to
     :param auth: :py:class:`Auth` instance which will provide authentication
-    :param blueprint_factory: an object that will create the ``BluePrint`` used by the admin
     :param prefix: url to bind admin to, defaults to ``/admin``
+    :param name: name of the admin blueprint, defaults to ``admin``
+    :param branding: display name shown in the navbar and page titles
+    :param theme: name of an admin theme stylesheet; ``'<theme>'`` loads
+        ``static/css/admin-<theme>.css`` on top of the base ``admin.css``.
+        Defaults to ``'crisp'``. Pass ``None`` to serve the unthemed base
+        stylesheet only. For full control (e.g. a stylesheet hosted outside
+        the admin's static folder), override the ``theme_css`` block in
+        ``admin/base.html`` instead.
 
     .. py:method:: register(model[, admin_class=ModelAdmin])
 
