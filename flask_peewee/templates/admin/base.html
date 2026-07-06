@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin.css') }}">
+  {% block theme_css %}<link rel="stylesheet" href="{{ url_for(admin.get_url_name('static'), filename='css/admin-crisp.css') }}">{% endblock %}
 
   <script src="{{ url_for(admin.get_url_name('static'), filename='js/bootstrap.bundle.min.js') }}" defer></script>
   <script src="{{ url_for(admin.get_url_name('static'), filename='js/admin.js') }}" defer></script>
@@ -25,6 +26,7 @@
       <form action="{{ admin.get_logout_url() }}" method="get">
         <button class="btn btn-danger btn-sm">Logout</button>
       </form>
+      <span class="taskbar-clock" id="taskbar-clock"></span>
     </div>
   </nav>
 
@@ -46,7 +48,7 @@
       <div class="col-md-9 col-lg-10">
         <div class="content">
           <div class="page-header">
-            <h1>{% block content_title %}{% endblock %} <small class="text-body-secondary fs-5">{% block content_tagline %}{% endblock %}</small></h1>
+            <h1>{% block content_title %}{% endblock %} <small>{% block content_tagline %}{% endblock %}</small></h1>
           </div>
           <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -63,7 +65,6 @@
           {% block pre_content %}{% endblock %}
           {% block content %}{% endblock %}
         </div><!-- /content -->
-        <hr>
         <footer class="pb-4">
           <p class="text-body-secondary">{% block footer %}Site administration{% endblock %}</p>
         </footer>

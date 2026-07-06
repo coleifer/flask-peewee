@@ -44,6 +44,11 @@ body.admin .form-select-sm {
 .navbar-brand {
   font-weight: 700;
 }
+.taskbar-clock {
+  color: rgba(255, 255, 255, .7);
+  margin-left: .75rem;
+  font-variant-numeric: tabular-nums;
+}
 .navbar-dark .nav-link {
   --bs-nav-link-color: rgba(255, 255, 255, .7);
 }
@@ -66,6 +71,10 @@ body.admin .form-select-sm {
 .page-header h1 {
   font-weight: 700;
   letter-spacing: -.02em;
+}
+.page-header h1 small {
+  font-size: 1.25rem;
+  color: var(--bs-secondary-color);
 }
 .breadcrumb {
   font-size: .875rem;

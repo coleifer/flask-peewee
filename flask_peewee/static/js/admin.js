@@ -222,4 +222,15 @@ var Admin = window.Admin || {};
     form.submit();
   };
 
+  document.addEventListener('DOMContentLoaded', function() {
+    var clock = document.getElementById('taskbar-clock');
+    if (!clock) return;
+    var tick = function() {
+      var d = new Date();
+      clock.textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    };
+    tick();
+    setInterval(tick, 15000);
+  });
+
 })(Admin);
