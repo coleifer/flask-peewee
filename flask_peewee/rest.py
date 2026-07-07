@@ -114,7 +114,12 @@ class AdminAuthentication(UserAuthentication):
 
 
 class RestResource(object):
+    # default page size when the client does not request a "limit".
     paginate_by = 20
+    # upper bound on a client-requested "limit"; None means no ceiling. This
+    # lets clients ask for pages larger than paginate_by (up to the cap) --
+    # paginate_by alone is only the default, never a maximum.
+    max_paginate_by = None
     value_transforms = {'False': False, 'false': False,
                         'True': True, 'true': True,
                         'None': None, 'none': None}
@@ -428,17 +433,27 @@ class RestResource(object):
         }
 
     def get_paginate_by(self):
-        try:
-            paginate_by = int(request.args.get('limit', self.paginate_by))
-        except ValueError:
-            paginate_by = self.paginate_by
-        else:
-            if self.paginate_by:
-                paginate_by = min(paginate_by, self.paginate_by) # restrict
-        return paginate_by
+        # an explicit "limit" wins (capped at max_paginate_by if set),
+        # otherwise fall back to the resource default. paginate_by is the
+        # default page size, not a maximum -- clients may request more.
+        if 'limit' in request.args:
+            try:
+                limit = int(request.args['limit'])
+            except (TypeError, ValueError):
+                limit = 0
+            if limit > 0:
+                if self.max_paginate_by:
+                    return min(limit, self.max_paginate_by)
+                return limit
+        return self.paginate_by
 
     def paginated_object_list(self, filtered_query):
         paginate_by = self.get_paginate_by()
+        if not paginate_by:
+            # pagination disabled and no limit requested: put everything on a
+            # single page so the response still uses the {meta, objects}
+            # envelope rather than a bare list.
+            paginate_by = filtered_query.count() or 1
         pq = PaginatedQuery(filtered_query, paginate_by)
         meta_data = self.get_request_metadata(pq)
 
@@ -456,10 +471,9 @@ class RestResource(object):
         # process any filters
         query = self.process_query(query)
 
-        if self.paginate_by or 'limit' in request.args:
-            return self.paginated_object_list(query)
-
-        return self.response(self.serialize_query(query))
+        # always return the paginated envelope so the response shape is
+        # consistent regardless of the resource's paginate_by setting.
+        return self.paginated_object_list(query)
 
     def object_detail(self, obj):
         return self.response(self.serialize_object(obj))

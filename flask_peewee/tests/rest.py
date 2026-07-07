@@ -507,6 +507,36 @@ class RestApiResourceTestCase(RestApiTestCase):
         f_obj = FModel.get(id=self.f1.id)
         self.assertEqual(f_obj.e, None)
 
+    def test_no_pagination_envelope(self):
+        # EResource sets paginate_by=None; the list endpoint must still return
+        # the {meta, objects} envelope (never a bare list), with everything on
+        # a single page.
+        resp = self.app.get('/api/emodel/')
+        resp_json = self.response_json(resp)
+        self.assertIsInstance(resp_json, dict)
+        self.assertEqual(resp_json['objects'], [])
+        self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertEqual(resp_json['meta']['page_count'], 0)
+
+        emodels = [EModel.create(e_field='e%d' % i) for i in range(3)]
+        resp = self.app.get('/api/emodel/?ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertIsInstance(resp_json, dict)
+        self.assertEqual(resp_json['meta']['page'], 1)
+        self.assertEqual(resp_json['meta']['page_count'], 1)
+        self.assertEqual(resp_json['meta']['next'], '')
+        self.assertEqual([o['id'] for o in resp_json['objects']],
+                         [e.id for e in emodels])
+
+    def test_max_paginate_by_caps_limit(self):
+        # EResource caps an explicit ?limit at max_paginate_by (5).
+        for i in range(8):
+            EModel.create(e_field='e%d' % i)
+        resp = self.app.get('/api/emodel/?ordering=id&limit=100')
+        resp_json = self.response_json(resp)
+        self.assertEqual(len(resp_json['objects']), 5)
+        self.assertEqual(resp_json['meta']['page_count'], 2)  # ceil(8 / 5)
+
 
 class RestApiBasicTestCase(RestApiTestCase):
     def get_users_and_notes(self):
@@ -572,6 +602,15 @@ class RestApiBasicTestCase(RestApiTestCase):
 
         # verify response objects are paginated properly
         self.assertAPINotes(resp_json, notes[20:])
+
+    def test_limit_exceeds_default(self):
+        # paginate_by is only a default page size, not a maximum: a client may
+        # request a larger page via ?limit (there are 30 notes, default is 20).
+        users, notes = self.get_users_and_notes()
+        resp = self.app.get('/api/note/?ordering=id&limit=100')
+        resp_json = self.response_json(resp)
+        self.assertEqual(len(resp_json['objects']), len(notes))
+        self.assertEqual(resp_json['meta']['page_count'], 1)
 
     def test_filtering(self):
         users, notes = self.get_users_and_notes()

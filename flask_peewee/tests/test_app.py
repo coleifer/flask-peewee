@@ -204,7 +204,8 @@ class CResource(RestResource):
     include_resources = {'b': BResource}
 
 class EResource(RestResource):
-    pass
+    paginate_by = None    # no default pagination -> single-page envelope
+    max_paginate_by = 5   # but cap an explicit ?limit at 5
 
 class FResource(RestResource):
     include_resources = {'e': EResource}

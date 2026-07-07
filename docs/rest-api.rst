@@ -134,13 +134,13 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
         {
           "content": "flask and peewee, together at last!",
           "pub_date": "2011-09-16T18:36:15",
-          "user_id": 1,
+          "user": 1,
           "id": 1
         },
         {
           "content": "Hey, I'm just some user",
           "pub_date": "2011-09-16T18:46:59",
-          "user_id": 2,
+          "user": 2,
           "id": 2
         }
       ]
@@ -154,7 +154,7 @@ just the details on that object:
     {
       content: "flask and peewee, together at last!"
       pub_date: "2011-09-16T18:36:15"
-      user_id: 1
+      user: 1
       id: 1
     }
 
@@ -284,7 +284,7 @@ Now we should be able to POST new messages.
     sock = httplib2.Http()
     sock.add_credentials('admin', 'admin') # use basic auth
 
-    message = {'user_id': 1, 'content': 'hello api'}
+    message = {'user': 1, 'content': 'hello api'}
     msg_json = json.dumps(message)
 
     headers, resp = sock.request('http://localhost:5000/api/message/', 'POST', body=msg_json)
@@ -297,12 +297,12 @@ The response object will look something like this:
 
     {
       'content': 'hello api',
-      'user_id': 1,
+      'user': 1,
       'pub_date': '2011-09-22T11:25:02',
       'id': 3
     }
 
-There is a problem with this, however.  Notice how the ``user_id`` was passed in
+There is a problem with this, however.  Notice how the ``user`` was passed in
 with the POST data?  This effectively will let a user post a message as another user.
 It also means a user can use PUT requests to modify another user's message:
 
@@ -323,7 +323,7 @@ The response will look like this:
     {
       'content': 'haxed you, bro',
       'pub_date': '2011-09-16T18:36:15',
-      'user_id': 2,
+      'user': 2,
       'id': 2
     }
 
@@ -424,7 +424,7 @@ This call will return only messages by the ``User`` with id=2:
         {
           "content": "haxed you, bro",
           "pub_date": "2011-09-16T18:36:15",
-          "user_id": 2,
+          "user": 2,
           "id": 2
         }
       ]
@@ -450,13 +450,13 @@ Joins can be traversed using the django double-underscore notation:
         {
           "content": "flask and peewee, together at last!",
           "pub_date": "2011-09-16T18:36:15",
-          "user_id": 1,
+          "user": 1,
           "id": 1
         },
         {
           "content": "hello api",
           "pub_date": "2011-09-22T11:25:02",
-          "user_id": 1,
+          "user": 1,
           "id": 3
         }
       ]
@@ -466,7 +466,7 @@ It is also supported to use different comparison operators with the same double-
 
 .. code-block:: console
 
-    $ curl http://127.0.0.1:5000/api/user/?user__lt=2
+    $ curl http://127.0.0.1:5000/api/user/?id__lt=2
 
 .. code-block:: javascript
 
@@ -490,7 +490,7 @@ It is also supported to use different comparison operators with the same double-
 
 
 Valid Comparison Operators are:
-    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'like', 'ilike'
+    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'is_not', 'like', 'ilike', 'regexp'
 
 
 Sorting results
@@ -509,10 +509,18 @@ If you would like to order objects "descending", place a "-" (hyphen character) 
 Limiting results and pagination
 -------------------------------
 
-By default, resources are paginated 20 per-page.  If you want to return less, you
-can specify a ``limit`` in the querystring.
+By default, resources are paginated 20 per-page (the ``paginate_by`` attribute).
+Specify a ``limit`` in the querystring to request a different page size -- larger
+or smaller:
 
 `/api/message/?limit=2`
+
+``paginate_by`` is only the default page size, not a maximum -- a client may
+request a larger page.  To cap how large a page can be requested, set
+``max_paginate_by`` on the resource (it defaults to ``None``, meaning no ceiling).
+Setting ``paginate_by = None`` disables pagination and returns every matching
+object on a single page (still wrapped in the standard ``meta``/``objects``
+envelope).
 
 In the "meta" section of the response, URIs for the "next" and "previous" sets
 of results are available, along with the total number of pages:
