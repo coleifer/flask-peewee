@@ -19,6 +19,7 @@ from flask_peewee.auth import Auth
 from flask_peewee.auth import BaseUser
 from flask_peewee.db import Database
 from flask_peewee.filters import QueryFilter
+from flask_peewee.rest import ALL_METHODS
 from flask_peewee.rest import APIKeyAuthentication
 from flask_peewee.rest import AdminAuthentication
 from flask_peewee.rest import BearerAuthentication
@@ -261,12 +262,12 @@ class PingResource(RestResource):
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
 admin_auth = AdminAuthentication(auth)
-api_key_auth = APIKeyAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
+api_key_auth = APIKeyAuthentication(APIKey, ALL_METHODS)
 
 class KeyBearerAuthentication(BearerAuthentication):
     token_field = 'key'  # reuse the APIKey.key column as the bearer token
 
-bearer_auth = KeyBearerAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
+bearer_auth = KeyBearerAuthentication(APIKey, ALL_METHODS)
 
 class TweetResource(RestrictOwnerResource):
     owner_field = 'user'

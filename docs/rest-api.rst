@@ -404,8 +404,9 @@ Token-based authentication
 Basic auth, which is handy for humans but awkward for programmatic clients.  For
 API clients, flask-peewee ships token-based authentication classes.  Like all
 authentication classes they only guard the ``protected_methods`` (``POST``,
-``PUT`` and ``DELETE`` by default -- ``GET`` is open); pass
-``protected_methods`` to also require auth on reads.
+``PUT`` and ``DELETE`` by default -- ``GET`` is open).  To require auth on reads
+too, pass ``protected_methods=ALL_METHODS`` (a convenience constant equal to
+``('GET', 'POST', 'PUT', 'DELETE')``) or your own list.
 
 API keys
 ^^^^^^^^

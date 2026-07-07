@@ -23,6 +23,12 @@ from flask_peewee.utils import slugify
 from functools import reduce
 
 
+# every HTTP method the REST API handles. Pass as protected_methods to require
+# authentication on reads as well as writes, e.g.
+# BearerAuthentication(Token, ALL_METHODS).
+ALL_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
+
+
 class RestForbidden(Exception):
     # raised when a nested write fails the child resource's check_*; caught in
     # create/edit and turned into a 403 (and rolls back the enclosing atomic).
@@ -229,7 +235,7 @@ class RestResource(object):
         self.pk = model._meta.primary_key
 
         self.authentication = authentication
-        self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
+        self.allowed_methods = allowed_methods or list(ALL_METHODS)
 
         self._fields = {self.model: self.fields or self.model._meta.sorted_field_names}
         if self.exclude:
