@@ -274,7 +274,7 @@ Exposing Models with the ModelAdmin
         fields or custom validation behavior.
 
         :param boolean adding: indicates whether adding a new instance or editing existing
-        :rtype: A `wtf-peewee <http://github.com/coleifer/wtf-peewee>`_ Form subclass that
+        :rtype: A `wtf-peewee <https://github.com/coleifer/wtf-peewee>`_ Form subclass that
                 will be used when adding or editing model instances in the admin.
 
     .. py:method:: get_add_form()

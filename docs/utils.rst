@@ -72,6 +72,7 @@ Misc
 
 
 .. py:function:: slugify(string)
+    :no-index:
 
     Convert a string into something suitable for use as part of a URL,
     e.g. "This is a url" becomes "this-is-a-url"

@@ -67,7 +67,7 @@ initially.
 Retrieving the current user
 ---------------------------
 
-Whenever in a `request context <http://flask.pocoo.org/docs/reqcontext/>`_, the
+Whenever in a `request context <https://flask.palletsprojects.com/en/stable/reqcontext/>`_, the
 currently logged-in user is available by calling :py:meth:`Auth.get_logged_in_user`,
 which will return ``None`` if the requesting user is not logged in.
 
