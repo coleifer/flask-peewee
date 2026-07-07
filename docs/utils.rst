@@ -66,6 +66,15 @@ Getting objects
         
         pq.get_pages() # returns total objects / objects-per-page
 
+        pq.get_count() # total number of matching rows
+
+        # a windowed list of page numbers for building pagination controls;
+        # None marks a gap to render as an ellipsis. on page 10 of 20:
+        pq.get_page_range()  # [1, None, 7, 8, 9, 10, 11, 12, 13, None, 20]
+
+    ``get_page_range(window=N)`` controls how many pages are shown on either side
+    of the current page (the default is 3).
+
 
 Misc
 ----
@@ -97,3 +106,18 @@ Misc
 .. py:function:: check_password(raw_password, enc_password)
 
     Compare a plain-text password against a salted/hashed password
+
+.. py:data:: PASSWORD_HASH_METHOD
+
+    The hashing method :py:func:`make_password` hands to werkzeug's
+    ``generate_password_hash`` -- ``'scrypt'`` by default.  Override it before
+    hashing to change the algorithm or work factor, for instance to pick a
+    cheaper method that speeds up your test suite:
+
+    .. code-block:: python
+
+        import flask_peewee.utils
+
+        flask_peewee.utils.PASSWORD_HASH_METHOD = 'pbkdf2:sha256:1'
+
+    See ``werkzeug.security.generate_password_hash`` for the accepted values.

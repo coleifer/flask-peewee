@@ -494,7 +494,7 @@ Auth
     :param prefix: url to bind authentication views to, defaults to /accounts/
     :param db_table: Create db table using db_table name. ``user`` is reserved keyword in postgres.
 
-    .. py:attribute:: default_next_url = 'homepage'
+    .. py:attribute:: default_next_url = '/'
 
         The url to redirect to upon successful login in the event a ``?next=<xxx>``
         is not provided.

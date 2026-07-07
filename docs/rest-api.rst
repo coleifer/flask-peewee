@@ -222,6 +222,18 @@ from serialization, subclass :py:class:`RestResource`:
 
 Now emails and passwords are no longer returned by the API.
 
+``exclude`` is a blacklist; its positive counterpart is ``fields``, a whitelist
+of the *only* fields to serialize.  The resource above could instead expose just
+the username and id:
+
+.. code-block:: python
+
+    class UserResource(RestResource):
+        fields = ('username', 'id')
+
+Reach for whichever is more convenient -- ``fields`` when you want to expose a
+small, fixed set of columns, ``exclude`` when you want everything but a few.
+
 
 Nested resources
 ----------------
@@ -660,6 +672,35 @@ so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are equivalent.
     stray query-string parameters (cache-busters, tracking params, etc.) from
     breaking a request.  Double-check your filter names if a query returns more
     than you expect.  An unknown ``ordering`` column is likewise ignored.
+
+
+Restricting what can be filtered
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default every field on the model is filterable and joins may be traversed
+into related models.  Since filters come straight off the query string, you will
+often want to lock this down -- especially for sensitive columns.  Three
+:py:class:`RestResource` attributes control it:
+
+* ``filter_fields`` -- a whitelist; only these fields may be filtered on.
+* ``filter_exclude`` -- a blacklist of fields that may never be filtered on (use
+  ``__`` notation for related columns, e.g. ``user__password``).
+* ``filter_recursive`` -- set to ``False`` to forbid filtering across foreign
+  keys entirely (no ``user__...`` lookups at all).
+
+.. code-block:: python
+
+    class MessageResource(RestResource):
+        # only these may be used as filters, however a client spells the query
+        filter_fields = ('id', 'content', 'user__username')
+
+    class UserResource(RestResource):
+        exclude = ('password',)          # don't serialize the hash...
+        filter_exclude = ('password',)   # ...and don't let it be filtered on either
+
+Because an unrecognized filter is ignored rather than rejected (see the note
+above), tightening this list can never break an otherwise-valid request -- a
+now-disallowed filter simply stops narrowing the results.
 
 
 Sorting results

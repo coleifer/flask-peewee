@@ -64,6 +64,33 @@ After successfully logging-in, they will be redirected to the page they requeste
 initially.
 
 
+Requiring specific permissions
+------------------------------
+
+:py:meth:`Auth.login_required` only checks that *someone* is logged in.  When a
+view should be restricted further, two more decorators are available:
+
+* :py:meth:`Auth.admin_required` -- additionally requires the user's ``admin``
+  flag to be set.
+* :py:meth:`Auth.test_user` -- takes a predicate ``fn(user)`` and builds a
+  decorator that requires a logged-in user for whom it returns a truthy value.
+
+In fact ``login_required`` and ``admin_required`` are nothing more than
+``test_user(lambda user: True)`` and ``test_user(lambda user: user.admin)``.  Use
+``test_user`` to express any rule you like:
+
+.. code-block:: python
+
+    @app.route('/staff/')
+    @auth.test_user(lambda user: user.is_staff)
+    def staff_area():
+        # only reachable by a logged-in user whose is_staff attribute is truthy
+        ...
+
+A request that fails the check is redirected to the login view, exactly like
+``login_required``.
+
+
 Retrieving the current user
 ---------------------------
 
@@ -73,6 +100,32 @@ which will return ``None`` if the requesting user is not logged in.
 
 The auth system also registers a pre-request hook that stores the currently logged-in
 user in the special flask variable ``g``.
+
+
+Logging users in and out programmatically
+-----------------------------------------
+
+Sometimes you need to establish the session yourself -- for instance, logging a
+user in immediately after they register.  :py:meth:`Auth.login_user` and
+:py:meth:`Auth.logout_user` do exactly that from within a request:
+
+.. code-block:: python
+
+    user = User.create(username='huey', email='huey@example.com', ...)
+    user.set_password('meow')
+    user.save()
+
+    auth.login_user(user)   # huey is now logged in for subsequent requests
+
+``logout_user()`` ends the session.  By default it removes only flask-peewee's
+own session keys, leaving any other data you've stored in the session intact.
+Pass ``clear_session=True`` when constructing :py:class:`Auth` to have logout
+wipe the *entire* session instead -- a simple hardening step against session
+fixation:
+
+.. code-block:: python
+
+    auth = Auth(app, db, clear_session=True)
 
 
 Accessing the user in the templates

@@ -120,6 +120,39 @@ Filtering is available, as is search:
 
 .. image:: fp-message-admin.png
 
+Searching
+^^^^^^^^^
+
+Set ``search_fields`` to add a quick-search box above the list.  It runs a
+case-insensitive substring match over char/text fields and supports ``__``
+traversal into related models -- so ``('content', 'user__username')`` searches
+both the message body and the author's username, joining ``User`` automatically:
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        columns = ('user', 'content', 'pub_date',)
+        search_fields = ('content', 'user__username')
+
+Leaving ``search_fields`` empty (the default) hides the search box entirely.
+
+Filtering
+^^^^^^^^^
+
+The list and export views expose per-field filters (equals, less-than, contains,
+etc., chosen by field type).  By default every field is filterable; two
+attributes narrow that:
+
+* ``filter_fields`` -- a whitelist of the only fields that may be filtered
+* ``filter_exclude`` -- a blacklist of fields to hide from filtering
+
+Both accept ``__`` notation for related fields, so
+``filter_exclude = ('user__password',)`` keeps a sensitive related column out of
+the filter UI entirely.
+
+Restricting the queryset
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Suppose privacy is a big concern, and under no circumstances should a user be
 able to see another user's messages -- even in the admin.  This can be done by overriding
 the :py:meth:`~ModelAdmin.get_query` method:
@@ -215,6 +248,99 @@ with a paginated, type-ahead list:
 .. image:: fp-message-fk-btn.png
 
 .. image:: fp-message-fk-modal.png
+
+
+Bulk actions
+------------
+
+Every row in the list view has a checkbox, and the **"With selected..."**
+dropdown offers *Export* and *Delete* out-of-the-box.  You can add your own
+bulk operations by subclassing :py:class:`Action` and listing instances in your
+:py:class:`ModelAdmin`'s ``actions`` attribute.
+
+An action implements a single ``callback(self, id_list)`` method, which receives
+the list of primary keys the user checked.  Suppose our ``Message`` model has a
+``flagged`` boolean and we want a one-click way to flag the selected rows:
+
+.. code-block:: python
+
+    from flask_peewee.admin import Action, ModelAdmin
+
+    class FlagAction(Action):
+        def callback(self, id_list):
+            Message.update(flagged=True).where(Message.id << id_list).execute()
+
+    class MessageAdmin(ModelAdmin):
+        columns = ('user', 'content', 'pub_date', 'flagged',)
+        actions = [FlagAction()]
+
+    admin.register(Message, MessageAdmin)
+
+The action shows up in the "With selected..." dropdown labelled with its
+``name``, which defaults to the class name minus the "Action" suffix
+(``FlagAction`` becomes "Flag").  Pass ``name`` (and optionally ``description``)
+to the constructor to override it, e.g. ``FlagAction(name='Flag as spam')``.
+
+If a callback returns a Flask ``Response``, it is sent to the user as-is -- handy
+for generating a download from the selected rows:
+
+.. code-block:: python
+
+    from flask import Response
+
+    class ExportContentAction(Action):
+        def callback(self, id_list):
+            rows = Message.select().where(Message.id << id_list)
+            body = '\n'.join(msg.content for msg in rows)
+            return Response(body, mimetype='text/plain', headers={
+                'Content-Disposition': 'attachment; filename=messages.txt'})
+
+If the callback returns anything else, the user is redirected back to the list
+view.  Submitting an action with no rows selected simply flashes a warning and
+does nothing.
+
+
+Exporting data
+--------------
+
+Every registered model gets an **Export** view (also reachable from the list
+view's "With selected..." dropdown).  It lets you choose which fields to include
+-- across foreign keys, too -- and downloads the result as a JSON file, honoring
+whatever filters are currently applied.
+
+By default every field is exportable.  Two :py:class:`ModelAdmin` attributes
+restrict that:
+
+* ``export_fields`` -- a whitelist of field names that may be exported
+* ``export_exclude`` -- a blacklist of field names to withhold
+
+.. code-block:: python
+
+    class UserAdmin(ModelAdmin):
+        columns = ('username', 'email',)
+        export_exclude = ('password',)   # never allow the password hash out
+
+These restrictions are enforced **server-side**: hand-posting a withheld field
+name will not dump it, so ``export_exclude = ('password',)`` is a real guarantee
+rather than a merely-hidden checkbox.
+
+Related fields are exported nested under their foreign key.  A related model
+defers to *its own* registered :py:class:`ModelAdmin`'s
+``export_fields``/``export_exclude``, so once ``UserAdmin`` excludes ``password``
+above, no other model's export can reach ``user__password`` either.  Exporting,
+say, the ``user``, ``content`` and ``user__username`` fields of ``Message``
+produces:
+
+.. code-block:: json
+
+    [
+      {"user": {"username": "admin"}, "content": "hello"},
+      {"user": {"username": "coleifer"}, "content": "flask + peewee"}
+    ]
+
+.. note::
+    Because related data nests under its foreign key, that foreign key is
+    included automatically -- there is no way to nest a related field without it.
 
 
 Creating admin panels
