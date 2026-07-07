@@ -397,6 +397,92 @@ to administrators:
     api.register(User, UserResource, auth=admin_auth)
 
 
+Token-based authentication
+--------------------------
+
+:py:class:`UserAuthentication` and :py:class:`AdminAuthentication` use HTTP
+Basic auth, which is handy for humans but awkward for programmatic clients.  For
+API clients, flask-peewee ships token-based authentication classes.  Like all
+authentication classes they only guard the ``protected_methods`` (``POST``,
+``PUT`` and ``DELETE`` by default -- ``GET`` is open); pass
+``protected_methods`` to also require auth on reads.
+
+API keys
+^^^^^^^^
+
+:py:class:`APIKeyAuthentication` authenticates against a model with ``key`` and
+``secret`` fields, supplied as query-string, header, or form parameters.  The
+matched row is stored on ``g.api_key``:
+
+.. code-block:: python
+
+    from flask_peewee.rest import APIKeyAuthentication
+
+    class APIKey(db.Model):
+        key = CharField()
+        secret = CharField()
+
+    api_key_auth = APIKeyAuthentication(APIKey)
+    api.register(SecretModel, auth=api_key_auth)
+
+    # curl "http://127.0.0.1:5000/api/secretmodel/?key=abc&secret=xyz"
+
+.. warning::
+    Because the key and secret can travel in the query string, they may end up
+    in access logs.  Prefer bearer tokens (below) for anything sensitive.
+
+Bearer tokens
+^^^^^^^^^^^^^
+
+:py:class:`BearerAuthentication` reads a token from the standard
+``Authorization: Bearer <token>`` header -- so the credential stays out of the
+query string and logs -- and looks it up in a model with a ``token`` field.
+The matched row is stored on ``g.api_key``:
+
+.. code-block:: python
+
+    from flask_peewee.rest import BearerAuthentication
+
+    class ApiToken(db.Model):
+        token = CharField()
+
+    bearer_auth = BearerAuthentication(ApiToken)
+    api.register(SecretModel, auth=bearer_auth)
+
+    # curl -H "Authorization: Bearer <token>" http://127.0.0.1:5000/api/secretmodel/
+
+Override ``token_field`` to use a differently-named column, and store
+high-entropy tokens (override ``get_key`` to keep them hashed at rest).
+
+Bearer tokens as users
+^^^^^^^^^^^^^^^^^^^^^^^
+
+:py:class:`UserBearerAuthentication` resolves the token to a *user* and sets
+``g.user`` (rather than ``g.api_key``), so bearer tokens work with
+:py:class:`RestrictOwnerResource` and anything else keyed off the authenticated
+user.  The token model carries a foreign key to the user:
+
+.. code-block:: python
+
+    from flask_peewee.rest import UserBearerAuthentication
+
+    class ApiToken(db.Model):
+        token = CharField()
+        user = ForeignKeyField(User)
+
+    user_bearer_auth = UserBearerAuthentication(ApiToken)
+
+    class MessageResource(RestrictOwnerResource):
+        owner_field = 'user'
+
+    api.register(Message, MessageResource, auth=user_bearer_auth)
+
+A request carrying a valid token is now treated as that token's user: new
+objects are assigned to them, and they may only modify their own.  Set
+``user_field = None`` if the token lives directly on the user model instead of
+a separate token table.
+
+
 Filtering records and querying
 ------------------------------
 
