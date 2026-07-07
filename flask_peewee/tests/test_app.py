@@ -86,6 +86,11 @@ class Comment(db.Model):
     body = TextField()
 
 
+class Ping(db.Model):
+    user = ForeignKeyField(User)
+    body = TextField()
+
+
 class TestModel(db.Model):
     data = TextField()
 
@@ -225,6 +230,17 @@ class GResource(RestResource):
     include_resources = {'e': EResource}
     nested_writes = False
 
+class AdminOnlyUserResource(UserResource):
+    # user writes (even nested) require an admin -- exercises check_*
+    # enforcement on nested writes.
+    def check_post(self, obj=None):
+        return bool(getattr(g, 'user', None) and g.user.admin)
+    def check_put(self, obj):
+        return bool(getattr(g, 'user', None) and g.user.admin)
+
+class PingResource(RestResource):
+    include_resources = {'user': AdminOnlyUserResource}
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -237,6 +253,7 @@ api.register(Message, RestrictOwnerResource)
 api.register(User, UserResource, auth=admin_auth)
 api.register(Note)
 api.register(Comment, CommentResource)
+api.register(Ping, PingResource)
 api.register(TestModel, auth=api_key_auth)
 api.register(AModel, AResource, auth=dummy_auth)
 api.register(BModel, BResource, auth=dummy_auth)

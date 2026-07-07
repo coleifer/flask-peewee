@@ -22,6 +22,7 @@ from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import TestModel
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import db
@@ -953,6 +954,56 @@ class RestApiUserAuthTestCase(RestApiTestCase):
             self.assertFalse(sneaky.admin)
         self.assertEqual(
             User.select().where(User.admin == True).count(), admin_before)
+
+    def test_nested_check_forbids_unauthorized_create(self):
+        # PingResource nests AdminOnlyUserResource, which requires an admin for
+        # user writes. A non-admin is authorized to create pings, but the
+        # nested user write must be rejected (403) and roll back the request.
+        ping_before = Ping.select().count()
+        user_before = User.select().count()
+        serialized = json.dumps({'body': 'x',
+                                 'user': {'username': 'sneaky', 'password': 'x',
+                                          'email': '', 'admin': True}})
+        resp = self.app.post('/api/ping/', data=serialized,
+                             headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 403)
+        # rolled back: neither the nested user nor the ping was created.
+        self.assertEqual(User.select().count(), user_before)
+        self.assertEqual(Ping.select().count(), ping_before)
+
+    def test_nested_check_forbids_unauthorized_edit(self):
+        ping = Ping.create(user=self.normal, body='hi')
+        serialized = json.dumps({'user': {'username': 'changed'}})
+        resp = self.app.put('/api/ping/%s/' % ping.id, data=serialized,
+                            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(User.get(User.id == self.normal.id).username, 'normal')
+
+    def test_nested_check_allows_admin(self):
+        # an admin satisfies the child check, so the nested user is created
+        # (with read-only fields still stripped).
+        serialized = json.dumps({'body': 'x',
+                                 'user': {'username': 'made', 'password': 'x',
+                                          'email': '', 'admin': True}})
+        resp = self.app.post('/api/ping/', data=serialized,
+                             headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 200)
+        made = User.get(User.username == 'made')
+        self.assertFalse(made.admin)
+
+    def test_nested_write_rolls_back_on_parent_error(self):
+        # the nested user save and the parent save share a transaction: when
+        # the parent insert fails (missing required "body"), the already-saved
+        # nested user must be rolled back too rather than left orphaned.
+        user_before = User.select().count()
+        serialized = json.dumps({'user': {'username': 'orphan',
+                                          'password': 'x', 'email': ''}})
+        resp = self.app.post('/api/ping/', data=serialized,
+                             headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(User.select().count(), user_before)
+        self.assertFalse(
+            User.select().where(User.username == 'orphan').exists())
 
     def test_auth_delete(self):
         self.create_notes()

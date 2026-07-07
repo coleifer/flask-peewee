@@ -23,6 +23,12 @@ from flask_peewee.utils import slugify
 from functools import reduce
 
 
+class RestForbidden(Exception):
+    # raised when a nested write fails the child resource's check_*; caught in
+    # create/edit and turned into a 403 (and rolls back the enclosing atomic).
+    pass
+
+
 class Authentication(object):
     def __init__(self, protected_methods=None):
         if protected_methods is None:
@@ -492,7 +498,18 @@ class RestResource(object):
         for k, v in data.items():
             if k in self._resources and isinstance(v, dict):
                 rel_resource = self._resources[k]
-                rel_obj, rel_models = rel_resource.deserialize_object(v, getattr(instance, k))
+                existing = getattr(instance, k)
+                rel_obj, rel_models = rel_resource.deserialize_object(v, existing)
+                # a nested write must satisfy the child resource's own
+                # per-object authorization, exactly as a direct write to that
+                # resource would -- editing an existing related row runs
+                # check_put, creating a new one runs check_post.
+                if existing is not None and existing.get_id() is not None:
+                    allowed = rel_resource.check_put(rel_obj)
+                else:
+                    allowed = rel_resource.check_post(rel_obj)
+                if not allowed:
+                    raise RestForbidden()
                 rel_resource.save_related_objects(rel_obj, v)
                 setattr(instance, k, rel_resource.save_object(rel_obj, v))
 
@@ -507,9 +524,12 @@ class RestResource(object):
     def persist_object(self, instance, data):
         # deserialize + save, translating validation/integrity problems into a
         # 400 (see create/edit) rather than letting them surface as a 500.
-        obj, models = self.deserialize_object(data, instance)
-        self.save_related_objects(obj, data)
-        return self.save_object(obj, data)
+        # Wrapped in a transaction so a rejected nested write (RestForbidden)
+        # or an integrity error cannot leave a half-written object graph.
+        with self.model._meta.database.atomic():
+            obj, models = self.deserialize_object(data, instance)
+            self.save_related_objects(obj, data)
+            return self.save_object(obj, data)
 
     def create(self):
         try:
@@ -519,6 +539,8 @@ class RestResource(object):
 
         try:
             obj = self.persist_object(self.model(), data)
+        except RestForbidden:
+            return self.response_forbidden()
         except (IntegrityError, DataError, ValueError, TypeError) as exc:
             return self.response_bad_request(str(exc))
 
@@ -532,6 +554,8 @@ class RestResource(object):
 
         try:
             obj = self.persist_object(obj, data)
+        except RestForbidden:
+            return self.response_forbidden()
         except (IntegrityError, DataError, ValueError, TypeError) as exc:
             return self.response_bad_request(str(exc))
 
