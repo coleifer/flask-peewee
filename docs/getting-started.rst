@@ -7,8 +7,8 @@ The goal of this document is to help get you up and running quickly.  So without
 further ado, let's get started.
 
 .. note::
-    Hopefully you have some familiarity with the `flask framework <http://flask.pocoo.org/>`_ and
-    the `peewee orm <https://peewee.readthedocs.io/>`_, but if not those links
+    Hopefully you have some familiarity with the `flask framework <https://flask.palletsprojects.com/>`_ and
+    the `peewee orm <https://docs.peewee-orm.com/>`_, but if not those links
     should help you get started.
 
 .. note::
@@ -20,7 +20,7 @@ Creating a flask app
 --------------------
 
 First, be sure you have :ref:`installed flask-peewee and its dependencies <installation>`.
-You can verify by running the test suite: ``python setup.py test``.
+You can verify by running the test suite: ``python runtests.py``.
 
 After ensuring things are installed, open a new file called "app.py" and enter the
 following code:
@@ -40,13 +40,13 @@ This isn't very exciting, but we can check out our project by running the app:
 .. code-block:: console
 
     $ python app.py
+     * Serving Flask app 'app'
+     * Debug mode: off
      * Running on http://127.0.0.1:5000/
-     * Restarting with reloader
-
+    Press CTRL+C to quit
 
 Navigating to the url listed will show a simple 404 page, because we haven't
 configured any templates or views yet.
-
 
 Creating a simple model
 -----------------------
@@ -98,8 +98,8 @@ Now we can create a model:
 
 
 .. note::
-    The model we created, ``Note``, subclasses ``db.Model``, which in turn is a subclass
-    of ``peewee.Model`` that is pre-configured to talk to our database.
+    The model we created, ``Note``, subclasses ``db.Model``, which in turn is
+    a subclass of ``peewee.Model`` that is pre-configured to talk to our database.
 
 
 Setting up a simple base template
@@ -142,12 +142,15 @@ if need be:
 .. code-block:: python
 
     if __name__ == '__main__':
-        auth.User.create_table(fail_silently=True)
-        Note.create_table(fail_silently=True)
+        # Use the underlying Peewee database to create tables at startup
+        # if they do not exist.
+        with db.database:
+           db.database.create_tables([auth.User, Note])
 
         app.run()
 
-After cleaning up the imports and declarations, we have something like the following:
+After cleaning up the imports and declarations, we have something like the
+following:
 
 .. code-block:: python
 
@@ -172,19 +175,18 @@ After cleaning up the imports and declarations, we have something like the follo
     # instantiate the db wrapper
     db = Database(app)
 
-
     class Note(db.Model):
         message = TextField()
         created = DateTimeField(default=datetime.datetime.now)
 
-
     # create an Auth object for use with our flask app and database wrapper
     auth = Auth(app, db)
 
-
     if __name__ == '__main__':
-        auth.User.create_table(fail_silently=True)
-        Note.create_table(fail_silently=True)
+        # Use the underlying Peewee database to create tables at startup
+        # if they do not exist.
+        with db.database:
+           db.database.create_tables([auth.User, Note])
 
         app.run()
 
@@ -212,7 +214,7 @@ the following:
 .. code-block:: python
 
     from app import auth
-    auth.User.create_table(fail_silently=True)  # make sure table created.
+    auth.User.create_table()  # Make sure table created.
     admin = auth.User(username='admin', email='', admin=True, active=True)
     admin.set_password('admin')
     admin.save()
@@ -223,12 +225,12 @@ It should now be possible to:
 2. enter in the username and password ("admin", "admin")
 3. be redirected to the admin dashboard
 
-.. image:: fp-getting-started.jpg
+.. image:: fp-getting-started.png
 
 The dashboard is pretty empty right now.  Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/).  If you navigate now to the note
 modeladmin you will see something like this:
 
-.. image:: fp-note-admin.jpg
+.. image:: fp-note-admin.png
 
 This is pretty lousy so let's clean it up to display the message and when it was
 published.  We can do that by customizing the columns displayed.  Edit the app with
@@ -242,14 +244,12 @@ the following changes:
         columns = ('message', 'created',)
 
     admin = Admin(app, auth)
-
     admin.register(Note, NoteAdmin)
-
     admin.setup()
 
 Now our modeladmin should look more like this:
 
-.. image:: fp-note-admin-2.jpg
+.. image:: fp-note-admin-2.png
 
 Let's go ahead and add the ``auth.User`` model to the admin as well:
 
@@ -257,7 +257,6 @@ Let's go ahead and add the ``auth.User`` model to the admin as well:
 
     admin.register(Note, NoteAdmin)
     auth.register_admin(admin)
-
     admin.setup()
 
 
@@ -274,9 +273,8 @@ The first step, then, is to create the :py:class:`RestAPI` object:
 
     from flask_peewee.rest import RestAPI
 
-    # create a RestAPI container
+    # create a RestAPI container.
     api = RestAPI(app)
-
     api.setup()
 
 This doesn't do anything yet, we need to register models with it first.  Let's
@@ -284,12 +282,9 @@ register the ``Note`` model from earlier:
 
 .. code-block:: python
 
-    # create a RestAPI container
+    # create a RestAPI container.
     api = RestAPI(app)
-
-    # register the Note model
     api.register(Note)
-
     api.setup()
 
 Assuming your project is still running, try executing the following command (or
@@ -306,20 +301,22 @@ You should see something like the following:
     {
       "meta": {
         "model": "note",
-        "next": "",
         "page": 1,
-        "previous": ""
+        "page_count": 1,
+        "object_count": 2,
+        "previous": "",
+        "next": ""
       },
       "objects": [
         {
-          "message": "blah blah blah this is a note",
           "id": 1,
-          "created": "2011-09-23 09:07:39"
+          "message": "This is a test note.",
+          "created": "2026-07-07T13:35:04"
         },
         {
-          "message": "this is another note!",
           "id": 2,
-          "created": "2011-09-23 09:07:54"
+          "message": "This is another test note.",
+          "created": "2026-07-07T13:35:18"
         }
       ]
     }
@@ -331,15 +328,14 @@ messages using the API.  If you try and make a POST right now, you will get a
 .. code-block:: console
 
     $ curl -i -d '' http://127.0.0.1:5000/api/note/
-
-    HTTP/1.0 401 UNAUTHORIZED
+    HTTP/1.1 401 Unauthorized
+    Server: Werkzeug/3.2.0.dev0 Python/3.13.5
+    Date: Tue, 07 Jul 2026 18:41:49 GMT
     WWW-Authenticate: Basic realm="Login Required"
     Content-Type: text/html; charset=utf-8
     Content-Length: 21
-    Server: Werkzeug/0.8-dev Python/2.6.6
-    Date: Fri, 23 Sep 2011 14:45:38 GMT
-
-    Authentication failed
+    Vary: Cookie
+    Connection: close
 
 This is because we have not configured any :py:class:`Authentication` method for
 our :py:class:`RestAPI`.
@@ -370,9 +366,9 @@ Now we can post new notes using a command-line tool like curl:
     $ curl -u admin:admin -d data='{"message": "hello api"}' http://127.0.0.1:5000/api/note/
 
     {
-      "message": "hello api",
       "id": 3,
-      "created": "2011-09-23 13:14:56"
+      "message": "hello api",
+      "created": "2026-07-07T13:43:02.200138"
     }
 
 You can see that it returns a serialized copy of the new ``Note`` object.

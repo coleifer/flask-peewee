@@ -68,7 +68,7 @@ class Auth(object):
             active = BooleanField()
             admin = BooleanField(default=False)
 
-            def __unicode__(self):
+            def __str__(self):
                 return self.username
 
             class Meta:
