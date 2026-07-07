@@ -164,14 +164,21 @@ There are five templates that can be overridden:
 Nicer display for Foreign Key fields
 ------------------------------------
 
-If you have a model that foreign keys to another, by default the related model
-instances are displayed in a <select> input.
+By default a foreign key renders as a ``<select>`` of the related rows.  How that
+holds up when the related table is large depends on where it appears:
 
-This can be problematic if you have a large list of models to search (causes slow
-load time, hurts the database).  To mitigate this pain, foreign key lookups can
-be done using a paginated widget that supports type-ahead searching.
+* In **filters**, the ``<select>`` is automatically capped at the first 20 rows
+  (plus whichever row is currently selected), so the page never balloons -- but
+  only those 20 rows are reachable.
+* In **model forms** (add/edit), the ``<select>`` is *not* capped: every related
+  row is rendered, which is slow to load and hammers the database on a large
+  table.
 
-Setting this up is very easy:
+To handle large related tables, set ``foreign_key_lookups`` -- a mapping of the
+foreign-key field name to the related field to search and display on.  This
+replaces the plain ``<select>`` with a paginated, type-ahead search backed by the
+model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``, a page
+at a time), so any row is reachable no matter how large the table:
 
 .. code-block:: python
 
@@ -179,32 +186,28 @@ Setting this up is very easy:
         columns = ('user', 'content', 'pub_date',)
         foreign_key_lookups = {'user': 'username'}
 
-When flask-peewee sees the ``foreign_key_lookups`` it will use the special modal
-window to select instances.  This applies to both filters and model forms:
+The widget differs between the two contexts:
 
 Filters
 ^^^^^^^
 
-1. Select a user by clicking the "Select..." button
+Without ``foreign_key_lookups`` the ``user`` filter is a ``<select>`` of the
+first 20 users -- fine for a small table, but on a large one you can only filter
+by those first 20.  With it, the ``<select>`` gains an inline type-ahead search
+that repopulates its options from ``ajax_list`` as you type, so any user can be
+selected.
 
-.. image:: fp-admin-filter.png
+Model forms
+^^^^^^^^^^^
 
-2. A modal window with a paginated list and typeahead search appers:
-
-.. image:: fp-admin-modal.png
-
-3. The button now indicates the selected user, clicking again will reload the dialog:
-
-.. image:: fp-admin-btn.png
-
-
-Admin ModelForms
-^^^^^^^^^^^^^^^^
-
-The interface is the same as with the filters, except the foreign key field is
-replaced by a simple button:
+Without ``foreign_key_lookups`` an add or edit form renders every related row in a
+single ``<select>`` -- the case worth avoiding on a large table.  With it, the
+field becomes a button showing the current selection; clicking it opens a modal
+with a paginated, type-ahead list:
 
 .. image:: fp-admin-btn-form.png
+
+.. image:: fp-admin-modal.png
 
 
 Creating admin panels
