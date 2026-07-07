@@ -21,11 +21,13 @@ from flask_peewee.db import Database
 from flask_peewee.filters import QueryFilter
 from flask_peewee.rest import APIKeyAuthentication
 from flask_peewee.rest import AdminAuthentication
+from flask_peewee.rest import BearerAuthentication
 from flask_peewee.rest import Authentication
 from flask_peewee.rest import RestAPI
 from flask_peewee.rest import RestResource
 from flask_peewee.rest import RestrictOwnerResource
 from flask_peewee.rest import UserAuthentication
+from flask_peewee.rest import UserBearerAuthentication
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import make_password
 from flask_peewee.utils import object_list
@@ -133,6 +135,20 @@ class GModel(db.Model):
 class APIKey(db.Model):
     key = CharField()
     secret = CharField()
+
+
+class BearerDoc(db.Model):
+    data = TextField()
+
+
+class ApiToken(db.Model):
+    token = CharField()
+    user = ForeignKeyField(User)
+
+
+class Tweet(db.Model):
+    user = ForeignKeyField(User)
+    content = TextField()
 
 
 class NotePanel(AdminPanel):
@@ -247,6 +263,17 @@ user_auth = UserAuthentication(auth)
 admin_auth = AdminAuthentication(auth)
 api_key_auth = APIKeyAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
 
+class KeyBearerAuthentication(BearerAuthentication):
+    token_field = 'key'  # reuse the APIKey.key column as the bearer token
+
+bearer_auth = KeyBearerAuthentication(APIKey, ['GET', 'POST', 'PUT', 'DELETE'])
+
+class TweetResource(RestrictOwnerResource):
+    owner_field = 'user'
+
+# resolves a token (ApiToken.token) to ApiToken.user and sets g.user
+user_bearer_auth = UserBearerAuthentication(ApiToken)
+
 api = RestAPI(app, default_auth=user_auth)
 
 api.register(Message, RestrictOwnerResource)
@@ -255,6 +282,8 @@ api.register(Note)
 api.register(Comment, CommentResource)
 api.register(Ping, PingResource)
 api.register(TestModel, auth=api_key_auth)
+api.register(BearerDoc, auth=bearer_auth)
+api.register(Tweet, TweetResource, auth=user_bearer_auth)
 api.register(AModel, AResource, auth=dummy_auth)
 api.register(BModel, BResource, auth=dummy_auth)
 api.register(CModel, CResource, auth=dummy_auth)

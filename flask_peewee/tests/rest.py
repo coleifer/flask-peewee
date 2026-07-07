@@ -12,8 +12,10 @@ from flask_peewee.rest import UserAuthentication
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import APIKey
+from flask_peewee.tests.test_app import ApiToken
 from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
+from flask_peewee.tests.test_app import BearerDoc
 from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
@@ -24,6 +26,7 @@ from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import TestModel
+from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import db
 from flask_peewee.utils import check_password
@@ -34,7 +37,7 @@ from flask_peewee.utils import make_password
 class RestApiTestCase(FlaskPeeweeTestCase):
     def setUp(self):
         super(RestApiTestCase, self).setUp()
-        models = [TestModel, APIKey]
+        models = [TestModel, APIKey, BearerDoc]
         db.database.drop_tables(models)
         db.database.create_tables(models)
 
@@ -1485,3 +1488,103 @@ class RestApiKeyAuthTestCase(RestApiTestCase):
 
             self.assertEqual(TestModel.select().count(), 4)
             self.assertEqual(resp_json['data'], 't4')
+
+
+class RestApiBearerAuthTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiBearerAuthTestCase, self).setUp()
+        self.doc = BearerDoc.create(data='d1')
+        # BearerDoc is protected by a bearer auth over APIKey.key, so an
+        # APIKey row's "key" value is the bearer token.
+        self.k1 = APIKey.create(key='tok', secret='s')
+
+    def bearer(self, token):
+        return {'Authorization': 'Bearer %s' % token}
+
+    def test_missing_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/bearerdoc/')
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+
+    def test_bad_scheme_or_token(self):
+        with self.flask_app.test_client() as c:
+            # wrong scheme (basic) is not accepted as a bearer token
+            resp = c.get('/api/bearerdoc/', headers={'Authorization': 'Basic tok'})
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+
+            # unknown token
+            resp = c.get('/api/bearerdoc/', headers=self.bearer('nope'))
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.api_key, None)
+
+    def test_valid_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/bearerdoc/', headers=self.bearer('tok'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.api_key, self.k1)
+            resp_json = self.response_json(resp)
+            self.assertEqual([o['data'] for o in resp_json['objects']], ['d1'])
+
+    def test_create_with_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.post('/api/bearerdoc/', data=json.dumps({'data': 'd2'}),
+                          headers=self.bearer('tok'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.api_key, self.k1)
+            self.assertEqual(BearerDoc.select().count(), 2)
+
+            # without the token the write is rejected
+            resp = c.post('/api/bearerdoc/', data=json.dumps({'data': 'd3'}))
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(BearerDoc.select().count(), 2)
+
+
+class RestApiUserBearerAuthTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiUserBearerAuthTestCase, self).setUp()
+        self.create_users()
+        # Tweet is owner-restricted and protected by a user-resolving bearer
+        # auth over ApiToken, so a token maps to (and authenticates as) a user.
+        ApiToken.create(token='ntok', user=self.normal)
+        ApiToken.create(token='atok', user=self.admin)
+
+    def bearer(self, token):
+        return {'Authorization': 'Bearer %s' % token}
+
+    def test_token_resolves_to_user_and_sets_owner(self):
+        with self.flask_app.test_client() as c:
+            resp = c.post('/api/tweet/', data=json.dumps({'content': 'hi'}),
+                          headers=self.bearer('ntok'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.user, self.normal)
+            # RestrictOwnerResource assigned the owner from the token's user
+            self.assertEqual(Tweet.get(content='hi').user, self.normal)
+
+    def test_missing_or_bad_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.post('/api/tweet/', data=json.dumps({'content': 'x'}))
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.user, None)
+
+            resp = c.post('/api/tweet/', data=json.dumps({'content': 'x'}),
+                          headers=self.bearer('nope'))
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(Tweet.select().count(), 0)
+
+    def test_owner_restriction_via_token(self):
+        # a tweet owned by normal; admin's token is a different user and must
+        # not be able to edit it, while normal's token can.
+        tweet = Tweet.create(user=self.normal, content='orig')
+        with self.flask_app.test_client() as c:
+            resp = c.put('/api/tweet/%s/' % tweet.id,
+                         data=json.dumps({'content': 'hax'}),
+                         headers=self.bearer('atok'))
+            self.assertEqual(resp.status_code, 403)
+
+            resp = c.put('/api/tweet/%s/' % tweet.id,
+                         data=json.dumps({'content': 'edit'}),
+                         headers=self.bearer('ntok'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(Tweet.get(id=tweet.id).content, 'edit')

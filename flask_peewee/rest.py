@@ -88,6 +88,74 @@ class APIKeyAuthentication(Authentication):
         return g.api_key
 
 
+class BearerAuthentication(Authentication):
+    """
+    Token auth via the ``Authorization: Bearer <token>`` header. Requires a
+    model with a token field (default "token"), which is looked up to authorize
+    the request. Unlike APIKeyAuthentication the credential rides in a header
+    rather than the query-string, so it does not leak into access logs. Store
+    high-entropy tokens; to keep them hashed at rest, override get_key.
+    """
+    token_field = 'token'
+
+    def __init__(self, model, protected_methods=None):
+        super(BearerAuthentication, self).__init__(protected_methods)
+        self.model = model
+        self._token_field = model._meta.fields[self.token_field]
+
+    def get_query(self):
+        return self.model.select()
+
+    def get_token(self):
+        scheme, _, token = request.headers.get(
+            'Authorization', '').partition(' ')
+        if scheme.lower() == 'bearer' and token.strip():
+            return token.strip()
+
+    def get_key(self, token):
+        try:
+            return self.get_query().where(self._token_field == token).get()
+        except self.model.DoesNotExist:
+            pass
+
+    def authorize(self):
+        g.api_key = None
+
+        if request.method not in self.protected_methods:
+            return True
+
+        token = self.get_token()
+        if token:
+            g.api_key = self.get_key(token)
+
+        return g.api_key
+
+
+class UserBearerAuthentication(BearerAuthentication):
+    """
+    Bearer-token auth that resolves the token to a *user* and sets g.user, so
+    it drives RestrictOwnerResource and the rest of the user-auth stack. The
+    token model has a foreign key to the user (default "user"); set
+    user_field=None if the token lives directly on the user model.
+    """
+    user_field = 'user'
+
+    def authorize(self):
+        g.user = None
+
+        if request.method not in self.protected_methods:
+            return True
+
+        token = self.get_token()
+        if token:
+            key = self.get_key(token)
+            if key is not None:
+                g.user = key if self.user_field is None \
+                    else getattr(key, self.user_field)
+
+        return g.user
+
+
 class UserAuthentication(Authentication):
     def __init__(self, auth, protected_methods=None):
         super(UserAuthentication, self).__init__(protected_methods)
