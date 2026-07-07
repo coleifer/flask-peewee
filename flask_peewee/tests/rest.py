@@ -539,6 +539,38 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(len(resp_json['objects']), 5)
         self.assertEqual(resp_json['meta']['page_count'], 2)  # ceil(8 / 5)
 
+    def test_nested_serialization_is_single_query(self):
+        # listing rows with a nested chain (C -> b -> a) must not issue a
+        # lookup per row -- the whole graph loads in one joined query.
+        import logging
+        for i in range(6):
+            a = AModel.create(a_field='a%d' % i)
+            b = BModel.create(a=a, b_field='b%d' % i)
+            CModel.create(b=b, c_field='c%d' % i)
+
+        count = {'n': 0}
+        class H(logging.Handler):
+            def emit(self, record):
+                if record.getMessage().strip().upper().lstrip("(').").startswith('SELECT'):
+                    count['n'] += 1
+        logger = logging.getLogger('peewee')
+        level, handler = logger.level, H()
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+        try:
+            resp = self.app.get('/api/cmodel/?ordering=id')
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+
+        resp_json = self.response_json(resp)
+        self.assertEqual(len(resp_json['objects']), 6)
+        # nesting is present and correct...
+        self.assertEqual(resp_json['objects'][0]['b']['a']['a_field'], 'a0')
+        # ...and it cost a constant number of queries (a COUNT for pagination
+        # plus one joined SELECT), not ~1 + 6*2 from lazy per-row loading.
+        self.assertLessEqual(count['n'], 3)
+
     def test_nested_writes_disabled(self):
         # GResource sets nested_writes=False: a nested related dict is ignored
         # (never created), though the FK can still be set by scalar id.
@@ -954,6 +986,22 @@ class RestApiUserAuthTestCase(RestApiTestCase):
             self.assertFalse(sneaky.admin)
         self.assertEqual(
             User.select().where(User.admin == True).count(), admin_before)
+
+    def test_filter_join_with_nested_serialization(self):
+        # a filter that joins a related table (DQ-based) must compose with the
+        # aliased eager-load join used for nested serialization -- both join
+        # the user table, and they must not collide.
+        Comment.create(user=self.admin, body='by admin')
+        Comment.create(user=self.normal, body='by normal')
+
+        resp = self.app.get('/api/comment/?user__username=admin&ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual(len(resp_json['objects']), 1)
+        obj = resp_json['objects'][0]
+        self.assertEqual(obj['body'], 'by admin')
+        # nested user hydrated from the aliased join, not a per-row lookup
+        self.assertEqual(obj['user']['username'], 'admin')
+        self.assertEqual(obj['user']['id'], self.admin.id)
 
     def test_nested_check_forbids_unauthorized_create(self):
         # PingResource nests AdminOnlyUserResource, which requires an admin for

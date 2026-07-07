@@ -478,12 +478,35 @@ class RestResource(object):
             'objects': query_dict,
         })
 
+    def apply_related_joins(self, query):
+        # Eager-load the include_resources tree in a single query so nested
+        # serialization does not issue a lookup per row (the N+1 you would get
+        # from lazily following each foreign key). Each related model is LEFT
+        # OUTER joined -- nullable FKs stay None -- and aliased, so the same
+        # model may be nested more than once (e.g. from_user / to_user).
+        return self._join_related(query, self.model, self)
+
+    def _join_related(self, query, src, resource):
+        for field_name, child in resource._resources.items():
+            dest = child.model.alias()
+            fk = getattr(src, field_name)
+            pk = getattr(dest, child.model._meta.primary_key.name)
+            query = query.select_extend(dest).join_from(
+                src, dest, JOIN.LEFT_OUTER, on=(fk == pk), attr=field_name)
+            query = self._join_related(query, dest, child)
+        return query
+
     def object_list(self):
         query = self.get_query()
         query = self.apply_ordering(query)
 
         # process any filters
         query = self.process_query(query)
+
+        # eager-load nested relations (avoids N+1 during serialization). This
+        # runs after process_query so it composes with the DQ-based filter
+        # joins -- the related models are aliased, so they never collide.
+        query = self.apply_related_joins(query)
 
         # always return the paginated envelope so the response shape is
         # consistent regardless of the resource's paginate_by setting.
