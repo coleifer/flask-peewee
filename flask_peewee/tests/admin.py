@@ -10,6 +10,9 @@ from flask import url_for
 
 from flask_peewee.admin import AdminPanel
 from flask_peewee.admin import ModelAdmin
+from flask_peewee.filters import FilterForm
+from flask_peewee.filters import FilterMapping
+from flask_peewee.filters import FilterModelConverter
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
@@ -19,6 +22,7 @@ from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import TSModel
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import admin
 from flask_peewee.tests.test_app import db
@@ -827,7 +831,7 @@ class AdminTestCase(BaseAdminTestCase):
 class AdminFilterTestCase(BaseAdminTestCase):
     def setUp(self):
         super(AdminFilterTestCase, self).setUp()
-        models = [AModel, BModel, CModel, DModel, BDetails]
+        models = [AModel, BModel, CModel, DModel, BDetails, TSModel]
         db.database.drop_tables(models)
         db.database.create_tables(models)
 
@@ -906,6 +910,40 @@ class AdminFilterTestCase(BaseAdminTestCase):
                 CModel: ['id', 'b', 'c_field'],
                 DModel: ['id', 'c', 'd_field'],
             })
+
+    def test_timestamp_filters(self):
+        # Regression: a TimestampField is stored as an integer but represents a
+        # datetime.  It used to fall through to plain numeric filtering, and its
+        # value could not be cleaned (TimestampField.db_value chokes on the
+        # picker string), so process_request silently dropped the filter and the
+        # query came back unfiltered.  It should behave like a DateTimeField.
+        now = datetime.datetime.now()
+        TSModel.create(ts=datetime.datetime(2024, 1, 15, 12), label='y2024')
+        TSModel.create(ts=datetime.datetime(2020, 6, 1), label='y2020')
+        TSModel.create(ts=now, label='today')
+
+        ts_field = TSModel._meta.fields['ts']
+
+        # the field offers the date-aware operators, not just numeric ones
+        ff = FilterForm(TSModel, FilterModelConverter(), FilterMapping())
+        ops = set(qf.key for qf in ff._query_filters[ts_field])
+        self.assertTrue({'within_days', 'older_days', 'year', 'month'} <= ops)
+
+        def run(op, value):
+            qs = '/?fo_ts=%s&fv_ts=%s' % (op, value)
+            with self.flask_app.test_request_context(qs):
+                form = FilterForm(TSModel, FilterModelConverter(), FilterMapping())
+                _, query, cleaned = form.process_request(TSModel.select())
+                return set(o.label for o in query), bool(cleaned)
+
+        # comparisons now apply (the bug: they were silently dropped, so the
+        # query returned all three rows with cleaned == []).
+        self.assertEqual(run('gt', '2022-01-01T00:00:00'), ({'y2024', 'today'}, True))
+        self.assertEqual(run('lt', '2022-01-01T00:00:00'), ({'y2020'}, True))
+        self.assertEqual(run('eq', '2024-01-15T12:00:00'), ({'y2024'}, True))
+        # date-aware operators work against the integer column
+        self.assertEqual(run('year', '2020'), ({'y2020'}, True))
+        self.assertEqual(run('within_days', '2'), ({'today'}, True))
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):

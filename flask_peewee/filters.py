@@ -187,6 +187,49 @@ class OlderThanDaysAgoFilter(QueryFilter):
         return 'older than X days ago'
 
 
+class TimestampMixin(object):
+    """Clean a datetime-picker value for a :class:`peewee.TimestampField`.
+
+    A ``TimestampField`` stores an integer, and its ``db_value()`` cannot parse
+    the raw string the filter form submits -- it raises ``TypeError``, which
+    ``process_request`` silently swallows, so the filter is dropped entirely.
+    Parse the value into a ``datetime`` and hand *that* to the query: peewee
+    converts it to the stored integer via ``db_value()`` exactly once when
+    building the WHERE clause, which stays correct even for sub-second
+    ``resolution`` (returning a pre-scaled integer would be re-scaled).
+    """
+    input_formats = ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d')
+
+    def clean(self, value):
+        if isinstance(value, datetime.datetime):
+            return value
+        for fmt in self.input_formats:
+            try:
+                return datetime.datetime.strptime(value, fmt)
+            except (TypeError, ValueError):
+                continue
+        raise ValueError('invalid timestamp value: %r' % (value,))
+
+
+class TimestampEqualFilter(TimestampMixin, EqualQueryFilter):
+    pass
+
+class TimestampNotEqualFilter(TimestampMixin, NotEqualQueryFilter):
+    pass
+
+class TimestampLessThanFilter(TimestampMixin, LessThanQueryFilter):
+    pass
+
+class TimestampLessThanEqualToFilter(TimestampMixin, LessThanEqualToQueryFilter):
+    pass
+
+class TimestampGreaterThanFilter(TimestampMixin, GreaterThanQueryFilter):
+    pass
+
+class TimestampGreaterThanEqualToFilter(TimestampMixin, GreaterThanEqualToQueryFilter):
+    pass
+
+
 class BooleanEqualQueryFilter(EqualQueryFilter):
     def clean(self, value):
         if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
@@ -217,6 +260,14 @@ class FilterMapping(object):
         GreaterThanEqualToQueryFilter)
     datetime_date = (numeric + (
         WithinDaysAgoFilter, OlderThanDaysAgoFilter, YearFilter, MonthFilter))
+    # TimestampField stores an integer but represents a datetime -- same
+    # operations as datetime_date, but the comparisons parse the picker value
+    # into a datetime (see TimestampMixin) so peewee converts it correctly.
+    timestamp = (
+        TimestampEqualFilter, TimestampNotEqualFilter, TimestampLessThanFilter,
+        TimestampGreaterThanFilter, TimestampLessThanEqualToFilter,
+        TimestampGreaterThanEqualToFilter, WithinDaysAgoFilter,
+        OlderThanDaysAgoFilter, YearFilter, MonthFilter)
     foreign_key = (EqualQueryFilter, NotEqualQueryFilter)
     boolean = (BooleanEqualQueryFilter, BooleanNotEqualQueryFilter)
 
@@ -226,6 +277,7 @@ class FilterMapping(object):
             TextField: 'string',
             DateTimeField: 'datetime_date',
             DateField: 'datetime_date',
+            TimestampField: 'timestamp',
             TimeField: 'numeric',
             IntegerField: 'numeric',
             BigIntegerField: 'numeric',
@@ -256,6 +308,9 @@ class FilterMapping(object):
 
     def convert_datetime_date(self, field):
         return [f(field, field.verbose_name, field.choices) for f in self.datetime_date]
+
+    def convert_timestamp(self, field):
+        return [f(field, field.verbose_name, field.choices) for f in self.timestamp]
 
     def convert_boolean(self, field):
         boolean_choices = [('True', '1', 'False', '')]
@@ -374,7 +429,7 @@ class FilterForm(object):
                 return query_filters[idx]
 
     def get_field_default(self, field):
-        if isinstance(field, DateTimeField):
+        if isinstance(field, (DateTimeField, TimestampField)):
             return datetime.datetime.now()
         elif isinstance(field, DateField):
             return datetime.date.today()
@@ -523,3 +578,5 @@ class FilterModelConverter(BaseModelConverter):
         self.defaults = dict(self.defaults)
         self.defaults[TextField] = fields.StringField
         self.defaults[DateTimeField] = DateTimeLocalField
+        # TimestampField represents a datetime; give it the same picker input.
+        self.defaults[TimestampField] = DateTimeLocalField

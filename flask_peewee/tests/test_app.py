@@ -152,6 +152,13 @@ class Tweet(db.Model):
     content = TextField()
 
 
+class TSModel(db.Model):
+    # TimestampField stores an integer but represents a datetime -- exercises
+    # admin filtering of timestamp columns.
+    ts = TimestampField()
+    label = CharField()
+
+
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
 
