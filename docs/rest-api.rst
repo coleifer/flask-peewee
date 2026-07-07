@@ -18,7 +18,7 @@ Also, you can filter results by columns on the model using django-style syntax,
 for example:
 
 * ``/api/blog/?name=Some%20Blog``
-* `/`api/blog/?author__username=some_blogger``
+* ``/api/blog/?author__username=some_blogger``
 
 Full operations:
 
@@ -38,10 +38,10 @@ Full operations:
 To negate an operation, prefix it with the ``-`` character, e.g. the following
 are equivalent:
 
-* ``/api/user/?is_admin=true``
-* ``/api/user/?is_admin__eq=true``
-* ``/api/user/?-is_admin=false``
-* ``/api/user/?is_admin__ne=false``
+* ``/api/user/?admin=true``
+* ``/api/user/?admin__eq=true``
+* ``/api/user/?-admin=false``
+* ``/api/user/?admin__ne=false``
 
 Special Python constants are supported when used as querystring parameters:
 
@@ -53,7 +53,8 @@ Getting started with the API
 ----------------------------
 
 In this documentation we'll start with a very simple API and build it out.  The
-complete version of this API is included in the :ref:`example-app`, so feel free
+complete version of this API is included in the `example app
+<https://github.com/coleifer/flask-peewee/tree/master/example>`_, so feel free
 to refer there.
 
 The project will be a simple 'twitter-like' app where users can post short messages
@@ -83,8 +84,8 @@ we will expose via the API.  Here is a truncated version of what they look like:
         admin = BooleanField(default=False)
 
     class Relationship(db.Model):
-        from_user = ForeignKeyField(User, related_name='relationships')
-        to_user = ForeignKeyField(User, related_name='related_to')
+        from_user = ForeignKeyField(User, backref='relationships')
+        to_user = ForeignKeyField(User, backref='related_to')
 
     class Message(db.Model):
         user = ForeignKeyField(User)
@@ -152,10 +153,10 @@ just the details on that object:
 .. code-block:: javascript
 
     {
-      content: "flask and peewee, together at last!"
-      pub_date: "2011-09-16T18:36:15"
-      user: 1
-      id: 1
+      "content": "flask and peewee, together at last!",
+      "pub_date": "2011-09-16T18:36:15",
+      "user": 1,
+      "id": 1
     }
 
 
@@ -222,6 +223,78 @@ from serialization, subclass :py:class:`RestResource`:
 Now emails and passwords are no longer returned by the API.
 
 
+Nested resources
+----------------
+
+By default a foreign key is serialized as the related row's primary key -- notice
+the ``"user": 1`` in the message output above.  To embed the *full* related
+object instead, point ``include_resources`` at the resource that should render it:
+
+.. code-block:: python
+
+    class UserResource(RestResource):
+        exclude = ('password', 'email',)
+
+    class MessageResource(RestResource):
+        include_resources = {'user': UserResource}
+
+    api.register(User, UserResource)
+    api.register(Message, MessageResource)
+
+Now each message embeds its author, serialized through ``UserResource`` (so the
+password and email are still excluded):
+
+.. code-block:: javascript
+
+    {
+      "content": "flask and peewee, together at last!",
+      "pub_date": "2011-09-16T18:36:15",
+      "user": {
+        "username": "admin",
+        "admin": true,
+        "active": true,
+        "join_date": "2011-09-16T18:34:49",
+        "id": 1
+      },
+      "id": 1
+    }
+
+``include_resources`` can be nested arbitrarily deep -- an included resource may
+itself include resources -- and one model can be embedded through more than one
+foreign key.  For example, a ``Relationship`` resource can expand both endpoints:
+
+.. code-block:: python
+
+    class RelationshipResource(RestResource):
+        include_resources = {
+            'from_user': UserResource,
+            'to_user': UserResource,
+        }
+
+The whole nested tree is loaded in a single query -- one ``JOIN`` per included
+foreign key -- so embedding related objects does *not* incur the N+1 queries you
+would get from following each row's relations lazily.
+
+Nested writes
+^^^^^^^^^^^^^
+
+Included resources also work on the way *in*: a ``POST`` or ``PUT`` whose body
+carries a nested object (instead of a bare id) creates or updates the related row
+as part of the same request.  Two rules keep that safe:
+
+* A resource's ``readonly_fields`` are stripped at **every** level of the
+  payload, so a nested object cannot smuggle in a field the resource protects
+  (e.g. slipping ``"admin": true`` into a nested user).
+* Each nested write must pass the child resource's own ``check_post`` /
+  ``check_put``, exactly as a direct write to that resource would -- so nesting
+  can never be used to sidestep a resource's authorization.
+
+The entire object graph is saved in a single transaction, so if any nested write
+is rejected the whole request rolls back.  To disable nested writes for a
+resource -- silently ignoring any nested object in the payload -- set
+``nested_writes = False``; the foreign key can still be assigned with a bare id.
+
+
 Allowing users to post objects
 ------------------------------
 
@@ -231,12 +304,9 @@ What if we want to create new messages via the Api?  Or modify/delete existing m
 
     $ curl -i -d '' http://127.0.0.1:5000/api/message/
 
-    HTTP/1.0 401 UNAUTHORIZED
+    HTTP/1.1 401 UNAUTHORIZED
     WWW-Authenticate: Basic realm="Login Required"
     Content-Type: text/html; charset=utf-8
-    Content-Length: 21
-    Server: Werkzeug/0.8-dev Python/2.6.6
-    Date: Thu, 22 Sep 2011 16:14:21 GMT
 
     Authentication failed
 
@@ -278,18 +348,15 @@ Now we should be able to POST new messages.
 
 .. code-block:: python
 
-    import json
-    import httplib2
+    import requests
 
-    sock = httplib2.Http()
-    sock.add_credentials('admin', 'admin') # use basic auth
-
-    message = {'user': 1, 'content': 'hello api'}
-    msg_json = json.dumps(message)
-
-    headers, resp = sock.request('http://localhost:5000/api/message/', 'POST', body=msg_json)
-
-    response = json.loads(resp)
+    # authenticate with HTTP basic auth
+    resp = requests.post(
+        'http://localhost:5000/api/message/',
+        json={'user': 1, 'content': 'hello api'},
+        auth=('admin', 'admin'),
+    )
+    response = resp.json()
 
 The response object will look something like this:
 
@@ -308,13 +375,13 @@ It also means a user can use PUT requests to modify another user's message:
 
 .. code-block:: python
 
-    # continued from above script
-    update = {'content': 'haxed you, bro'}
-    update_json = json.dumps(update)
-
-    headers, resp = sock.request('http://127.0.0.1:5000/api/message/2/', 'PUT', body=update_json)
-
-    response = json.loads(resp)
+    # continued from above -- edit another user's message (id=2)
+    resp = requests.put(
+        'http://127.0.0.1:5000/api/message/2/',
+        json={'content': 'haxed you, bro'},
+        auth=('admin', 'admin'),
+    )
+    response = resp.json()
 
 The response will look like this:
 
@@ -353,21 +420,25 @@ Now, if we try and modify the message, we get a 403 Forbidden:
 
 .. code-block:: python
 
-    headers, resp = sock.request('http://127.0.0.1:5000/api/message/2/', 'PUT', body=update_json)
-    print headers['status']
-
-    # prints 403
+    resp = requests.put(
+        'http://127.0.0.1:5000/api/message/2/',
+        json={'content': 'haxed you, bro'},
+        auth=('admin', 'admin'),
+    )
+    print(resp.status_code)  # 403
 
 It is fine to modify our own message, though (message with id=1):
 
 .. code-block:: python
 
-    headers, resp = sock.request('http://127.0.0.1:5000/api/message/1/', 'PUT', body=update_json)
-    print headers['status']
+    resp = requests.put(
+        'http://127.0.0.1:5000/api/message/1/',
+        json={'content': 'haxed you, bro'},
+        auth=('admin', 'admin'),
+    )
+    print(resp.status_code)  # 200
 
-    # prints 200
-
-Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py#L284>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
+Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
 
 * PUT / DELETE -- verify the authenticated user is the owner of the object
 * POST -- assign the authenticated user as the owner of the new object
@@ -625,10 +696,10 @@ of results are available, along with the total number of pages:
 
 .. code-block:: javascript
 
-    meta: {
-      model: "message"
-      next: "/api/message/?limit=1&page=3"
-      page: 2
-      page_count: 5,
-      previous: "/api/message/?limit=1&page=1"
+    "meta": {
+      "model": "message",
+      "next": "/api/message/?limit=1&page=3",
+      "page": 2,
+      "page_count": 5,
+      "previous": "/api/message/?limit=1&page=1"
     }
