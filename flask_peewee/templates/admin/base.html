@@ -15,24 +15,25 @@
 </head>
 
 <body class="{% block body_class %}admin{% endblock %}">
-  <nav class="navbar navbar-expand navbar-dark bg-dark fixed-top">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ admin.branding }}</a>
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link active" href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="/">View site</a></li>
-      </ul>
-
-      <form action="{{ admin.get_logout_url() }}" method="get">
-        <button class="btn btn-danger btn-sm">Logout</button>
-      </form>
-      <span class="taskbar-clock" id="taskbar-clock"></span>
-    </div>
-  </nav>
-
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-3 col-lg-2">
+        {# themes position this fixed (top or bottom bar) or leave it in flow
+           as a window above the model list #}
+        <nav class="navbar navbar-expand navbar-dark bg-dark fixed-top">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for(admin.get_url_name('index')) }}">{{ admin.branding }}</a>
+            <ul class="navbar-nav me-auto">
+              <li class="nav-item"><a class="nav-link active" href="{{ url_for(admin.get_url_name('index')) }}">Dashboard</a></li>
+              <li class="nav-item"><a class="nav-link" href="/">View site</a></li>
+            </ul>
+
+            <form action="{{ admin.get_logout_url() }}" method="get">
+              <button class="btn btn-danger btn-sm">Logout</button>
+            </form>
+            <span class="taskbar-clock" id="taskbar-clock"></span>
+          </div>
+        </nav>
         <div class="card sidebar-nav">
           <div class="card-header">Navigation</div>
           {% block sidebar %}

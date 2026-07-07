@@ -690,6 +690,7 @@ body.admin pre {
   padding: 8px 10px;
   font-size: 14px;
   margin: 4px 2px;
+  overflow-x: auto;
 }
 
 /* ------------------------------------------------------------------ modals */
