@@ -728,6 +728,13 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPINotes(resp_json, Note.filter(id__in=[1,2,5]).order_by(Note.id))
 
+        # repeated in params combine with comma-separated values. assert the
+        # count too: assertAPINotes zips and would not notice a dropped id.
+        resp = self.app.get('/api/note/?id__in=1,2&id__in=5')
+        resp_json = self.response_json(resp)
+        self.assertEqual(len(resp_json['objects']), 3)
+        self.assertAPINotes(resp_json, Note.filter(id__in=[1,2,5]).order_by(Note.id))
+
         # also test that the IN operator works with list of strings
         resp = self.app.get('/api/user/?username__in=admin,normal')
         resp_json = self.response_json(resp)

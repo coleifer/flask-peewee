@@ -492,6 +492,17 @@ It is also supported to use different comparison operators with the same double-
 Valid Comparison Operators are:
     'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'is_not', 'like', 'ilike', 'regexp'
 
+The ``in`` operator accepts a comma-separated list and/or repeated parameters,
+so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are equivalent.
+
+.. note::
+    Unrecognized filter parameters -- a misspelled field, or a field not exposed
+    for filtering -- are **ignored** rather than rejected, so a typo such as
+    ``?usernam=x`` silently returns every row.  This is intentional: it keeps
+    stray query-string parameters (cache-busters, tracking params, etc.) from
+    breaking a request.  Double-check your filter names if a query returns more
+    than you expect.  An unknown ``ordering`` column is likewise ignored.
+
 
 Sorting results
 ---------------

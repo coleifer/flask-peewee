@@ -260,16 +260,17 @@ class RestResource(object):
 
     def apply_filter(self, query, field, expr, op, arg_list, negated):
         query_expr = '%s__%s' % (expr, op)
-        constructor = lambda kwargs: negated and ~DQ(**kwargs) or DQ(**kwargs)
+        constructor = lambda kwargs: ~DQ(**kwargs) if negated else DQ(**kwargs)
         if isinstance(field, BooleanField):
             arg_list = [convert_boolean(arg) for arg in arg_list]
 
         if op == 'in':
-            # in gives us a string format list '1,2,3,4'
-            # we have to turn it into a list before passing to
-            # the filter.
-            arg_list = [i.strip() for i in arg_list[0].split(',')]
-            return query.filter(constructor({query_expr: arg_list}))
+            # `in` values may be given comma-separated and/or as repeated
+            # params, e.g. ?id__in=1,2&id__in=3 -> [1, 2, 3].
+            values = []
+            for arg in arg_list:
+                values.extend(v.strip() for v in str(arg).split(','))
+            return query.filter(constructor({query_expr: values}))
         elif len(arg_list) == 1:
             return query.filter(constructor({query_expr: arg_list[0]}))
         else:
