@@ -34,8 +34,8 @@ Getting objects
             active = Blog.select().where(Blog.active==True)
             return object_list('blog/index.html', active)
     
-    .. code-block:: html
-    
+    .. code-block:: html+jinja
+
         <!-- template -->
         {% for blog in object_list %}
           {# render the blog here #}
@@ -57,8 +57,8 @@ Getting objects
     .. code-block:: python
     
         query = Blog.select().where(Blog.active==True)
-        pq = PaginatedQuery(query)
-        
+        pq = PaginatedQuery(query, 20)  # 20 items per page
+
         # assume url was /?page=3
         obj_list = pq.get_list()  # returns 3rd page of results
         

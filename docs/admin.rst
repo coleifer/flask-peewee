@@ -64,7 +64,9 @@ To get started with the admin, there are just a couple steps:
 
 .. note::
 
-    For a complete example, check the :ref:`example` which ships with the project.
+    For a complete example, check the `example app
+    <https://github.com/coleifer/flask-peewee/tree/master/example>`_ which ships
+    with the project.
 
 
 Customizing how models are displayed
@@ -270,7 +272,7 @@ by the panel's ``get_context`` method.
 
 And the template:
 
-.. code-block:: python
+.. code-block:: jinja
 
     {% extends "admin/panels/default.html" %}
 
@@ -306,9 +308,9 @@ file uploads.
     import datetime
     import os
 
-    from flask import Markup
+    from markupsafe import Markup
     from peewee import *
-    from werkzeug import secure_filename
+    from werkzeug.utils import secure_filename
 
     from app import app, db
 
@@ -316,7 +318,7 @@ file uploads.
     class Photo(db.Model):
         image = CharField()
 
-        def __unicode__(self):
+        def __str__(self):
             return self.image
 
         def save_image(self, file_obj):

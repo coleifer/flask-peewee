@@ -100,8 +100,10 @@ Admin
         Configures urls for models and panels, then registers blueprint with the
         Flask application.  Use this method when you have finished registering
         all the models and panels with the admin object, but before starting
-        the WSGI application.  For a sample implementation, check out ``example/main.py``
-        in the example application supplied with flask-peewee.
+        the WSGI application.  For a sample implementation, check out ``main.py``
+        in the `example application
+        <https://github.com/coleifer/flask-peewee/tree/master/example>`_ supplied
+        with flask-peewee.
 
         .. code-block:: python
 
@@ -177,7 +179,7 @@ Exposing Models with the ModelAdmin
     .. py:attribute:: columns
 
         List or tuple of columns should be displayed in the list index.  By default if no
-        columns are specified the ``Model``'s ``__unicode__()`` will be used.
+        columns are specified the ``Model``'s ``__str__()`` will be used.
 
         .. note::
 
@@ -659,6 +661,7 @@ Database
         class Blog(db.Model):
             # this model will automatically work with the database specified
             # in the application's config.
+            name = CharField()
 
     Here is how to defer initialization via ``init_app``:
 
@@ -667,7 +670,7 @@ Database
         db = Database()
 
         class Blog(db.Model):
-            # ...
+            name = CharField()  # ...
 
         # Some time later, we can initialize the database wrapper.
         app = Flask(__name__)

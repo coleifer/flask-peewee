@@ -151,8 +151,8 @@ Here's a simple example of extending the auth system to use a custom user model:
     class CustomAuth(Auth):
         def get_user_model(self):
             return User
-        
-        def get_model_admin(self):
+
+        def get_model_admin(self, model_admin=None):
             return UserAdmin
     
     # instantiate the auth
