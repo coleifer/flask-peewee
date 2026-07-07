@@ -6,6 +6,7 @@ from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import CModel
+from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
@@ -19,17 +20,10 @@ class FlaskPeeweeTestCase(unittest.TestCase):
     def setUp(self):
         utils.PASSWORD_HASH_METHOD = 'pbkdf2:sha256:1'
 
-        Note.drop_table(True)
-        Message.drop_table(True)
-        User.drop_table(True)
-        User.create_table()
-        Message.create_table()
-        Note.create_table()
-
-        FModel.drop_table(True)
-        EModel.drop_table(True)
-        EModel.create_table()
-        FModel.create_table()
+        # drop_tables/create_tables resolve foreign-key ordering for us.
+        models = [User, Message, Note, Comment, EModel, FModel]
+        test_app.db.database.drop_tables(models)
+        test_app.db.database.create_tables(models)
 
         self.flask_app = test_app.app
         self.flask_app._template_context = {}

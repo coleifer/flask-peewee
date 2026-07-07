@@ -81,6 +81,11 @@ class Note(db.Model):
     created_date = DateTimeField(default=datetime.datetime.now)
 
 
+class Comment(db.Model):
+    user = ForeignKeyField(User)
+    body = TextField()
+
+
 class TestModel(db.Model):
     data = TextField()
 
@@ -204,6 +209,11 @@ class EResource(RestResource):
 class FResource(RestResource):
     include_resources = {'e': EResource}
 
+class CommentResource(RestrictOwnerResource):
+    # nests the admin-only UserResource, which marks "admin" read-only
+    owner_field = 'user'
+    include_resources = {'user': UserResource}
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -215,6 +225,7 @@ api = RestAPI(app, default_auth=user_auth)
 api.register(Message, RestrictOwnerResource)
 api.register(User, UserResource, auth=admin_auth)
 api.register(Note)
+api.register(Comment, CommentResource)
 api.register(TestModel, auth=api_key_auth)
 api.register(AModel, AResource, auth=dummy_auth)
 api.register(BModel, BResource, auth=dummy_auth)

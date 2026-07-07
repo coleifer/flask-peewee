@@ -21,6 +21,7 @@ from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import admin
+from flask_peewee.tests.test_app import db
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
@@ -826,16 +827,9 @@ class AdminTestCase(BaseAdminTestCase):
 class AdminFilterTestCase(BaseAdminTestCase):
     def setUp(self):
         super(AdminFilterTestCase, self).setUp()
-        BDetails.drop_table(True)
-        DModel.drop_table(True)
-        CModel.drop_table(True)
-        BModel.drop_table(True)
-        AModel.drop_table(True)
-        AModel.create_table()
-        BModel.create_table()
-        CModel.create_table()
-        DModel.create_table()
-        BDetails.create_table()
+        models = [AModel, BModel, CModel, DModel, BDetails]
+        db.database.drop_tables(models)
+        db.database.create_tables(models)
 
     def create_models(self):
         for i in range(1, 4):

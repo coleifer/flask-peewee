@@ -293,10 +293,28 @@ class RestResource(object):
         readonly.add(self.pk.name)
         return readonly
 
-    def deserialize_object(self, data, instance):
+    def scrub_readonly_fields(self, data):
+        # Strip read-only fields at *every* level of a (possibly nested)
+        # payload. A top-level-only strip is not enough: the deserializer
+        # recurses into nested foreign-key dicts and would write read-only
+        # fields (e.g. "admin") straight onto the related instance, defeating
+        # the guard and allowing privilege escalation via a nested write.
+        # Recurse through the declared child resources so each applies its own
+        # read-only policy.
+        if not isinstance(data, dict):
+            return data
         readonly = self.get_readonly_fields()
-        if readonly:
-            data = dict((k, v) for k, v in data.items() if k not in readonly)
+        cleaned = {}
+        for key, value in data.items():
+            if key in readonly:
+                continue
+            if key in self._resources and isinstance(value, dict):
+                value = self._resources[key].scrub_readonly_fields(value)
+            cleaned[key] = value
+        return cleaned
+
+    def deserialize_object(self, data, instance):
+        data = self.scrub_readonly_fields(data)
         d = self.get_deserializer()
         return d.deserialize_object(instance, data)
 
