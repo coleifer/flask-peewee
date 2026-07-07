@@ -40,8 +40,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'flask-peewee'
-copyright = u'2011, charles leifer'
+import datetime
+project = 'flask-peewee'
+copyright = '%s, charles leifer' % (datetime.datetime.now().year)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -91,7 +92,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'flask'
+html_theme = 'alabaster'
 
 html_theme_options = {
     'index_logo': 'peewee.jpg',

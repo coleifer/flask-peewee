@@ -22,7 +22,6 @@ Contents:
    auth
    rest-api
    utils
-   gevent
 
 API in depth:
 

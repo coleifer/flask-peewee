@@ -22,15 +22,15 @@ class NotePanel(AdminPanel):
             if request.form.get('message'):
                 Note.create(
                     user=auth.get_logged_in_user(),
-                    message=request.form['message'],
-                )
+                    message=request.form['message'])
+
         next = request.form.get('next') or self.dashboard_url()
         return redirect(next)
 
     def get_context(self):
-        return {
-            'note_list': Note.select().order_by(Note.created_date.desc()).paginate(1, 3)
-        }
+        # Get the 3 latest notes.
+        notes = Note.select().order_by(Note.created_date.desc()).paginate(1, 3)
+        return {'note_list': notes}
 
 class UserStatsPanel(AdminPanel):
     template_name = 'admin/user_stats.html'
@@ -45,7 +45,7 @@ class UserStatsPanel(AdminPanel):
         }
 
 
-admin = Admin(app, auth, branding='Example Site')
+admin = Admin(app, auth, branding='Example Site')#, theme='crux')
 
 
 class MessageAdmin(ModelAdmin):

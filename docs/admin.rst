@@ -10,14 +10,15 @@ application content.
 
 Here's a screen-shot of the admin dashboard:
 
-.. image:: fp-admin.jpg
+.. image:: fp-admin.png
 
 Getting started
 ---------------
 
 To get started with the admin, there are just a couple steps:
 
-1. Instantiate an :py:class:`Auth` backend for your project -- this component is responsible for providing the security for the admin area
+1. Instantiate an :py:class:`Auth` backend for your project -- this component
+   is responsible for providing the security for the admin area
 
     .. code-block:: python
 
@@ -42,7 +43,8 @@ To get started with the admin, there are just a couple steps:
 
         admin = Admin(app, auth)
 
-3. Register any :py:class:`ModelAdmin` or :py:class:`AdminPanel` objects you would like to expose via the admin
+3. Register any :py:class:`ModelAdmin` or :py:class:`AdminPanel` objects you
+   would like to expose via the admin
 
     .. code-block:: python
 
@@ -59,7 +61,6 @@ To get started with the admin, there are just a couple steps:
 
         # after all models and panels are registered, configure the urls
         admin.setup()
-
 
 .. note::
 
@@ -79,7 +80,7 @@ which looks like this:
         content = TextField()
         pub_date = DateTimeField(default=datetime.datetime.now)
 
-        def __unicode__(self):
+        def __str__(self):
             return '%s: %s' % (self.user, self.content)
 
 If we were to simply register this model with the admin, it would look something
@@ -92,7 +93,7 @@ like this:
 
     admin.setup()
 
-.. image:: fp-message-admin.jpg
+.. image:: fp-message-admin-plain.png
 
 A quick way to improve the appearance of this view is to specify which columns
 to display.  To start customizing how the ``Message`` model is displayed in the
@@ -104,14 +105,18 @@ admin, we'll subclass :py:class:`ModelAdmin`.
 
     class MessageAdmin(ModelAdmin):
         columns = ('user', 'content', 'pub_date',)
+        foreign_key_lookups = {'user': 'username'}
+        filter_fields = ('user', 'content', 'pub_date', 'user__username')
+        search_fields = ('content', 'user__username')
 
     admin.register(Message, MessageAdmin)
 
     admin.setup()
 
-Now the admin shows all the columns and they can be clicked to sort the data:
+Now the admin shows all the columns and they can be clicked to sort the data.
+Filtering is available, as is search:
 
-.. image:: fp-message-admin-2.jpg
+.. image:: fp-message-admin.png
 
 Suppose privacy is a big concern, and under no circumstances should a user be
 able to see another user's messages -- even in the admin.  This can be done by overriding
@@ -134,7 +139,7 @@ for an individual ``Model``:
 .. code-block:: python
 
     class MessageAdmin(ModelAdmin):
-        columns = ('user', 'content', 'pub_date',)
+        # ...
 
         def get_template_overrides(self):
             # override the edit template with a custom one
@@ -205,9 +210,9 @@ single ``<select>`` -- the case worth avoiding on a large table.  With it, the
 field becomes a button showing the current selection; clicking it opens a modal
 with a paginated, type-ahead list:
 
-.. image:: fp-admin-btn-form.png
+.. image:: fp-message-fk-btn.png
 
-.. image:: fp-admin-modal.png
+.. image:: fp-message-fk-modal.png
 
 
 Creating admin panels
@@ -230,9 +235,7 @@ Some example use-cases for AdminPanels might be:
 Referring to the `example app <https://github.com/coleifer/flask-peewee/tree/master/example>`_,
 we'll look at a simple panel that allows administrators to leave "notes" in the admin area:
 
-.. image:: fp-note-panel.jpg
-
-.. image:: fp-note-panel-2.jpg
+.. image:: fp-notes-panel.png
 
 Here's what the panel class looks like:
 
@@ -251,15 +254,15 @@ Here's what the panel class looks like:
                 if request.form.get('message'):
                     Note.create(
                         user=auth.get_logged_in_user(),
-                        message=request.form['message'],
-                    )
+                        message=request.form['message'])
+
             next = request.form.get('next') or self.dashboard_url()
             return redirect(next)
 
         def get_context(self):
-            return {
-                'note_list': Note.select().order_by(Note.created_date.desc()).limit(3)
-            }
+            # Get the 3 latest notes.
+            notes = Note.select().order_by(Note.created_date.desc()).paginate(1, 3)
+            return {'note_list': notes}
 
 When the admin dashboard is rendered (``/admin/``), all panels are rendered using
 the templates the specify.  The template is rendered with the context provided
@@ -277,8 +280,8 @@ And the template:
       {% endfor %}
       <form method="post" action="{{ url_for(panel.get_url_name('create')) }}">
         <input type="hidden" value="{{ request.url }}" />
-        <p><textarea name="message"></textarea></p>
-        <p><button type="submit" class="btn small">Save</button></p>
+        <p><textarea name="message" class="form-control"></textarea></p>
+        <button type="submit" class="btn btn-secondary btn-sm">Save</button>
       </form>
     {% endblock %}
 
@@ -297,7 +300,7 @@ the storage.
 Here's a very simple example of a "photo" model and a ``ModelAdmin`` that enables
 file uploads.
 
-.. code-block:: models.py
+.. code-block:: python
 
     # models.py
     import datetime
@@ -350,7 +353,7 @@ file uploads.
         def get_form(self, adding=False):
             class PhotoForm(Form):
                 image = HiddenField()
-                image_file = FileField(u'Image file')
+                image_file = FileField('Image file')
 
             return PhotoForm
 

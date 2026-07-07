@@ -1,4 +1,0 @@
-.. _example:
-
-Example App
-===========

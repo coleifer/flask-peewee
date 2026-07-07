@@ -1152,7 +1152,7 @@ Utilities
             active = Blog.select().where(Blog.active==True)
             return object_list('blog/index.html', active)
 
-    .. code-block:: html
+    .. code-block:: jinja
 
         <!-- template -->
         {% for blog in object_list %}

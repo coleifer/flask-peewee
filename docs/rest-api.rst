@@ -1,10 +1,10 @@
 .. _rest-api:
 
-REST Api
+REST API
 ========
 
 flask-peewee comes with some tools for exposing your project's models via a
-RESTful API.  There are several components to the ``rest`` module, but the basic
+REST API.  There are several components to the ``rest`` module, but the basic
 setup is to create an instance of :py:class:`RestAPI` and then register your
 project's models with subclasses of :py:class:`RestResource`.
 

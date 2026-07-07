@@ -90,27 +90,29 @@ behavior:
 Other examples
 --------------
 
-To connect to MySQL using authentication:
+Connection pooled Postgres or MySQL:
+
+.. code-block:: python
+
+    DATABASE = {
+        'name': 'my_app',
+        'engine': 'playhouse.pool.PooledPostgresqlDatabase',
+        # 'engine': 'playhouse.pool.PooledMySQLDatabase',
+        # 'user': 'postgres',
+        # 'password': 'secret password',
+        # 'host': '127.0.0.1',
+    }
+
+To connect to Postgres / MySQL without pool:
 
 .. code-block:: python
 
     DATABASE = {
         'name': 'my_database',
-        'engine': 'peewee.MySQLDatabase',
+        'engine': 'peewee.PostgresqlDatabase',
+        # 'engine': 'peewee.MySQLDatabase',
         'user': 'db_user',
-        'passwd': 'secret password',
-    }
-
-To connect to Postgresql using the playhouse ``PostgresqlExtDatabase``:
-
-.. code-block:: python
-
-    DATABASE = {
-        'name': 'pg_database',
-        'engine': 'playhouse.PostgresqlExtDatabase',
-        'host': '127.0.0.1',
-        'user': 'postgres',
-        'port': 5432,
+        'password': 'secret password',
     }
 
 We can specify the database directly, as well:
@@ -118,5 +120,4 @@ We can specify the database directly, as well:
 .. code-block:: python
 
     pg_db = PostgresqlDatabase('pg_database')
-
     db = Database(app, pg_db)
