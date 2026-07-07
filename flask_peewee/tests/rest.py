@@ -19,6 +19,7 @@ from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
+from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import TestModel
@@ -536,6 +537,26 @@ class RestApiResourceTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual(len(resp_json['objects']), 5)
         self.assertEqual(resp_json['meta']['page_count'], 2)  # ceil(8 / 5)
+
+    def test_nested_writes_disabled(self):
+        # GResource sets nested_writes=False: a nested related dict is ignored
+        # (never created), though the FK can still be set by scalar id.
+        e1 = EModel.create(e_field='e1')
+        emodel_count = EModel.select().count()
+
+        resp = self.post_to('/api/gmodel/', {'g_field': 'g1',
+                                             'e': {'e_field': 'sneaky'}})
+        self.assertEqual(resp.status_code, 200)
+        # the nested EModel was not created and the FK was left null
+        self.assertEqual(EModel.select().count(), emodel_count)
+        self.assertFalse(
+            EModel.select().where(EModel.e_field == 'sneaky').exists())
+        self.assertIsNone(GModel.get(g_field='g1').e)
+
+        # a scalar foreign key still works
+        resp = self.post_to('/api/gmodel/', {'g_field': 'g2', 'e': e1.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(GModel.get(g_field='g2').e, e1)
 
 
 class RestApiBasicTestCase(RestApiTestCase):

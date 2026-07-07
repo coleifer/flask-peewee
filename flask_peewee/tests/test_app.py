@@ -120,6 +120,11 @@ class FModel(db.Model):
     f_field = CharField()
 
 
+class GModel(db.Model):
+    e = ForeignKeyField(EModel, null=True)
+    g_field = CharField()
+
+
 class APIKey(db.Model):
     key = CharField()
     secret = CharField()
@@ -215,6 +220,11 @@ class CommentResource(RestrictOwnerResource):
     owner_field = 'user'
     include_resources = {'user': UserResource}
 
+class GResource(RestResource):
+    # nesting is read-only: a nested {...} write is ignored.
+    include_resources = {'e': EResource}
+    nested_writes = False
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -234,6 +244,7 @@ api.register(CModel, CResource, auth=dummy_auth)
 
 api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
+api.register(GModel, GResource, auth=dummy_auth)
 
 
 # views

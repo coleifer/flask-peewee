@@ -141,6 +141,11 @@ class RestResource(object):
     # mapping of field name to resource class
     include_resources = None
 
+    # whether related objects may be created/updated through a nested {...} in
+    # this resource's payload. When False, a nested object is ignored (the FK
+    # can still be set by scalar id).
+    nested_writes = True
+
     # delete behavior
     delete_recursive = True
 
@@ -314,6 +319,9 @@ class RestResource(object):
             if key in readonly:
                 continue
             if key in self._resources and isinstance(value, dict):
+                if not self.nested_writes:
+                    # nested writes disabled: ignore the nested object.
+                    continue
                 value = self._resources[key].scrub_readonly_fields(value)
             cleaned[key] = value
         return cleaned
@@ -479,6 +487,8 @@ class RestResource(object):
         return self.response(self.serialize_object(obj))
 
     def save_related_objects(self, instance, data):
+        if not self.nested_writes:
+            return
         for k, v in data.items():
             if k in self._resources and isinstance(v, dict):
                 rel_resource = self._resources[k]

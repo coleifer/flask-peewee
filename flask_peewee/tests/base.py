@@ -10,6 +10,7 @@ from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
+from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import User
@@ -21,7 +22,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         utils.PASSWORD_HASH_METHOD = 'pbkdf2:sha256:1'
 
         # drop_tables/create_tables resolve foreign-key ordering for us.
-        models = [User, Message, Note, Comment, EModel, FModel]
+        models = [User, Message, Note, Comment, EModel, FModel, GModel]
         test_app.db.database.drop_tables(models)
         test_app.db.database.create_tables(models)
 
