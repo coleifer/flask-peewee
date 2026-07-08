@@ -29,6 +29,10 @@ create/edit/delete functionality for your project's models.
 
 .. image:: https://media.charlesleifer.com/blog/photos/im-1783454777-579.png
 
+or you can use one of the themes. Here is the *crux* theme:
+
+.. image:: https://media.charlesleifer.com/blog/photos/fp-crux-full.png
+
 rest api
 --------
 
@@ -49,7 +53,7 @@ provides a RESTful interface for your project's models.
           "username": "admin",
           "admin": true,
           "email": "",
-          "join_date": "2011-09-16 18:34:49",
+          "join_date": "2025-09-16 18:34:49",
           "active": true,
           "id": 1
         },
@@ -57,7 +61,7 @@ provides a RESTful interface for your project's models.
           "username": "coleifer",
           "admin": false,
           "email": "coleifer@gmail.com",
-          "join_date": "2011-09-16 18:35:56",
+          "join_date": "2025-09-16 18:35:56",
           "active": true,
           "id": 2
         }
