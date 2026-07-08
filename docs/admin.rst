@@ -12,6 +12,10 @@ Here's a screen-shot of the admin dashboard:
 
 .. image:: fp-admin.png
 
+You can also try out a custom theme. Here is the *crux* theme:
+
+.. image:: fp-crux-full.png
+
 Getting started
 ---------------
 
