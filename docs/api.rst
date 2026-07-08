@@ -819,7 +819,7 @@ RESTful Resources and their subclasses
             /* messages without "include_resources" */
             {
               "content": "flask and peewee, together at last!",
-              "pub_date": "2011-09-16 18:36:15",
+              "pub_date": "2026-09-16 18:36:15",
               "id": 1,
               "user": 2
             },
@@ -827,12 +827,12 @@ RESTful Resources and their subclasses
             /* messages with "include_resources = {'user': UserResource} */
             {
               "content": "flask and peewee, together at last!",
-              "pub_date": "2011-09-16 18:36:15",
+              "pub_date": "2026-09-16 18:36:15",
               "id": 1,
               "user": {
                 "username": "coleifer",
                 "active": true,
-                "join_date": "2011-09-16 18:35:56",
+                "join_date": "2026-09-16 18:35:56",
                 "admin": false,
                 "id": 2
               }
