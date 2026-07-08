@@ -262,7 +262,7 @@ class ModelAdmin(object):
             for fk, rel_model in joins:
                 query = query.ensure_join(fk.model, rel_model, fk)
             # ** is peewee's ILIKE operator (case-insensitive contains).
-            clauses.append(field ** ('%%%s%%' % term))
+            clauses.append(field.contains(term))
 
         return query.switch(self.model).where(functools.reduce(operator.or_, clauses))
 
@@ -523,7 +523,7 @@ class ModelAdmin(object):
             query = rel_model.select().order_by(rel_field)
             query_string = request.args.get('query')
             if query_string:
-                query = query.where(rel_field ** ('%%%s%%' % query_string))
+                query = query.where(rel_field.contains(query_string))
 
             pq = PaginatedQuery(query, self.filter_paginate_by)
             current_page = pq.get_page()

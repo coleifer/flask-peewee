@@ -123,7 +123,7 @@ class ContainsQueryFilter(QueryFilter):
         return value
 
     def query(self, value):
-        return self.field ** ('%%%s%%' % value)
+        return self.field.contains(value)
 
     def operation(self):
         return 'contains'
