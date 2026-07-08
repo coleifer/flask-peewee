@@ -92,6 +92,24 @@ body.admin .form-select-sm {
   background-color: rgba(var(--fp-ink), .03);
   font-weight: 600;
 }
+
+/* Dashboard panels pack into two masonry-style columns (round-robin assignment
+   happens in admin/index.html) so a short panel doesn't leave a gap beside a
+   taller neighbour. Collapses to a single column on narrow screens. */
+.panel-masonry {
+  display: flex;
+  gap: 1rem;
+}
+.panel-masonry .panel-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+@media (max-width: 767.98px) {
+  .panel-masonry {
+    flex-direction: column;
+    gap: 0;
+  }
+}
 .list-group {
   --bs-list-group-active-bg: var(--fp-accent);
   --bs-list-group-active-border-color: var(--fp-accent);

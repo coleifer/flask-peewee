@@ -6,10 +6,13 @@
 
 {% block content %}
   {% if panels %}
-    <div class="row">
-    {% for panel in panels %}
-      {{ panel.render()|safe() }}
-    {% endfor %}
+    <div class="panel-masonry">
+      <div class="panel-col">
+        {% for panel in panels %}{% if loop.index0 % 2 == 0 %}{{ panel.render()|safe() }}{% endif %}{% endfor %}
+      </div>
+      <div class="panel-col">
+        {% for panel in panels %}{% if loop.index0 % 2 == 1 %}{{ panel.render()|safe() }}{% endif %}{% endfor %}
+      </div>
     </div>
   {% endif %}
 
