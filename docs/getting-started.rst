@@ -259,6 +259,14 @@ Let's go ahead and add the ``auth.User`` model to the admin as well:
     auth.register_admin(admin)
     admin.setup()
 
+The admin supports themes. Here is how to use the *crux* theme, for example:
+
+.. code-block:: python
+
+    admin = Admin(app, auth, theme='crux')
+
+.. image:: fp-crux.png
+
 
 Exposing content using a REST API
 ---------------------------------
