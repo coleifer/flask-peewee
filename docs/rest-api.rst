@@ -691,7 +691,7 @@ often want to lock this down -- especially for sensitive columns.  Three
 .. code-block:: python
 
     class MessageResource(RestResource):
-        # only these may be used as filters, however a client spells the query
+        # the only fields a client may filter on (with any operator)
         filter_fields = ('id', 'content', 'user__username')
 
     class UserResource(RestResource):

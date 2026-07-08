@@ -68,8 +68,8 @@ Getting objects
 
         pq.get_count() # total number of matching rows
 
-        # a windowed list of page numbers for building pagination controls;
-        # None marks a gap to render as an ellipsis. on page 10 of 20:
+        # a windowed list of page numbers for pagination controls; None marks a
+        # gap to render as an ellipsis. On page 10 of 20 it returns:
         pq.get_page_range()  # [1, None, 7, 8, 9, 10, 11, 12, 13, None, 20]
 
     ``get_page_range(window=N)`` controls how many pages are shown on either side

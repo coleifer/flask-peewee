@@ -276,7 +276,7 @@ the list of primary keys the user checked.  Suppose our ``Message`` model has a
 
     admin.register(Message, MessageAdmin)
 
-The action shows up in the "With selected..." dropdown labelled with its
+The action shows up in the "With selected..." dropdown labeled with its
 ``name``, which defaults to the class name minus the "Action" suffix
 (``FlagAction`` becomes "Flag").  Pass ``name`` (and optionally ``description``)
 to the constructor to override it, e.g. ``FlagAction(name='Flag as spam')``.
