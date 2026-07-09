@@ -11,11 +11,13 @@ from flask import abort
 from flask import render_template
 from flask import request
 from peewee import BooleanField
+from peewee import DateField
 from peewee import DateTimeField
 from peewee import DoesNotExist
 from peewee import ForeignKeyField
 from peewee import Model
 from peewee import SelectQuery
+from peewee import TimeField
 from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
 
@@ -162,24 +164,37 @@ def get_model_from_dictionary(model, field_dict, strict=False):
             if isinstance(field_obj, BooleanField):
                 if isinstance(value, str) and value.lower() in ('0', 'f', 'false', ''):
                     value = False
-            elif isinstance(field_obj, DateTimeField):
+            elif isinstance(field_obj, (DateTimeField, DateField, TimeField)):
                 value = deserialize_datetime(field_obj, value)
 
             setattr(model_instance, field_name, field_obj.python_value(value))
     return model_instance, models
 
-def deserialize_datetime(field_obj, value):
-    formats = ('%Y-%m-%dT%H:%M:%S%z',
+ISO_FORMATS = ('%Y-%m-%dT%H:%M:%S%z',
                '%Y-%m-%dT%H:%M:%S.%f',
                '%Y-%m-%dT%H:%M:%S',
                '%Y-%m-%dT',
                '%Y-%m-%d')
+
+def deserialize_datetime(field_obj, value):
+    # String values arriving over the wire are parsed against the field's own
+    # formats plus the ISO-8601 variants the serializer emits.  An unparseable
+    # string raises ValueError (a 400 in the REST api) rather than passing
+    # garbage through to the database, which sqlite would happily store.
+    if not isinstance(value, str):
+        return value
+    if not value:
+        # empty string (e.g. a blank form input) means "no value".
+        return None
+    formats = list(getattr(field_obj, 'formats', None) or ())
+    formats.extend(f for f in ISO_FORMATS if f not in formats)
     for fmt in formats:
         try:
             return datetime.datetime.strptime(value, fmt)
-        except Exception:
+        except ValueError:
             continue
-    return value
+    raise ValueError('Unrecognized date/time value for "%s": %r'
+                     % (field_obj.name, value))
 
 def path_to_models(model, path):
     accum = []

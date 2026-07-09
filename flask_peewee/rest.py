@@ -212,6 +212,12 @@ class RestResource(object):
     # incoming POST/PUT body -- protects against mass assignment.
     readonly_fields = None
 
+    # when True, a write payload containing unrecognized keys is rejected with
+    # a 400 listing them, instead of the keys being silently ignored --
+    # protects clients against typo'd field names. Read-only fields are
+    # stripped, not rejected, so echoing back a GET response still works.
+    reject_unknown_fields = False
+
     # exclude certian fields from being exposed as filters -- for related fields
     # use "__" notation, e.g. user__password
     filter_exclude = None
@@ -407,8 +413,33 @@ class RestResource(object):
             cleaned[key] = value
         return cleaned
 
+    def check_unknown_fields(self, data, model=None, prefix=''):
+        # collect payload keys the deserializer would not recognize as fields.
+        # A foreign key may be written by field name ("user") or column name
+        # ("user_id"), so both are considered known; nested dicts are checked
+        # against the related model, mirroring the deserializer's traversal.
+        model = model or self.model
+        fields = model._meta.fields
+        known = set(fields)
+        known.update(f.object_id_name for f in model._meta.sorted_fields
+                     if isinstance(f, ForeignKeyField))
+        unknown = []
+        for key, value in data.items():
+            if key not in known:
+                unknown.append(prefix + key)
+            elif key in fields and isinstance(fields[key], ForeignKeyField) \
+                    and isinstance(value, dict):
+                unknown.extend(self.check_unknown_fields(
+                    value, fields[key].rel_model, prefix + key + '__'))
+        return unknown
+
     def deserialize_object(self, data, instance):
         data = self.scrub_readonly_fields(data)
+        if self.reject_unknown_fields:
+            unknown = self.check_unknown_fields(data)
+            if unknown:
+                raise ValueError('Unrecognized field(s): %s'
+                                 % ', '.join(sorted(unknown)))
         d = self.get_deserializer()
         return d.deserialize_object(instance, data)
 

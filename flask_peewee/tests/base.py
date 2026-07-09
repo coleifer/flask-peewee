@@ -12,6 +12,7 @@ from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import ApiToken
 from flask_peewee.tests.test_app import GModel
+from flask_peewee.tests.test_app import HModel
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import Message
@@ -25,8 +26,8 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         utils.PASSWORD_HASH_METHOD = 'pbkdf2:sha256:1'
 
         # drop_tables/create_tables resolve foreign-key ordering for us.
-        models = [User, Message, Note, Comment, EModel, FModel, GModel, Ping,
-                  ApiToken, Tweet]
+        models = [User, Message, Note, Comment, EModel, FModel, GModel,
+                  HModel, Ping, ApiToken, Tweet]
         test_app.db.database.drop_tables(models)
         test_app.db.database.create_tables(models)
 

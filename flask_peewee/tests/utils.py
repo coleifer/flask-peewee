@@ -5,6 +5,7 @@ from flask import request
 from werkzeug.exceptions import NotFound
 
 from flask_peewee.utils import check_password
+from flask_peewee.utils import deserialize_datetime
 from flask_peewee.utils import get_hexdigest
 from flask_peewee.utils import get_model_from_dictionary
 from flask_peewee.utils import get_object_or_404
@@ -77,6 +78,26 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         stored = User.get(User.id == user.id).password
         self.assertFalse(is_legacy_password(stored))
         self.assertTrue(check_password('sekret', stored))
+
+    def test_deserialize_datetime(self):
+        field = Message.pub_date
+
+        # ISO-8601 (serializer output) and the field's own formats parse.
+        self.assertEqual(deserialize_datetime(field, '2026-01-02T03:04:05'),
+                         datetime.datetime(2026, 1, 2, 3, 4, 5))
+        self.assertEqual(deserialize_datetime(field, '2026-01-02 03:04:05'),
+                         datetime.datetime(2026, 1, 2, 3, 4, 5))
+
+        # non-string values pass through untouched.
+        now = datetime.datetime.now()
+        self.assertIs(deserialize_datetime(field, now), now)
+        self.assertIsNone(deserialize_datetime(field, None))
+
+        # an empty string means "no value".
+        self.assertIsNone(deserialize_datetime(field, ''))
+
+        # anything unparseable raises (surfaced as a 400 by the REST api).
+        self.assertRaises(ValueError, deserialize_datetime, field, 'not-a-date')
 
     def test_is_safe_url(self):
         for good in ('/', '/admin/', '/a/b/?x=1', 'relative/path'):

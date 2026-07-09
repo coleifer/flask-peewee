@@ -307,6 +307,44 @@ resource -- silently ignoring any nested object in the payload -- set
 ``nested_writes = False``; the foreign key can still be assigned with a bare id.
 
 
+Validating incoming data
+------------------------
+
+Write payloads are validated as they are deserialized, and problems surface as
+a 400 with a JSON error rather than a 500 (or worse, bad data):
+
+* A body that is not valid JSON is rejected.
+* Values that cannot be coerced to their field's type are rejected.  This
+  includes date/time strings: a value like ``"pub_date": "not-a-date"`` returns
+  ``{"error": "Unrecognized date/time value for \"pub_date\": 'not-a-date'"}``
+  instead of being written through to the database.  Both ISO-8601 (what the
+  API itself emits) and the field's own ``formats`` are accepted.
+* Violated database constraints (``NOT NULL``, unique, foreign keys) are
+  reported as a 400 as well.
+
+Unrecognized keys in a payload are silently ignored by default, which is
+forgiving but means a typo'd field name is dropped without complaint.  Set
+``reject_unknown_fields = True`` on the resource to get a 400 listing the
+offending keys instead:
+
+.. code-block:: python
+
+    class MessageResource(RestResource):
+        reject_unknown_fields = True
+
+.. code-block:: console
+
+    $ curl -d '{"contnet": "hello"}' http://127.0.0.1:5000/api/message/
+
+    {"error": "Unrecognized field(s): contnet"}
+
+Read-only fields are exempt (they are stripped, not rejected), so fetching an
+object and ``PUT``-ing the whole thing back continues to work, and a foreign
+key may be written by field name or column name (``user`` / ``user_id``).
+Unknown keys inside a nested object are reported with the ``__`` path notation,
+e.g. ``user__usernmae``.
+
+
 Allowing users to post objects
 ------------------------------
 

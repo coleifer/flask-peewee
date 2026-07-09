@@ -22,6 +22,7 @@ from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import GModel
+from flask_peewee.tests.test_app import HModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
@@ -593,6 +594,96 @@ class RestApiResourceTestCase(RestApiTestCase):
         resp = self.post_to('/api/gmodel/', {'g_field': 'g2', 'e': e1.id})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(GModel.get(g_field='g2').e, e1)
+
+
+class RestApiValidationTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiValidationTestCase, self).setUp()
+        # HModel is recreated fresh by the base setUp; clear the persistent
+        # A-family rows (child tables first) so counts are predictable.
+        for M in (DModel, CModel, BDetails, BModel, AModel):
+            M.delete().execute()
+
+    def post_to(self, url, data):
+        return self.app.post(url, data=json.dumps(data))
+
+    def test_datetime_garbage_rejected(self):
+        # unparseable date/time strings -> 400 naming the field, nothing
+        # stored (previously the string was written to the database as-is).
+        for field in ('h_date', 'h_day'):
+            resp = self.post_to('/api/hmodel/', {'h_field': 'x',
+                                                 field: 'not-a-date'})
+            self.assertEqual(resp.status_code, 400)
+            self.assertIn(field, self.response_json(resp)['error'])
+        self.assertEqual(HModel.select().count(), 0)
+
+    def test_datetime_formats_accepted(self):
+        # ISO-8601 (what the serializer emits) round-trips.
+        resp = self.post_to('/api/hmodel/', {'h_field': 'iso',
+                                             'h_date': '2026-01-02T03:04:05'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(HModel.get(h_field='iso').h_date,
+                         datetime.datetime(2026, 1, 2, 3, 4, 5))
+
+        # peewee's own space-separated format is accepted too.
+        resp = self.post_to('/api/hmodel/', {'h_field': 'pw',
+                                             'h_date': '2026-01-02 03:04:05'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(HModel.get(h_field='pw').h_date,
+                         datetime.datetime(2026, 1, 2, 3, 4, 5))
+
+        # an empty string (e.g. a blank form input) means "no value".
+        resp = self.post_to('/api/hmodel/', {'h_field': 'blank', 'h_date': ''})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(HModel.get(h_field='blank').h_date)
+
+    def test_unknown_fields_ignored_by_default(self):
+        # default resources preserve the historical behavior: unrecognized
+        # keys are silently ignored.
+        resp = self.post_to('/api/amodel/', {'a_field': 'ok',
+                                             'a_feild': 'typo'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(AModel.select().count(), 1)
+
+    def test_reject_unknown_fields(self):
+        # HResource opts in: a typo'd key -> 400 listing the offender.
+        resp = self.post_to('/api/hmodel/', {'h_field': 'x',
+                                             'h_feild': 'typo'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('h_feild', self.response_json(resp)['error'])
+        self.assertEqual(HModel.select().count(), 0)
+
+        resp = self.post_to('/api/hmodel/', {'h_field': 'clean'})
+        self.assertEqual(resp.status_code, 200)
+
+    def test_reject_unknown_fields_allows_fk_column_name(self):
+        # writing the FK by column name ("a_id") is recognized, not rejected.
+        a = AModel.create(a_field='a1')
+        resp = self.post_to('/api/hmodel/', {'h_field': 'x', 'a_id': a.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(HModel.get(h_field='x').a, a)
+
+    def test_reject_unknown_fields_nested(self):
+        # unknown keys inside a nested foreign-key dict are reported with the
+        # __ path notation.
+        resp = self.post_to('/api/hmodel/', {
+            'h_field': 'x',
+            'a': {'a_field': 'new', 'a_feild': 'typo'},
+        })
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('a__a_feild', self.response_json(resp)['error'])
+
+    def test_reject_unknown_fields_echo_roundtrip(self):
+        # GET -> PUT of the same payload must not 400: the read-only pk is
+        # stripped by scrub_readonly_fields, not treated as unknown.
+        h = HModel.create(h_field='orig')
+        resp = self.app.get('/api/hmodel/%s/' % h.id)
+        data = self.response_json(resp)
+        data['h_field'] = 'edited'
+
+        resp = self.post_to('/api/hmodel/%s/' % h.id, data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(HModel.get(HModel.id == h.id).h_field, 'edited')
 
 
 class RestApiBasicTestCase(RestApiTestCase):

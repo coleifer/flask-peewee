@@ -132,6 +132,12 @@ class GModel(db.Model):
     e = ForeignKeyField(EModel, null=True)
     g_field = CharField()
 
+class HModel(db.Model):
+    a = ForeignKeyField(AModel, null=True)
+    h_field = CharField()
+    h_date = DateTimeField(null=True)
+    h_day = DateField(null=True)
+
 
 class APIKey(db.Model):
     key = CharField()
@@ -254,6 +260,10 @@ class GResource(RestResource):
     include_resources = {'e': EResource}
     nested_writes = False
 
+class HResource(RestResource):
+    # write payloads containing unrecognized keys are rejected with a 400.
+    reject_unknown_fields = True
+
 class AdminOnlyUserResource(UserResource):
     # user writes (even nested) require an admin -- exercises check_*
     # enforcement on nested writes.
@@ -299,6 +309,7 @@ api.register(CModel, CResource, auth=dummy_auth)
 api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
 api.register(GModel, GResource, auth=dummy_auth)
+api.register(HModel, HResource, auth=dummy_auth)
 
 
 # views

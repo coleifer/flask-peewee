@@ -776,10 +776,15 @@ RESTful Resources and their subclasses
 
     .. py:attribute:: paginate_by = 20
 
-        Determines how many results to return for a given API query.
+        The default page size for a given API query.
 
-        .. note:: *Fewer* results can be requested by specifying a ``limit``,
-            but ``paginate_by`` is the upper bound.
+        .. note:: A different page size can be requested by specifying a
+            ``limit``.  ``paginate_by`` is only the default, not a maximum;
+            use ``max_paginate_by`` to cap what a client may request.
+
+    .. py:attribute:: max_paginate_by = None
+
+        When set, caps the page size a client may request with ``limit``.
 
     .. py:attribute:: fields = None
 
@@ -800,6 +805,20 @@ RESTful Resources and their subclasses
     .. py:attribute:: filter_recursive = True
 
         Allow filtering on related resources
+
+    .. py:attribute:: readonly_fields = None
+
+        A list or tuple of field names that clients may never write.  They are
+        stripped from incoming ``POST``/``PUT`` payloads at every level,
+        protecting against mass assignment.  The primary key is always
+        read-only.
+
+    .. py:attribute:: reject_unknown_fields = False
+
+        When ``True``, a write payload containing unrecognized keys is
+        rejected with a 400 listing them, instead of the keys being silently
+        ignored.  Read-only fields are stripped, not rejected, and a foreign
+        key may be written by field name or column name (``user`` / ``user_id``).
 
     .. py:attribute:: include_resources
 
