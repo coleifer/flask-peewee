@@ -105,7 +105,7 @@ user in the special flask variable ``g``.
 Logging users in and out programmatically
 -----------------------------------------
 
-Sometimes you need to establish the session yourself -- for instance, logging a
+Sometimes you need to establish the session yourself, for instance to log a
 user in immediately after they register.  :py:meth:`Auth.login_user` and
 :py:meth:`Auth.logout_user` do exactly that from within a request:
 
@@ -120,7 +120,7 @@ user in immediately after they register.  :py:meth:`Auth.login_user` and
 ``logout_user()`` ends the session.  By default it removes only flask-peewee's
 own session keys, leaving any other data you've stored in the session intact.
 Pass ``clear_session=True`` when constructing :py:class:`Auth` to have logout
-wipe the *entire* session instead -- a simple hardening step against session
+wipe the *entire* session instead, a simple hardening step against session
 fixation:
 
 .. code-block:: python

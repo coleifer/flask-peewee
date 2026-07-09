@@ -382,7 +382,7 @@ Now we can post new notes using a command-line tool like curl:
 You can see that it returns a serialized copy of the new ``Note`` object.
 
 .. note::
-    This is just a small example of what you can do with the Rest API -- refer to
+    This is just a small example of what you can do with the Rest API.  Refer to
     the :ref:`Rest API docs <rest-api>` for more detailed information, including
 
     * limiting access on a per-model basis

@@ -110,7 +110,7 @@ Misc
 .. py:data:: PASSWORD_HASH_METHOD
 
     The hashing method :py:func:`make_password` hands to werkzeug's
-    ``generate_password_hash`` -- ``'scrypt'`` by default.  Override it before
+    ``generate_password_hash`` (``'scrypt'`` by default).  Override it before
     hashing to change the algorithm or work factor, for instance to pick a
     cheaper method that speeds up your test suite:
 

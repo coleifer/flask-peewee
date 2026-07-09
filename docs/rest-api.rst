@@ -30,7 +30,7 @@ Full operations:
 * ``__ne``: not equal to
 * ``__in``: in set
 * ``__is``: is, ``?field__is=None`` or ``?-field__is=None`` for NOT NULL
-* ``__is_not``: is not , ``?field__is_not=None``
+* ``__is_not``: is not, ``?field__is_not=None``
 * ``__like``: wild-card matching, case-sensitive
 * ``__ilike``: wild-card matching, case-insensitive
 * ``__regexp``: regular-expression matching (database-specific)
@@ -231,14 +231,14 @@ the username and id:
     class UserResource(RestResource):
         fields = ('username', 'id')
 
-Reach for whichever is more convenient -- ``fields`` when you want to expose a
+Reach for whichever is more convenient: ``fields`` when you want to expose a
 small, fixed set of columns, ``exclude`` when you want everything but a few.
 
 
 Nested resources
 ----------------
 
-By default a foreign key is serialized as the related row's primary key -- notice
+By default a foreign key is serialized as the related row's primary key.  Notice
 the ``"user": 1`` in the message output above.  To embed the *full* related
 object instead, point ``include_resources`` at the resource that should render it:
 
@@ -298,7 +298,7 @@ as part of the same request.  Two rules keep that safe:
   payload, so a nested object cannot smuggle in a field the resource protects
   (e.g. slipping ``"admin": true`` into a nested user).
 * Each nested write must pass the child resource's own ``check_post`` /
-  ``check_put``, exactly as a direct write to that resource would -- so nesting
+  ``check_put``, exactly as a direct write to that resource would, so nesting
   can never be used to sidestep a resource's authorization.
 
 The entire object graph is saved in a single transaction, so if any nested write
@@ -679,7 +679,7 @@ Restricting what can be filtered
 
 By default every field on the model is filterable and joins may be traversed
 into related models.  Since filters come straight off the query string, you will
-often want to lock this down -- especially for sensitive columns.  Three
+often want to lock this down, especially for sensitive columns.  Three
 :py:class:`RestResource` attributes control it:
 
 * ``filter_fields`` -- a whitelist; only these fields may be filtered on.
@@ -699,8 +699,8 @@ often want to lock this down -- especially for sensitive columns.  Three
         filter_exclude = ('password',)   # ...and don't let it be filtered on either
 
 Because an unrecognized filter is ignored rather than rejected (see the note
-above), tightening this list can never break an otherwise-valid request -- a
-now-disallowed filter simply stops narrowing the results.
+above), tightening this list can never break an otherwise-valid request.  A
+now-disallowed filter stops narrowing the results.
 
 
 Sorting results

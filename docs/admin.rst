@@ -129,7 +129,7 @@ Searching
 
 Set ``search_fields`` to add a quick-search box above the list.  It runs a
 case-insensitive substring match over char/text fields and supports ``__``
-traversal into related models -- so ``('content', 'user__username')`` searches
+traversal into related models, so ``('content', 'user__username')`` searches
 both the message body and the author's username, joining ``User`` automatically:
 
 .. code-block:: python
@@ -212,7 +212,7 @@ By default a foreign key renders as a ``<select>`` of the related rows.  How tha
 holds up when the related table is large depends on where it appears:
 
 * In **filters**, the ``<select>`` is automatically capped at the first 20 rows
-  (plus whichever row is currently selected), so the page never balloons -- but
+  (plus whichever row is currently selected), so the page never balloons, but
   only those 20 rows are reachable.
 * In **model forms** (add/edit), the ``<select>`` is *not* capped: every related
   row is rendered, which is slow to load and hammers the database on a large
@@ -236,7 +236,7 @@ Filters
 ^^^^^^^
 
 Without ``foreign_key_lookups`` the ``user`` filter is a ``<select>`` of the
-first 20 users -- fine for a small table, but on a large one you can only filter
+first 20 users, fine for a small table, but on a large one you can only filter
 by those first 20.  With it, the ``<select>`` gains an inline type-ahead search
 that repopulates its options from ``ajax_list`` as you type, so any user can be
 selected.
@@ -245,7 +245,7 @@ Model forms
 ^^^^^^^^^^^
 
 Without ``foreign_key_lookups`` an add or edit form renders every related row in a
-single ``<select>`` -- the case worth avoiding on a large table.  With it, the
+single ``<select>``, the case worth avoiding on a large table.  With it, the
 field becomes a button showing the current selection; clicking it opens a modal
 with a paginated, type-ahead list:
 
@@ -285,7 +285,7 @@ The action shows up in the "With selected..." dropdown labeled with its
 (``FlagAction`` becomes "Flag").  Pass ``name`` (and optionally ``description``)
 to the constructor to override it, e.g. ``FlagAction(name='Flag as spam')``.
 
-If a callback returns a Flask ``Response``, it is sent to the user as-is -- handy
+If a callback returns a Flask ``Response``, it is sent to the user as-is, handy
 for generating a download from the selected rows:
 
 .. code-block:: python
@@ -300,7 +300,7 @@ for generating a download from the selected rows:
                 'Content-Disposition': 'attachment; filename=messages.txt'})
 
 If the callback returns anything else, the user is redirected back to the list
-view.  Submitting an action with no rows selected simply flashes a warning and
+view.  Submitting an action with no rows selected flashes a warning and
 does nothing.
 
 
@@ -344,7 +344,7 @@ produces:
 
 .. note::
     Because related data nests under its foreign key, that foreign key is
-    included automatically -- there is no way to nest a related field without it.
+    included automatically.  There is no way to nest a related field without it.
 
 
 Creating admin panels
