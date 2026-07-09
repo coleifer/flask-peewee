@@ -632,8 +632,8 @@ class Admin(object):
     def unregister(self, model):
         del(self._registry[model])
 
-    def register_panel(self, title, panel):
-        panel_instance = panel(self, title)
+    def register_panel(self, title, panel, *args, **kwargs):
+        panel_instance = panel(self, title, *args, **kwargs)
         self._panels[title] = panel_instance
 
     def unregister_panel(self, title):
