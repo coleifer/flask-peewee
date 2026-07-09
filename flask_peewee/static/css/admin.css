@@ -244,15 +244,32 @@ table td.last {
 }
 
 /* list view: let a long, unbreakable value (e.g. a tracker URL) wrap inside
-   its column instead of forcing the whole table wide. `overflow-wrap:
-   anywhere` (unlike word-break) also lets the column shrink to fit, and the
-   cap keeps one long-text column from crowding out the others. The
-   .table-responsive wrapper scrolls the table itself if it's still too wide,
-   so the page body never scrolls sideways. */
+   its column instead of overflowing. Use `break-word`, NOT `anywhere`:
+   `anywhere` advertises a soft-wrap opportunity between every character when
+   the browser computes a column's min-content width, so on a narrow screen
+   the auto table-layout collapses every text column to ~1ch and the row
+   explodes into a tower of one-letter lines instead of scrolling. This bites
+   links hardest, since a linked title or tag is one long token.
+   `break-word` still breaks an over-long token during layout, but keeps each
+   column's min-content at its longest word — so the table retains a real
+   minimum width and the .table-responsive wrapper scrolls it sideways when it
+   can't fit, rather than the page body. The cap keeps one long-text column
+   from crowding out the others. */
 table.list-view td {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   max-width: 28rem;
   vertical-align: top;
+}
+/* below md the sidebar and content stack to full width and the list is at its
+   most cramped: hold the table to a readable width and let the
+   .table-responsive wrapper scroll it sideways, like a window, instead of the
+   auto-layout squeezing every column into the viewport. (A short, few-column
+   table is forced to scroll too; swap this for a per-column min-width on
+   `td:not(.check):not(.links):not(.last)` if that ever grates.) */
+@media (max-width: 767.98px) {
+  table.list-view {
+    min-width: 34rem;
+  }
 }
 table.list-view tbody td {
   font-size: .8125rem;
