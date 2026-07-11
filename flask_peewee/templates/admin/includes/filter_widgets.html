@@ -14,7 +14,8 @@
     <form action="." class="modeladmin-filters" method="get">
       {% if ordering %}<input type="hidden" name="ordering" value="{{ ordering }}" />{% endif %}
       {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}" />{% endif %}
-      <div class="d-flex align-items-start">
+      {# phones: Apply/Reset drop below the filter list instead of squeezing beside it #}
+      <div class="d-flex flex-column flex-sm-row align-items-sm-start gap-2">
         <div class="filter-list flex-grow-1">
           {% for f in active_filters %}
             <div class="filter-row d-flex align-items-center gap-2 mb-2">

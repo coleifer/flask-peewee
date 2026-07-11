@@ -17,7 +17,9 @@
 <body class="{% block body_class %}admin{% endblock %}">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-3 col-lg-2">
+      {# order-1: on phones the content comes first and this nav column drops
+         below it, so you land on the page, not on a screenful of nav #}
+      <div class="col-md-3 col-lg-2 order-1 order-md-0">
         {# themes position this fixed (top or bottom bar) or leave it in flow
            as a window above the model list #}
         <nav class="navbar navbar-expand navbar-dark bg-dark fixed-top">

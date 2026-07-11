@@ -41,6 +41,28 @@ body.admin .form-select-sm {
   --bs-dark-rgb: var(--fp-ink);
   border-bottom: 2px solid var(--fp-accent);
 }
+/* the navbar is fixed chrome (top bar here, bottom taskbar in crisp) and the
+   body reserves exactly one row of padding for it — it must never wrap to a
+   second row and cover content. Keep items on one line; if a very narrow
+   screen still can't fit them, the bar pans sideways instead of growing. */
+.navbar .container-fluid {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.navbar .container-fluid::-webkit-scrollbar {
+  display: none;
+}
+.navbar-brand,
+.navbar .nav-link {
+  white-space: nowrap;
+}
+/* phones show a clock in the device status bar an inch away */
+@media (max-width: 575.98px) {
+  .taskbar-clock {
+    display: none;
+  }
+}
 .navbar-brand {
   font-weight: 700;
 }
@@ -162,6 +184,9 @@ body.admin .btn:where(:not(.btn-primary):not(.btn-secondary):not(.btn-success):n
 .pagination {
   --bs-pagination-active-bg: var(--fp-accent);
   --bs-pagination-active-border-color: var(--fp-accent);
+  /* a long page range wraps instead of poking out of the content window */
+  flex-wrap: wrap;
+  row-gap: .25rem;
 }
 
 .section-heading {
@@ -216,11 +241,28 @@ body.admin .btn:where(:not(.btn-primary):not(.btn-secondary):not(.btn-success):n
   padding-top: 1rem;
   margin-top: 1.25rem;
 }
+/* five action buttons don't fit one row on a phone. The row is `d-flex
+   gap-2` (nowrap): without these rules flex squeezes every button to its
+   longest word and the labels fold into multi-line towers of uneven height.
+   Wrap whole buttons instead, each keeping its label on one line. */
+.form-actions {
+  flex-wrap: wrap;
+}
+.form-actions .btn {
+  white-space: nowrap;
+}
 
 /* modeladmin filters */
 form.modeladmin-filters select,
 form.modeladmin-filters input {
   display: inline-block;
+}
+/* a filter row (label chip + operation select + value input) is a nowrap
+   flex row built in two places — server-side in filter_widgets.html and
+   client-side in admin.js add_row — so wrap it here rather than in both
+   class strings. Without this the row overflows the card on phones. */
+form.modeladmin-filters .filter-row {
+  flex-wrap: wrap;
 }
 
 /* the split date + time inputs of a datetime field sit side by side */

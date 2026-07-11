@@ -68,6 +68,8 @@ body.admin {
   background-color: var(--desk);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='3'%3E%3Crect width='1' height='1' fill='%23484769'/%3E%3C/svg%3E");
   padding: 14px 8px 64px;
+  /* clearance for the fixed bottom taskbar, incl. notched-phone inset */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
 body.admin *,
@@ -236,6 +238,17 @@ body.admin input[type="button"]:not([class]):active {
   box-shadow: 0 -1px 0 #55504d;
   padding: 4px 6px;
   min-height: 38px;
+  /* keep the home-indicator area of notched phones out of the buttons */
+  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+}
+/* the body's 64px bottom padding assumes a one-row taskbar; admin.css keeps
+   the items on one line, and phones just get slimmer chips */
+@media (max-width: 575.98px) {
+  .navbar-brand,
+  .navbar .nav-link {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
 }
 .navbar .container-fluid {
   gap: 6px;
