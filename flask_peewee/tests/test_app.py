@@ -185,7 +185,7 @@ class NotePanel(AdminPanel):
 
     def get_context(self):
         return {
-            'note_list': Note.select().order_by(('created_date', 'desc')).paginate(1, 3)
+            'note_list': Note.select().order_by(Note.created_date.desc()).paginate(1, 3)
         }
 
 
