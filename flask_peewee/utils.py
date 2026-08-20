@@ -15,6 +15,7 @@ from peewee import DateField
 from peewee import DateTimeField
 from peewee import DoesNotExist
 from peewee import ForeignKeyField
+from peewee import JOIN
 from peewee import Model
 from peewee import SelectQuery
 from peewee import TimeField
@@ -210,6 +211,39 @@ def path_to_models(model, path):
     if path:
         accum.extend(path_to_models(model, path))
     return accum
+
+
+def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER):
+    """
+    Join `query` from `base_model` along the foreign keys in `fks`, aliasing each
+    related model so two paths to the same model do not collapse onto one join.
+    peewee's ensure_join dedupes by model pair and ignores the fk, so filtering
+    two different foreign keys to the same model would otherwise share a single
+    join and both predicates would hit one alias.
+
+    Joins default to INNER; pass ``JOIN.LEFT_OUTER`` (as search does) to keep a
+    base row whose foreign key along the path is null.  `alias_map` caches a path
+    prefix -> terminal alias, so repeated uses of one path share their join.
+    Returns (query, terminal), where terminal is the base model for an empty path
+    or the final alias.
+    """
+    src = base_model
+    prefix = ()
+    for fk in fks:
+        prefix += (fk.name,)
+        dest = alias_map.get(prefix)
+        if dest is None:
+            dest = fk.rel_model.alias()
+            alias_map[prefix] = dest
+            # attach to a throwaway attr, not the fk's own name. otherwise peewee
+            # binds the (column-less) joined alias onto e.g. `message.user`, and
+            # a LEFT join with no match leaves it None instead of lazy-loading.
+            query = query.join_from(
+                src, dest, join_type,
+                on=(getattr(src, fk.name) == getattr(dest, fk.rel_field.name)),
+                attr='_join_%s' % '__'.join(prefix))
+        src = dest
+    return query, src
 
 
 def convert_boolean(s):

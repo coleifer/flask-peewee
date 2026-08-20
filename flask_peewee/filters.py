@@ -10,6 +10,7 @@ from wtforms import validators
 from wtforms import widgets
 
 from flask_peewee.forms import BaseModelConverter
+from flask_peewee.utils import alias_join_path
 from functools import reduce
 
 
@@ -474,11 +475,11 @@ class FilterForm(object):
         # reconstruct the "select" and "value" fields we are searching for in the
         # arguments from the request by depth-first searching the field tree --
         # basically what we should have at the end is the field we're querying,
-        # the type of query (QueryFilter), the value requested, and the path we
-        # took to get there (joins)
+        # the type of query (QueryFilter), the value requested, and the foreign
+        # keys we joined to get there.
         accum = {}
 
-        def _dfs(node, prefix, models, join_columns, path_names):
+        def _dfs(node, prefix, join_columns, path_names):
             for field in node.fields:
                 qf_select = self.field_operation_prefix.join((prefix, field.name))
                 qf_value = self.field_value_prefix.join((prefix, field.name))
@@ -488,7 +489,6 @@ class FilterForm(object):
                     accum[field].append((
                         request.args.getlist(qf_select),
                         request.args.getlist(qf_value),
-                        models,
                         join_columns,
                         qf_select,
                         qf_value,
@@ -497,11 +497,10 @@ class FilterForm(object):
 
             for child_prefix, child in node.children.items():
                 new_prefix = prefix + self.field_relation_prefix + child_prefix + self.separator
-                model_copy = list(models) + [child.model]
                 join_copy = list(join_columns) + [node.model._meta.fields[child_prefix]]
-                _dfs(child, new_prefix, model_copy, join_copy, path_names + [child_prefix])
+                _dfs(child, new_prefix, join_copy, path_names + [child_prefix])
 
-        _dfs(self._field_tree, '', [], [], [])
+        _dfs(self._field_tree, '', [], [])
 
         return accum
 
@@ -520,12 +519,11 @@ class FilterForm(object):
         form = FormClass(request.args)
         query_filters = self.parse_query_filters()
         cleaned = []
+        alias_map = {}
 
         for field, filters in query_filters.items():
-            for (filter_key_list, filter_value_list, path, join_path, qf_s, qf_v, label) in filters:
-                query = query.switch(self.model)
-                for join, model in zip(join_path, path):
-                    query = query.ensure_join(join.model, model, join)
+            for (filter_key_list, filter_value_list, join_path, qf_s, qf_v, label) in filters:
+                query, target = alias_join_path(query, self.model, join_path, alias_map)
 
                 op_groups = {}
                 for filter_key, filter_value in zip(filter_key_list, filter_value_list):
@@ -538,8 +536,15 @@ class FilterForm(object):
                     except (TypeError, ValueError):
                         continue
 
+                    # build the predicate against the (possibly aliased) target
+                    # so two paths to one model don't collapse onto one join.
+                    bound = query_filter
+                    if target is not self.model:
+                        bound = type(query_filter)(
+                            getattr(target, field.name),
+                            query_filter.name, query_filter.options)
                     op_groups.setdefault(query_filter.key, []).append(
-                        query_filter.query(value))
+                        bound.query(value))
 
                     # `form` only binds the first occurrence of each
                     # parameter, so give each row its own form bound to just

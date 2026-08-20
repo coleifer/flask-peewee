@@ -20,6 +20,7 @@ from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import DModel
+from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import ScopedItem
@@ -928,6 +929,11 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(note.message, 'testing')
 
 
+class LinkAdmin(ModelAdmin):
+    filter_fields = ('src', 'dst', 'src__username', 'dst__username')
+    search_fields = ('label', 'dst__username')
+
+
 class AdminFilterTestCase(BaseAdminTestCase):
     def setUp(self):
         super(AdminFilterTestCase, self).setUp()
@@ -1044,6 +1050,35 @@ class AdminFilterTestCase(BaseAdminTestCase):
         # date-aware operators work against the integer column
         self.assertEqual(run('year', '2020'), ({'y2020'}, True))
         self.assertEqual(run('within_days', '2'), ({'today'}, True))
+
+    def test_filter_two_fks_same_model(self):
+        # two foreign keys to one model must join through separate aliases, so a
+        # filter on both does not collapse to one join with contradictory
+        # predicates (which returned nothing).
+        self.create_users()
+        a, b = self.admin, self.normal
+        Link.create(src=a, dst=b, label='a-to-b')
+        Link.create(src=b, dst=a, label='b-to-a')
+
+        link_admin = LinkAdmin(admin, Link)
+        qs = ('/?fr_src-fo_username=eq&fr_src-fv_username=%s'
+              '&fr_dst-fo_username=eq&fr_dst-fv_username=%s' % (a.username, b.username))
+        with self.flask_app.test_request_context(qs):
+            _, query, _, _ = link_admin.process_filters(Link.select())
+            labels = [l.label for l in query]
+        self.assertEqual(labels, ['a-to-b'])
+
+    def test_search_left_joins_nullable_fk(self):
+        # search LEFT OUTER joins the fk path, so a row whose nullable fk is null
+        # still appears when it matches a direct search field.
+        self.create_users()
+        a = self.admin
+        Link.create(src=a, dst=a, label='has-dst')
+        Link.create(src=a, dst=None, label='null-dst-findme')
+
+        link_admin = LinkAdmin(admin, Link)
+        query = link_admin.apply_search(Link.select(), 'findme')
+        self.assertEqual([l.label for l in query], ['null-dst-findme'])
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):

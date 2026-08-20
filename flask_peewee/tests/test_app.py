@@ -177,6 +177,15 @@ class ScopedRef(db.Model):
     name = CharField()
 
 
+class Link(db.Model):
+    # two foreign keys to the same model, one nullable. exercises the aliased
+    # filter join (distinct paths must not collapse) and the LEFT OUTER search
+    # join (a null-fk row must survive a search that matches a direct field).
+    src = ForeignKeyField(User, backref='links_out')
+    dst = ForeignKeyField(User, null=True, backref='links_in')
+    label = TextField(default='')
+
+
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
 

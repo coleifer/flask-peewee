@@ -21,6 +21,7 @@ from flask_peewee.forms import AjaxSelectWidget
 from flask_peewee.forms import LimitedModelSelectField
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
+from flask_peewee.utils import alias_join_path
 from flask_peewee.utils import get_next
 from flask_peewee.utils import path_to_models
 from flask_peewee.utils import slugify
@@ -28,6 +29,7 @@ from peewee import BooleanField
 from peewee import DateField
 from peewee import DateTimeField
 from peewee import ForeignKeyField
+from peewee import JOIN
 from peewee import TextField
 from werkzeug.datastructures import CombinedMultiDict
 from werkzeug.datastructures import Headers
@@ -241,13 +243,13 @@ class ModelAdmin(object):
         # resolve a possibly-dotted search field to its Field object plus the
         # foreign keys that must be joined to reach it.
         model = self.model
-        joins = []
+        fks = []
         parts = name.split('__')
         for attr in parts[:-1]:
             fk = model._meta.fields[attr]
-            joins.append((fk, fk.rel_model))
+            fks.append(fk)
             model = fk.rel_model
-        return model._meta.fields[parts[-1]], joins
+        return model._meta.fields[parts[-1]], fks
 
     def apply_search(self, query, term):
         term = (term or '').strip()
@@ -255,16 +257,17 @@ class ModelAdmin(object):
         if not term or not search_fields:
             return query
 
+        # search LEFT OUTER joins each path so a row whose foreign key is null
+        # still appears when it matches a direct field. filters INNER join.
+        alias_map = {}
         clauses = []
         for name in search_fields:
-            field, joins = self._resolve_search_field(name)
-            query = query.switch(self.model)
-            for fk, rel_model in joins:
-                query = query.ensure_join(fk.model, rel_model, fk)
-            # ** is peewee's ILIKE operator (case-insensitive contains).
-            clauses.append(field.contains(term))
+            field, fks = self._resolve_search_field(name)
+            query, target = alias_join_path(
+                query, self.model, fks, alias_map, JOIN.LEFT_OUTER)
+            clauses.append(getattr(target, field.name).contains(term))
 
-        return query.switch(self.model).where(functools.reduce(operator.or_, clauses))
+        return query.where(functools.reduce(operator.or_, clauses))
 
     def get_form_data(self):
         # combine files with form data so file-upload fields (e.g. blobs)
