@@ -3,6 +3,8 @@ import json
 import operator
 import os
 import re
+from urllib.parse import parse_qsl
+from urllib.parse import urlencode
 
 from flask import Blueprint
 from flask import Response
@@ -744,11 +746,12 @@ class Admin(object):
         return s.replace('_', ' ').title()
 
     def update_querystring(self, querystring, key, val):
-        if not querystring:
-            return '%s=%s' % (key, val)
-        else:
-            querystring = re.sub(r'%s(?:[^&]+)?&?' % key, '', querystring.decode('utf8')).rstrip('&')
-            return ('%s&%s=%s' % (querystring, key, val)).lstrip('&')
+        if isinstance(querystring, bytes):
+            querystring = querystring.decode('utf8')
+        parsed = parse_qsl(querystring or '', keep_blank_values=True)
+        pairs = [(k, v) for k, v in parsed if k != key]
+        pairs.append((key, val))
+        return urlencode(pairs)
 
     def get_verbose_name(self, model, column_name):
         try:

@@ -1111,6 +1111,12 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
         self.assertEqual(admin.update_querystring(qs('page=1&session=3'), 'page', 2), 'session=3&page=2')
         self.assertEqual(admin.update_querystring(qs('session=3&page=1&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
         self.assertEqual(admin.update_querystring(qs('session=3&ordering=id'), 'page', 2), 'session=3&ordering=id&page=2')
+        # a value that contains the key name as a substring is not corrupted.
+        self.assertEqual(admin.update_querystring(qs('q=rampage&page=1'), 'page', 2),
+                         'q=rampage&page=2')
+        # clearing 'q' preserves filter params whose values embed the key.
+        self.assertEqual(admin.update_querystring(qs('q=hello&fo_content=eq'), 'q', ''),
+                         'fo_content=eq&q=')
 
     def test_get_verbose_name(self):
         self.assertEqual(admin.get_verbose_name(User, 'username'), 'Username')
