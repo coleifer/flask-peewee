@@ -139,12 +139,17 @@ def get_model_from_dictionary(model, field_dict, strict=False):
     else:
         model_instance = model()
         check_fks = False
+    # foreign keys may be written by column name ("user_id"), the only
+    # non-field keys allowed. setattr'ing any other key would reach a writable
+    # property like "_pk" and let a payload retarget the row.
+    fk_columns = {f.object_id_name for f in model._meta.sorted_fields
+                  if isinstance(f, ForeignKeyField)}
     models = [model_instance]
     for field_name, value in field_dict.items():
         try:
             field_obj = model._meta.fields[field_name]
         except KeyError:
-            if not strict:
+            if not strict and field_name in fk_columns:
                 setattr(model_instance, field_name, value)
             continue
 

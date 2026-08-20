@@ -106,3 +106,24 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         s = self.s.serialize_object(self.admin)
         d, model_list = self.d.deserialize_object(User(), s)
         self.assertEqual(d, self.admin)
+
+    def test_deserialize_drops_non_field_keys(self):
+        # fields and fk column names ("user_id") are honored, "_pk" is dropped.
+        # _pk has a setter, so accepting it would retarget the row.
+        self.create_users()
+        note = Note.create(user=self.admin, message='original')
+        other = Note.create(user=self.normal, message='other')
+
+        deserialized, models = self.d.deserialize_object(note, {
+            'message': 'edited',
+            '_pk': other.id,
+        })
+        self.assertEqual(deserialized.message, 'edited')
+        self.assertEqual(deserialized.id, note.id)
+
+        # a foreign key written by column name still lands.
+        via_column, models = self.d.deserialize_object(Note(), {
+            'message': 'via-column',
+            'user_id': self.normal.id,
+        })
+        self.assertEqual(via_column.user_id, self.normal.id)

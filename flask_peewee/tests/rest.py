@@ -1095,6 +1095,40 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         self.assertTrue(User.select().where(User.id == self.normal.id).exists())
         self.assertFalse(User.select().where(User.id == 99999).exists())
 
+    def test_write_pk_payload_ignored(self):
+        # a "_pk" in the body must not retarget the row: the addressed row is
+        # the only one a write may touch. Before the guard a PUT edited a
+        # different row and a POST clobbered one via update-instead-of-insert.
+        self.create_notes()
+
+        # PUT at admin_note carrying normal_note's pk edits admin_note only.
+        url = '/api/note/%s/' % self.admin_note.id
+        body = json.dumps({'message': 'edited', '_pk': self.normal_note.id})
+        resp = self.app.put(url, data=body,
+                            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Note.get(id=self.admin_note.id).message, 'edited')
+        self.assertEqual(Note.get(id=self.normal_note.id).message, 'normal')
+
+        # POST carrying an existing pk inserts a new row, leaving it untouched.
+        before = Note.select().count()
+        body = json.dumps({'message': 'created', 'user': self.normal.id,
+                           '_pk': self.admin_note.id})
+        resp = self.app.post('/api/note/', data=body,
+                             headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Note.select().count(), before + 1)
+        self.assertEqual(Note.get(id=self.admin_note.id).message, 'edited')
+
+    def test_write_fk_by_column_name(self):
+        # a foreign key may still be written by its column name ("user_id"),
+        # the legitimate use of the unknown-key fallback the _pk guard keeps.
+        body = json.dumps({'message': 'via-column', 'user_id': self.inactive.id})
+        resp = self.app.post('/api/note/', data=body,
+                             headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Note.get(message='via-column').user, self.inactive)
+
     def test_nested_readonly_mass_assignment_edit(self):
         # A read-only field on a *nested* resource must be honored just like on
         # a top-level one. A non-admin edits their own comment and tries to flip
