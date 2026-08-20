@@ -784,6 +784,33 @@ class AdminTestCase(BaseAdminTestCase):
             for row in data:
                 self.assertEqual(list(row), ['username'])
 
+    def test_export_no_fields_returns_ids_only(self):
+        # an empty or fully-excluded selection must not fall through to a
+        # full-row dump. it exports the primary key only, so export_exclude'd
+        # columns such as the password hash never leak.
+        self.create_users()
+        pk = User._meta.primary_key.name
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # no 'fields' posted at all.
+            resp = c.post('/admin/user/export/')
+            self.assertEqual(resp.status_code, 200)
+            data = json.loads(resp.data)
+            self.assertEqual(len(data), 3)
+            for row in data:
+                self.assertEqual(list(row), [pk])
+
+            # only an excluded field posted, so nothing survives the allowlist.
+            resp = c.post('/admin/user/export/', data={'fields': ['password']})
+            self.assertEqual(resp.status_code, 200)
+            data = json.loads(resp.data)
+            self.assertEqual(len(data), 3)
+            for row in data:
+                self.assertEqual(list(row), [pk])
+                self.assertNotIn('password', row)
+
     def test_admin_search(self):
         users = self.create_users()
         for user in users:

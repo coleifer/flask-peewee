@@ -492,6 +492,12 @@ class ModelAdmin(object):
             # cannot be dumped by posting field names directly.
             allowed = self.get_exportable_lookups(related)
             raw_fields = [f for f in request.form.getlist('fields') if f in allowed]
+            if not raw_fields:
+                # an empty or fully-excluded selection exports identities only.
+                # an empty field list otherwise leaves the query columns
+                # unrestricted and the serializer defaulting to every field, so
+                # it would dump excluded columns such as the password hash.
+                raw_fields = [self.pk.name]
             export = Export(query, related, raw_fields)
             return export.json_response('export-%s.json' % self.get_admin_name())
 
