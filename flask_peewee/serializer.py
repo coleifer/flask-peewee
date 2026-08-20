@@ -36,14 +36,15 @@ class Serializer(object):
             return value
 
     def clean_data(self, data):
-        for key, value in data.items():
-            if isinstance(value, dict):
-                self.clean_data(value)
-            elif isinstance(value, (list, tuple)):
-                data[key] = list(map(self.clean_data, value))
-            else:
-                data[key] = self.convert_value(value)
-        return data
+        # recurse structurally: dicts and lists are walked element-wise, and any
+        # scalar (including a list element) is passed through convert_value. the
+        # old code mapped clean_data over list elements and then called .items()
+        # on each, which raised on a list of scalars.
+        if isinstance(data, dict):
+            return {key: self.clean_data(value) for key, value in data.items()}
+        elif isinstance(data, (list, tuple)):
+            return [self.clean_data(value) for value in data]
+        return self.convert_value(data)
 
     def serialize_object(self, obj, fields=None, exclude=None):
         data = get_dictionary_from_model(obj, fields, exclude)

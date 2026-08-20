@@ -535,6 +535,23 @@ class AdminTestCase(BaseAdminTestCase):
             data = json.loads(resp.data.decode('utf8'))
             self.assertEqual(data['object_list'], [])
 
+    def test_ajax_list_bad_field_returns_empty(self):
+        # the /_ajax/ route exists on every admin, so it must not 500 on inputs
+        # it accepts: no field, a real fk the admin did not configure for
+        # lookup, or a name that is not a field at all.
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # NoteAdmin has no foreign_key_lookups configured.
+            for url in ('/admin/note/_ajax/',
+                        '/admin/note/_ajax/?field=user',
+                        '/admin/note/_ajax/?field=nope'):
+                resp = c.get(url)
+                self.assertEqual(resp.status_code, 200, url)
+                self.assertEqual(json.loads(resp.data)['object_list'], [], url)
+
     def test_model_admin_index(self):
         self.create_users()
 

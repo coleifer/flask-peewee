@@ -8,6 +8,7 @@ from flask_peewee.utils import check_password
 from flask_peewee.utils import deserialize_datetime
 from flask_peewee.utils import get_hexdigest
 from flask_peewee.utils import get_model_from_dictionary
+from flask_peewee.utils import get_next
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import is_legacy_password
 from flask_peewee.utils import is_safe_url
@@ -37,6 +38,15 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         self.assertRaises(NotFound, get_object_or_404, active, User.username=='not-here')
         self.assertRaises(NotFound, get_object_or_404, inactive, User.username=='test')
         self.assertEqual(user, get_object_or_404(active, User.username=='test'))
+
+    def test_get_next(self):
+        # request.query_string is bytes in werkzeug 3, so get_next must decode
+        # it rather than interpolate the bytes repr into the next url.
+        with flask_app.test_request_context('/admin/message/?page=2&ordering=-pub_date'):
+            self.assertEqual(get_next(),
+                             '/admin/message/?page=2&ordering=-pub_date')
+        with flask_app.test_request_context('/admin/message/'):
+            self.assertEqual(get_next(), '/admin/message/')
 
     def test_passwords(self):
         p = make_password('testing')

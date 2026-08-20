@@ -92,7 +92,7 @@ class PaginatedQuery(object):
 def get_next():
     if not request.query_string:
         return request.path
-    return '%s?%s' % (request.path, request.query_string)
+    return '%s?%s' % (request.path, request.query_string.decode('utf-8'))
 
 def is_safe_url(url):
     # only allow redirects to relative, same-host paths -- reject absolute

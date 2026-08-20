@@ -42,6 +42,22 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'email': '',
         })
 
+    def test_clean_data_nested_lists(self):
+        # a field holding a list of scalars or datetimes must serialize without
+        # error, converting each element (the old code called .items() on a
+        # list element and raised).
+        dt = datetime.datetime(2026, 1, 2, 3, 4, 5)
+        cleaned = self.s.clean_data({
+            'tags': ['a', 'b', 'c'],
+            'times': [dt, dt],
+            'nested': [{'when': dt}],
+            'scalar': dt,
+        })
+        self.assertEqual(cleaned['tags'], ['a', 'b', 'c'])
+        self.assertEqual(cleaned['times'], [dt.isoformat(), dt.isoformat()])
+        self.assertEqual(cleaned['nested'], [{'when': dt.isoformat()}])
+        self.assertEqual(cleaned['scalar'], dt.isoformat())
+
     def test_deserializer(self):
         users = self.create_users()
 

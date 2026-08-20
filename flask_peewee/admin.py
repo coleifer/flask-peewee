@@ -520,14 +520,18 @@ class ModelAdmin(object):
         prev_page = 0
         next_page = 0
 
+        data = []
+        lookups = self.foreign_key_lookups or {}
         try:
             models = path_to_models(self.model, field_name)
-        except AttributeError:
-            data = []
-        else:
+        except (AttributeError, TypeError):
+            # field is missing or not a relation on this model.
+            models = None
+
+        if models is not None and field_name in lookups:
             field = self.model._meta.fields[field_name]
             rel_model = models.pop()
-            rel_field = rel_model._meta.fields[self.foreign_key_lookups[field_name]]
+            rel_field = rel_model._meta.fields[lookups[field_name]]
             # enumerate candidates through the related admin's get_query() so the
             # picker respects that admin's row visibility.
             query = self.admin.get_query_for(rel_model).order_by(rel_field)
@@ -542,9 +546,7 @@ class ModelAdmin(object):
             if current_page < pq.get_pages():
                 next_page = current_page + 1
 
-            data = []
-
-            # if the field is nullable, include the "None" option at the top of the list
+            # if the field is nullable, include the "None" option at the top.
             if field.null:
                 data.append({'id': '__None', 'repr': 'None'})
 
