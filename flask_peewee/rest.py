@@ -696,8 +696,8 @@ class RestResource(object):
 
 
 class RestrictOwnerResource(RestResource):
-    # restrict PUT/DELETE to owner of an object, likewise apply owner to any
-    # incoming POSTs
+    # restrict edits (PUT and a POST to a detail url) and DELETE to the owner of
+    # the object, and stamp the current user as owner on any create.
     owner_field = 'user'
 
     def validate_owner(self, user, obj):
@@ -705,6 +705,12 @@ class RestrictOwnerResource(RestResource):
 
     def set_owner(self, obj, user):
         setattr(obj, self.owner_field, user)
+
+    def check_post(self, obj=None):
+        # a list POST creates a new object (obj is None) and is open, becoming
+        # owned by the caller in save_object. a detail POST edits an existing
+        # object and must clear the same owner check as PUT.
+        return obj is None or self.validate_owner(g.user, obj)
 
     def check_put(self, obj):
         return self.validate_owner(g.user, obj)

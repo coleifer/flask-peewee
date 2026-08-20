@@ -1306,6 +1306,31 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPIMessage(resp_json, message)
 
+    def test_auth_edit_via_post(self):
+        # a POST to a detail url is an edit, so it must clear the owner check
+        # like PUT. Regression: a non-owner POST used to overwrite the row and
+        # reassign its owner to the caller.
+        self.create_messages()
+
+        original = self.normal_message.content
+        url = '/api/message/%s/' % self.normal_message.id
+
+        # a non-owner POST is forbidden and changes nothing.
+        resp = self.app.post(url, data=json.dumps({'content': 'hacked'}),
+                             headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 403)
+        obj = Message.get(id=self.normal_message.id)
+        self.assertEqual(obj.content, original)
+        self.assertEqual(obj.user_id, self.normal.id)
+
+        # the owner can still edit through POST.
+        resp = self.app.post(url, data=json.dumps({'content': 'edited'}),
+                             headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        obj = Message.get(id=self.normal_message.id)
+        self.assertEqual(obj.content, 'edited')
+        self.assertEqual(obj.user_id, self.normal.id)
+
     def test_auth_delete(self):
         self.create_messages()
 
