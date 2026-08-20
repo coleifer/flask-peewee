@@ -171,7 +171,8 @@ def get_model_from_dictionary(model, field_dict, strict=False):
             setattr(model_instance, field_name, field_obj.python_value(value))
     return model_instance, models
 
-ISO_FORMATS = ('%Y-%m-%dT%H:%M:%S%z',
+ISO_FORMATS = ('%Y-%m-%dT%H:%M:%S.%f%z',
+               '%Y-%m-%dT%H:%M:%S%z',
                '%Y-%m-%dT%H:%M:%S.%f',
                '%Y-%m-%dT%H:%M:%S',
                '%Y-%m-%dT',

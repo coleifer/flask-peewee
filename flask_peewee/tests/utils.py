@@ -110,6 +110,16 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         # anything unparseable raises (surfaced as a 400 by the REST api).
         self.assertRaises(ValueError, deserialize_datetime, field, 'not-a-date')
 
+        # aware datetimes round-trip: the serializer emits fractional seconds
+        # with an offset, and javascript Date.toISOString() emits a trailing Z.
+        utc = datetime.timezone.utc
+        self.assertEqual(
+            deserialize_datetime(field, '2026-01-02T03:04:05.789012+00:00'),
+            datetime.datetime(2026, 1, 2, 3, 4, 5, 789012, tzinfo=utc))
+        self.assertEqual(
+            deserialize_datetime(field, '2026-01-02T03:04:05.789Z'),
+            datetime.datetime(2026, 1, 2, 3, 4, 5, 789000, tzinfo=utc))
+
     def test_is_safe_url(self):
         for good in ('/', '/admin/', '/a/b/?x=1', 'relative/path'):
             self.assertTrue(is_safe_url(good), good)
