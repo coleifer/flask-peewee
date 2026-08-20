@@ -10,7 +10,7 @@ from wtforms import validators
 from wtforms import widgets
 
 from flask_peewee.forms import BaseModelConverter
-from flask_peewee.utils import alias_join_path
+from flask_peewee.utils import alias_field
 from flask_peewee.utils import convert_boolean
 from functools import reduce
 
@@ -522,7 +522,8 @@ class FilterForm(object):
 
         for field, filters in query_filters.items():
             for (filter_key_list, filter_value_list, join_path, qf_s, qf_v, label) in filters:
-                query, target = alias_join_path(query, self.model, join_path, alias_map)
+                query, bound_field = alias_field(
+                    query, self.model, join_path, field, alias_map)
 
                 op_groups = {}
                 for filter_key, filter_value in zip(filter_key_list, filter_value_list):
@@ -535,13 +536,12 @@ class FilterForm(object):
                     except (TypeError, ValueError):
                         continue
 
-                    # build the predicate against the (possibly aliased) target
+                    # build the predicate against the (possibly aliased) field
                     # so two paths to one model don't collapse onto one join.
                     bound = query_filter
-                    if target is not self.model:
+                    if bound_field is not field:
                         bound = type(query_filter)(
-                            getattr(target, field.name),
-                            query_filter.name, query_filter.options)
+                            bound_field, query_filter.name, query_filter.options)
                     op_groups.setdefault(query_filter.key, []).append(
                         bound.query(value))
 

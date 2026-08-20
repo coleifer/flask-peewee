@@ -341,6 +341,7 @@ api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
 api.register(GModel, GResource, auth=dummy_auth)
 api.register(HModel, HResource, auth=dummy_auth)
+api.register(Link, auth=dummy_auth)
 
 
 # views

@@ -23,6 +23,7 @@ from flask_peewee.forms import AjaxSelectWidget
 from flask_peewee.forms import LimitedModelSelectField
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
+from flask_peewee.utils import alias_field
 from flask_peewee.utils import alias_join_path
 from flask_peewee.utils import get_next
 from flask_peewee.utils import order_query
@@ -255,9 +256,9 @@ class ModelAdmin(object):
         clauses = []
         for name in search_fields:
             field, fks = self._resolve_search_field(name)
-            query, target = alias_join_path(
-                query, self.model, fks, alias_map, JOIN.LEFT_OUTER)
-            clauses.append(getattr(target, field.name).contains(term))
+            query, field = alias_field(
+                query, self.model, fks, field, alias_map, JOIN.LEFT_OUTER)
+            clauses.append(field.contains(term))
 
         return query.where(functools.reduce(operator.or_, clauses))
 

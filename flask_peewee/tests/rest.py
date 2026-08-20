@@ -23,12 +23,14 @@ from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import HModel
+from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import TestModel
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
+from flask_peewee.tests.test_app import api
 from flask_peewee.tests.test_app import db
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
@@ -911,6 +913,37 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual(resp_json['objects'], [
             {'id': f1.id, 'e': {'id': e1.id, 'e_field': 'e1'}, 'f_field': 'f1'}])
+
+    def create_links(self):
+        self.create_users()
+        Link.create(src=self.admin, dst=self.normal, label='a-to-b')
+        Link.create(src=self.normal, dst=self.admin, label='b-to-a')
+
+    def test_filter_two_fks_same_model(self):
+        # two foreign keys to one model must filter through separate aliased
+        # joins, not collapse onto one join with contradictory predicates.
+        self.create_links()
+        resp = self.app.get('/api/link/?src__username=admin&dst__username=normal')
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['label'] for o in resp_json['objects']], ['a-to-b'])
+
+    def test_filter_one_path_shares_join(self):
+        # two filters on one related path reuse a single aliased join, and a
+        # boolean on the aliased path still converts through the real field.
+        self.create_links()
+        resource = api._registry[Link]
+        with self.flask_app.test_request_context(
+                '/api/link/?src__username=admin&src__active=True'):
+            query = resource.process_query(resource.get_query())
+        self.assertEqual(query.sql()[0].count('JOIN'), 1)
+        self.assertEqual([l.label for l in query], ['a-to-b'])
+
+    def test_filter_negated_related(self):
+        # negation survives the rebind onto the aliased field.
+        self.create_links()
+        resp = self.app.get('/api/link/?-src__username=admin')
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['label'] for o in resp_json['objects']], ['b-to-a'])
 
 
 class RestApiUserAuthTestCase(RestApiTestCase):

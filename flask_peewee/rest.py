@@ -14,6 +14,7 @@ from flask_peewee.filters import make_field_tree
 from flask_peewee.serializer import Deserializer
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
+from flask_peewee.utils import alias_field
 from flask_peewee.utils import convert_boolean
 from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import order_query
@@ -310,33 +311,44 @@ class RestResource(object):
         if not raw_filters:
             return query
 
-        # do a breadth first search across the field tree created by filter_fields,
-        # searching for matching keys in the request parameters -- when found,
-        # filter the query accordingly
-        queue = [(self._field_tree, '')]
+        # phase 1: breadth first search across the field tree created by
+        # filter_fields, matching request parameters to fields and carrying
+        # the foreign-key chain needed to reach each one.
+        plan = []
+        queue = [(self._field_tree, '', [])]
         while queue:
-            node, prefix = queue.pop(0)
+            node, prefix, fks = queue.pop(0)
             for field in node.fields:
                 filter_expr = '%s%s' % (prefix, field.name)
-
                 if filter_expr in raw_filters:
-                    for op, arg_list, negated in raw_filters.pop(filter_expr):
-                        clean_args = self.clean_arg_list(arg_list)
-                        query = self.apply_filter(query, field, filter_expr, op, clean_args, negated)
+                    plan.append((field, fks, raw_filters.pop(filter_expr)))
 
             for child_prefix, child_node in node.children.items():
-                queue.append((child_node, prefix + child_prefix + '__'))
+                fk = node.model._meta.fields[child_prefix]
+                queue.append((child_node, prefix + child_prefix + '__', fks + [fk]))
+
+        # phase 2: join each related path through its own alias (peewee's
+        # filter()/ensure_join would collapse two fks to one model onto a
+        # single join) and build predicates against the aliased field.
+        alias_map = {}
+        for field, fks, filters in plan:
+            query, lhs = alias_field(query, self.model, fks, field, alias_map)
+            for op, arg_list, negated in filters:
+                clean_args = self.clean_arg_list(arg_list)
+                if isinstance(field, BooleanField):
+                    clean_args = [convert_boolean(arg) for arg in clean_args]
+                query = self.apply_filter(query, lhs, op, clean_args, negated)
 
         return query
 
     def clean_arg_list(self, arg_list):
         return [self.value_transforms.get(arg, arg) for arg in arg_list]
 
-    def apply_filter(self, query, field, expr, op, arg_list, negated):
-        query_expr = '%s__%s' % (expr, op)
-        constructor = lambda kwargs: ~DQ(**kwargs) if negated else DQ(**kwargs)
-        if isinstance(field, BooleanField):
-            arg_list = [convert_boolean(arg) for arg in arg_list]
+    def apply_filter(self, query, field, op, arg_list, negated):
+        # `field` arrives rebound to its join alias. DJANGO_MAP[op] is the
+        # same callable peewee's filter() resolves ops through.
+        op_fn = DJANGO_MAP[op]
+        make = lambda value: ~op_fn(field, value) if negated else op_fn(field, value)
 
         if op == 'in':
             # `in` values may be given comma-separated and/or as repeated
@@ -344,13 +356,11 @@ class RestResource(object):
             values = []
             for arg in arg_list:
                 values.extend(v.strip() for v in str(arg).split(','))
-            return query.filter(constructor({query_expr: values}))
+            return query.where(make(values))
         elif len(arg_list) == 1:
-            return query.filter(constructor({query_expr: arg_list[0]}))
+            return query.where(make(arg_list[0]))
         else:
-            query_clauses = [
-                constructor({query_expr: val}) for val in arg_list]
-            return query.filter(reduce(operator.or_, query_clauses))
+            return query.where(reduce(operator.or_, [make(val) for val in arg_list]))
 
     def get_serializer(self):
         return Serializer()

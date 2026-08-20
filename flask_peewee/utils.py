@@ -248,6 +248,18 @@ def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER,
     return query, src
 
 
+def alias_field(query, base_model, fks, field, alias_map, join_type=JOIN.INNER):
+    """
+    Join `query` along `fks` via alias_join_path and rebind `field` to the
+    terminal alias, returning (query, field) ready to build a predicate.
+    An empty path returns the field untouched.
+    """
+    query, target = alias_join_path(query, base_model, fks, alias_map, join_type)
+    if target is not base_model:
+        field = getattr(target, field.name)
+    return query, field
+
+
 def order_query(query, model, ordering, is_sortable):
     if ordering:
         column = ordering.lstrip('-')
