@@ -9,7 +9,9 @@ from flask import session
 from flask import url_for
 
 from flask_peewee.admin import AdminPanel
+from flask_peewee.admin import Export
 from flask_peewee.admin import ModelAdmin
+from flask_peewee.serializer import Serializer
 from flask_peewee.filters import FilterForm
 from flask_peewee.filters import FilterMapping
 from flask_peewee.filters import FilterModelConverter
@@ -33,6 +35,8 @@ from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
 
+from peewee import CharField
+from peewee import ForeignKeyField
 from wtfpeewee.orm import model_form
 
 
@@ -1079,6 +1083,52 @@ class AdminFilterTestCase(BaseAdminTestCase):
         link_admin = LinkAdmin(admin, Link)
         query = link_admin.apply_search(Link.select(), 'findme')
         self.assertEqual([l.label for l in query], ['null-dst-findme'])
+
+    def test_export_two_fks_same_model(self):
+        # two foreign keys to one model export through separate aliased joins
+        # instead of raising "more than one foreign key".
+        self.create_users()
+        Link.create(src=self.admin, dst=self.normal, label='ab')
+
+        related = LinkAdmin(admin, Link).collect_related_fields(Link, {}, [])
+        export = Export(Link.select(), related, ['src__username', 'dst__username'])
+        prepared, field_dict = export.prepare_query()
+        rows = [Serializer().serialize_object(o, field_dict) for o in prepared]
+        self.assertEqual(rows, [
+            {'src': {'username': 'admin'}, 'dst': {'username': 'normal'}}])
+
+    def test_export_related_field_without_fk_column(self):
+        # a related column serializes even when its fk column was not also
+        # selected (the fk name is added so the serializer recurses).
+        self.create_users()
+        Message.create(user=self.admin, content='hi')
+
+        related = admin._registry[Message].collect_related_fields(Message, {}, [])
+        export = Export(Message.select(), related, ['content', 'user__username'])
+        prepared, field_dict = export.prepare_query()
+        rows = [Serializer().serialize_object(o, field_dict) for o in prepared]
+        self.assertEqual(rows, [{'content': 'hi', 'user': {'username': 'admin'}}])
+
+    def test_export_fk_to_non_pk_field(self):
+        # an fk that references a non-pk field must select that field on the
+        # alias, not the related model's primary key.
+        class Coded(db.Model):
+            code = CharField(unique=True)
+            label = CharField()
+        class CodedRef(db.Model):
+            coded = ForeignKeyField(Coded, field='code')
+            note = CharField()
+
+        db.database.create_tables([Coded, CodedRef])
+        try:
+            CodedRef.create(coded=Coded.create(code='abc', label='Alpha'), note='n1')
+            related = ModelAdmin(admin, CodedRef).collect_related_fields(CodedRef, {}, [])
+            export = Export(CodedRef.select(), related, ['note', 'coded__label'])
+            prepared, field_dict = export.prepare_query()
+            rows = [Serializer().serialize_object(o, field_dict) for o in prepared]
+            self.assertEqual(rows, [{'note': 'n1', 'coded': {'label': 'Alpha'}}])
+        finally:
+            db.database.drop_tables([CodedRef, Coded])
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):

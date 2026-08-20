@@ -792,62 +792,58 @@ class Export(object):
         self.related = related
         self.fields = fields
 
-        self.alias_to_model = dict([(k[1], k[0]) for k in self.related.keys()])
-
     def prepare_query(self):
         clone = self.query.clone()
-
+        base = self.query.model
         select = []
-        joined = set()
+        field_dict = {}
+        alias_map = {}
 
-        def ensure_join(query, m, p):
-            if m not in joined:
-                if '__' not in p:
-                    next_model = query.model
-                else:
-                    next, _ = p.rsplit('__', 1)
-                    next_model = self.alias_to_model[next]
-                    query = ensure_join(query, next_model, next)
+        def want(model, name):
+            names = field_dict.setdefault(model, [])
+            if name not in names:
+                names.append(name)
 
-                joined.add(m)
-                return query.switch(next_model).join(m)
-            else:
-                return query
-
-        extra_pks = []
+        def pick(field):
+            if not any(f is field for f in select):
+                select.append(field)
 
         for lookup in self.fields:
-            # lookup may be something like "content" or "user__user_name"
-            if '__' in lookup:
-                path, column = lookup.rsplit('__', 1)
-                model = self.alias_to_model[path]
-                clone = ensure_join(clone, model, path)
+            if '__' not in lookup:
+                want(base, lookup)
+                pick(base._meta.fields[lookup])
+                continue
 
-                # the related model's primary key must be selected for the
-                # instance to be reconstructed and traversed when serializing.
-                pk = model._meta.primary_key
-                if not any(f is pk for f in extra_pks):
-                    extra_pks.append(pk)
-            else:
-                model = self.query.model
-                column = lookup
+            path, column = lookup.rsplit('__', 1)
+            fks, model = [], base
+            for part in path.split('__'):
+                fk = model._meta.fields[part]
+                fks.append(fk)
+                model = fk.rel_model
 
-            field = model._meta.fields[column]
-            select.append(field)
+            clone, alias = alias_join_path(clone, base, fks, alias_map, bind=True)
+
+            # serializing a related column needs get_dictionary_from_model to
+            # recurse into each fk on the path, which requires the fk name in the
+            # field list and its id at every hop. under a bound join peewee reads
+            # that id from the aliased row's primary key, so select each alias pk.
+            src, prefix = base, ()
+            for fk in fks:
+                want(src, fk.name)
+                prefix += (fk.name,)
+                dest = alias_map[prefix]
+                pick(getattr(dest, fk.rel_field.name))
+                src = fk.rel_model
+            want(model, column)
+            pick(getattr(alias, column))
 
         if select:
-            columns = select + [pk for pk in extra_pks
-                                if not any(f is pk for f in select)]
-            clone = clone.columns(*columns)
-        return clone, select
+            clone = clone.columns(*select)
+        return clone, field_dict
 
     def json_response(self, filename='export.json'):
         serializer = Serializer()
-        prepared_query, selected = self.prepare_query()
-        field_dict = {}
-        for field in selected:
-            field_dict.setdefault(field.model, [])
-            field_dict[field.model].append(field.name)
+        prepared_query, field_dict = self.prepare_query()
 
         def generate():
             i = prepared_query.count()

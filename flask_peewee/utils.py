@@ -214,7 +214,8 @@ def path_to_models(model, path):
     return accum
 
 
-def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER):
+def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER,
+                    bind=False):
     """
     Join `query` from `base_model` along the foreign keys in `fks`, aliasing each
     related model so two paths to the same model do not collapse onto one join.
@@ -236,13 +237,15 @@ def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER):
         if dest is None:
             dest = fk.rel_model.alias()
             alias_map[prefix] = dest
-            # attach to a throwaway attr, not the fk's own name. otherwise peewee
-            # binds the (column-less) joined alias onto e.g. `message.user`, and
-            # a LEFT join with no match leaves it None instead of lazy-loading.
+            # bind=True attaches the alias to the fk's own attr so the joined row
+            # is available for serialization. the default uses a throwaway attr,
+            # so a filter/search join does not overwrite (and, on a LEFT join
+            # with no match, null out) the real relation.
+            attr = fk.name if bind else '_join_%s' % '__'.join(prefix)
             query = query.join_from(
                 src, dest, join_type,
                 on=(getattr(src, fk.name) == getattr(dest, fk.rel_field.name)),
-                attr='_join_%s' % '__'.join(prefix))
+                attr=attr)
         src = dest
     return query, src
 
