@@ -607,6 +607,18 @@ class RestApiValidationTestCase(RestApiTestCase):
     def post_to(self, url, data):
         return self.app.post(url, data=json.dumps(data))
 
+    def test_resource_filter_fields_not_mutated(self):
+        class ChildResource(RestResource):
+            pass
+        class ParentResource(RestResource):
+            filter_fields = ['content', 'user']
+            include_resources = {'user': ChildResource}
+
+        before = list(ParentResource.filter_fields)
+        ParentResource(RestAPI(self.flask_app), Message, Authentication())
+        ParentResource(RestAPI(self.flask_app), Message, Authentication())
+        self.assertEqual(ParentResource.filter_fields, before)
+
     def test_datetime_garbage_rejected(self):
         # unparseable date/time strings -> 400 naming the field, nothing
         # stored (previously the string was written to the database as-is).

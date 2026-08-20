@@ -209,7 +209,7 @@ def path_to_models(model, path):
     else:
         raise AttributeError('%s has no related field named "%s"' % (model, attr))
     if path:
-        accum.extend(path_to_models(model, path))
+        accum.extend(path_to_models(field.rel_model, path))
     return accum
 
 

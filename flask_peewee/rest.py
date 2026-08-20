@@ -249,8 +249,8 @@ class RestResource(object):
         else:
             self._exclude = {}
 
-        self._filter_fields = self.filter_fields or list(self.model._meta.sorted_field_names)
-        self._filter_exclude = self.filter_exclude or []
+        self._filter_fields = list(self.filter_fields or self.model._meta.sorted_field_names)
+        self._filter_exclude = list(self.filter_exclude or [])
 
         self._resources = {}
 

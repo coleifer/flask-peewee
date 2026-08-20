@@ -13,6 +13,7 @@ from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import is_legacy_password
 from flask_peewee.utils import is_safe_url
 from flask_peewee.utils import make_password
+from flask_peewee.utils import path_to_models
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
@@ -143,3 +144,12 @@ class UtilsTestCase(FlaskPeeweeTestCase):
 
         self.assertEqual(user.username, 'cl')
         self.assertFalse(user.is_admin)
+
+    def test_path_to_models_multi_segment(self):
+        class C(Model):
+            pass
+        class B(Model):
+            c = ForeignKeyField(C)
+        class A(Model):
+            b = ForeignKeyField(B)
+        self.assertEqual(path_to_models(A, 'b__c'), [B, C])
