@@ -90,14 +90,17 @@ class Auth(object):
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
+                form.populate_obj(instance)
 
-                user = super(UserAdmin, self).save_model(instance, form, adding)
+                # hash before the single save so the raw password is never
+                # written to the database. the old order let super() save the
+                # plaintext first, then overwrote it with the hash on a second
+                # save.
+                if form.password.data != orig_password:
+                    instance.set_password(form.password.data)
 
-                if orig_password != form.password.data:
-                    user.set_password(form.password.data)
-                    user.save()
-
-                return user
+                instance.save(force_insert=adding)
+                return instance
 
 
         return UserAdmin
