@@ -401,7 +401,9 @@ class ModelAdmin(object):
         else:
             id_list = request.form.getlist('id')
 
-        query = self.model.select().where(self.pk << id_list)
+        # honor get_query() so a scoped admin only deletes, and on the GET
+        # confirmation page only discloses, rows the user is allowed to see.
+        query = self.get_query().where(self.pk << id_list)
 
         if request.method == 'GET':
             collected = {}
@@ -520,7 +522,9 @@ class ModelAdmin(object):
             field = self.model._meta.fields[field_name]
             rel_model = models.pop()
             rel_field = rel_model._meta.fields[self.foreign_key_lookups[field_name]]
-            query = rel_model.select().order_by(rel_field)
+            # enumerate candidates through the related admin's get_query() so the
+            # picker respects that admin's row visibility.
+            query = self.admin.get_query_for(rel_model).order_by(rel_field)
             query_string = request.args.get('query')
             if query_string:
                 query = query.where(rel_field.contains(query_string))
@@ -641,6 +645,13 @@ class Admin(object):
 
     def get_admin_for(self, model):
         return self._registry.get(model)
+
+    def get_query_for(self, model):
+        # the base query for a model, scoped by its registered admin's
+        # get_query() when it has one. Falls back to the bare model select so an
+        # unregistered related model still resolves.
+        model_admin = self.get_admin_for(model)
+        return model_admin.get_query() if model_admin else model.select()
 
     def get_model_admins(self):
         return sorted(self._registry.values(), key=lambda o: o.get_admin_name())

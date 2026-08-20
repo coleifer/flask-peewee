@@ -22,6 +22,8 @@ from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import ScopedItem
+from flask_peewee.tests.test_app import ScopedRef
 from flask_peewee.tests.test_app import TSModel
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import admin
@@ -120,6 +122,8 @@ class AdminTestCase(BaseAdminTestCase):
             admin._registry[DModel],
             admin._registry[Message],
             admin._registry[Note],
+            admin._registry[ScopedItem],
+            admin._registry[ScopedRef],
             admin._registry[User],
         ])
         self.assertContext('panels', [
@@ -478,6 +482,58 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(User.select().count(), 0)
             self.assertEqual(Message.select().count(), 0)
             self.assertEqual(Note.select().count(), 0)
+
+    def test_delete_respects_get_query(self):
+        # ScopedItemAdmin.get_query() hides rows flagged hidden. Both the GET
+        # confirmation and the POST go through it, so a hidden row can be
+        # neither disclosed nor deleted.
+        self.create_users()
+        visible = ScopedItem.create(label='visible')
+        hidden = ScopedItem.create(label='hidden', hidden=True)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # the confirmation page for a hidden row shows nothing.
+            resp = c.get('/admin/scopeditem/delete/?id=%d' % hidden.id)
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(list(self.get_context('query')), [])
+
+            # posting the hidden id deletes nothing.
+            resp = c.post('/admin/scopeditem/delete/', data={'id': hidden.id})
+            self.assertRedirect(resp)
+            self.assertTrue(
+                ScopedItem.select().where(ScopedItem.id == hidden.id).exists())
+
+            # a visible row is still shown and deletable.
+            resp = c.get('/admin/scopeditem/delete/?id=%d' % visible.id)
+            self.assertEqual(list(self.get_context('query')), [visible])
+            resp = c.post('/admin/scopeditem/delete/', data={'id': visible.id})
+            self.assertRedirect(resp)
+            self.assertFalse(
+                ScopedItem.select().where(ScopedItem.id == visible.id).exists())
+
+    def test_ajax_list_respects_related_get_query(self):
+        # the FK picker on ScopedRef.item enumerates ScopedItem through its
+        # admin's get_query(), so it cannot disclose hidden rows.
+        self.create_users()
+        visible = ScopedItem.create(label='visible')
+        hidden = ScopedItem.create(label='hidden', hidden=True)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            resp = c.get('/admin/scopedref/_ajax/?field=item')
+            self.assertEqual(resp.status_code, 200)
+            ids = [o['id'] for o in
+                   json.loads(resp.data.decode('utf8'))['object_list']]
+            self.assertIn(visible.id, ids)
+            self.assertNotIn(hidden.id, ids)
+
+            # searching for the hidden row returns nothing.
+            resp = c.get('/admin/scopedref/_ajax/?field=item&query=hidden')
+            data = json.loads(resp.data.decode('utf8'))
+            self.assertEqual(data['object_list'], [])
 
     def test_model_admin_index(self):
         self.create_users()
@@ -992,5 +1048,7 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
             admin._registry[DModel],
             admin._registry[Message],
             admin._registry[Note],
+            admin._registry[ScopedItem],
+            admin._registry[ScopedRef],
             admin._registry[User],
         ])

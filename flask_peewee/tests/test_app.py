@@ -165,6 +165,18 @@ class TSModel(db.Model):
     label = CharField()
 
 
+class ScopedItem(db.Model):
+    # ScopedItemAdmin.get_query() hides rows flagged hidden, so the admin's
+    # delete path and the FK picker that targets this model must respect it.
+    label = CharField()
+    hidden = BooleanField(default=False)
+
+
+class ScopedRef(db.Model):
+    item = ForeignKeyField(ScopedItem)
+    name = CharField()
+
+
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
 
@@ -215,6 +227,14 @@ class MessageAdmin(ModelAdmin):
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
 
+class ScopedItemAdmin(ModelAdmin):
+    # scope every path, including delete, to non-hidden rows.
+    def get_query(self):
+        return ScopedItem.select().where(ScopedItem.hidden == False)
+
+class ScopedRefAdmin(ModelAdmin):
+    foreign_key_lookups = {'item': 'label'}
+
 
 auth.register_admin(admin)
 admin.register(AModel, AAdmin)
@@ -224,6 +244,8 @@ admin.register(DModel, DAdmin)
 admin.register(BDetails)
 admin.register(Message, MessageAdmin)
 admin.register(Note, NoteAdmin)
+admin.register(ScopedItem, ScopedItemAdmin)
+admin.register(ScopedRef, ScopedRefAdmin)
 admin.register_panel('Notes', NotePanel)
 
 
