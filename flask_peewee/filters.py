@@ -11,6 +11,7 @@ from wtforms import widgets
 
 from flask_peewee.forms import BaseModelConverter
 from flask_peewee.utils import alias_join_path
+from flask_peewee.utils import convert_boolean
 from functools import reduce
 
 
@@ -233,9 +234,7 @@ class TimestampGreaterThanEqualToFilter(TimestampMixin, GreaterThanEqualToQueryF
 
 class BooleanEqualQueryFilter(EqualQueryFilter):
     def clean(self, value):
-        if isinstance(value, str) and value.lower() in ('0', 'false', 'f', ''):
-            return False
-        return True
+        return convert_boolean(value)
 
 
 class BooleanNotEqualQueryFilter(BooleanEqualQueryFilter):
@@ -583,5 +582,5 @@ class FilterModelConverter(BaseModelConverter):
         self.defaults = dict(self.defaults)
         self.defaults[TextField] = fields.StringField
         self.defaults[DateTimeField] = DateTimeLocalField
-        # TimestampField represents a datetime; give it the same picker input.
+        # TimestampField represents a datetime, so give it the same picker input.
         self.defaults[TimestampField] = DateTimeLocalField

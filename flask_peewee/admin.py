@@ -25,21 +25,16 @@ from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import alias_join_path
 from flask_peewee.utils import get_next
+from flask_peewee.utils import order_query
 from flask_peewee.utils import path_to_models
 from flask_peewee.utils import slugify
-from peewee import BooleanField
-from peewee import DateField
-from peewee import DateTimeField
 from peewee import ForeignKeyField
 from peewee import JOIN
-from peewee import TextField
 from werkzeug.datastructures import CombinedMultiDict
 from werkzeug.datastructures import Headers
 from wtforms import fields
-from wtforms import widgets
 from wtfpeewee.fields import ModelHiddenField
 from wtfpeewee.fields import ModelSelectField
-from wtfpeewee.fields import ModelSelectMultipleField
 from wtfpeewee.orm import model_form
 
 
@@ -126,7 +121,7 @@ class ModelAdmin(object):
     delete_recursive = True
 
     # restrict which fields may be exported. export_fields is a whitelist of
-    # field names; export_exclude a blacklist. Related models are restricted
+    # field names, export_exclude a blacklist. Related models are restricted
     # by their own registered ModelAdmin's settings.
     export_fields = None
     export_exclude = None
@@ -228,12 +223,7 @@ class ModelAdmin(object):
         return instance
 
     def apply_ordering(self, query, ordering):
-        if ordering:
-            desc, column = ordering.startswith('-'), ordering.lstrip('-')
-            if self.column_is_sortable(column):
-                field = self.model._meta.fields[column]
-                query = query.order_by(field.asc() if not desc else field.desc())
-        return query
+        return order_query(query, self.model, ordering, self.column_is_sortable)
 
     def get_extra_context(self):
         return {}
@@ -287,7 +277,6 @@ class ModelAdmin(object):
             elif action == 'export':
                 return redirect(url_for(self.get_url_name('export'), id=id_list))
             elif action in self.action_map:
-                id_list = request.form.getlist('id')
                 if not id_list:
                     flash('Please select one or more rows.', 'warning')
                 else:
@@ -388,7 +377,6 @@ class ModelAdmin(object):
         )
 
     def collect_objects(self, obj):
-        deps = obj.dependencies()
         objects = []
 
         for query, fk in obj.dependencies():
@@ -597,7 +585,6 @@ class Admin(object):
         self.app = app
         self.auth = auth
 
-        self._admin_models = {}
         self._registry = {}
         self._panels = {}
 
@@ -642,8 +629,6 @@ class Admin(object):
 
     def register(self, model, admin_class=ModelAdmin):
         model_admin = admin_class(self, model)
-        admin_name = model_admin.get_admin_name()
-
         self._registry[model] = model_admin
 
     def unregister(self, model):

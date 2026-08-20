@@ -1,6 +1,5 @@
 import base64
 import datetime
-import sys
 import uuid
 
 from peewee import Model

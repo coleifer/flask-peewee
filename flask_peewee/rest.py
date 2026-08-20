@@ -4,11 +4,8 @@ import operator
 
 from flask import Blueprint
 from flask import Response
-from flask import abort
 from flask import g
-from flask import redirect
 from flask import request
-from flask import session
 from flask import url_for
 from peewee import *
 from peewee import DJANGO_MAP
@@ -19,6 +16,7 @@ from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import convert_boolean
 from flask_peewee.utils import get_object_or_404
+from flask_peewee.utils import order_query
 from flask_peewee.utils import slugify
 from functools import reduce
 
@@ -30,7 +28,7 @@ ALL_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
 
 class RestForbidden(Exception):
-    # raised when a nested write fails the child resource's check_*; caught in
+    # raised when a nested write fails the child resource's check_*. caught in
     # create/edit and turned into a 403 (and rolls back the enclosing atomic).
     pass
 
@@ -196,7 +194,7 @@ class AdminAuthentication(UserAuthentication):
 class RestResource(object):
     # default page size when the client does not request a "limit".
     paginate_by = 20
-    # upper bound on a client-requested "limit"; None means no ceiling. This
+    # upper bound on a client-requested "limit". None means no ceiling. This
     # lets clients ask for pages larger than paginate_by (up to the cap) --
     # paginate_by alone is only the default, never a maximum.
     max_paginate_by = None
@@ -265,10 +263,6 @@ class RestResource(object):
 
                 self._filter_fields.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
                 self._filter_exclude.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])
-
-            self._include_foreign_keys = False
-        else:
-            self._include_foreign_keys = True
 
         self._field_tree = make_field_tree(self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
 
@@ -416,7 +410,7 @@ class RestResource(object):
     def check_unknown_fields(self, data, model=None, prefix=''):
         # collect payload keys the deserializer would not recognize as fields.
         # A foreign key may be written by field name ("user") or column name
-        # ("user_id"), so both are considered known; nested dicts are checked
+        # ("user_id"), so both are considered known. nested dicts are checked
         # against the related model, mirroring the deserializer's traversal.
         model = model or self.model
         fields = model._meta.fields
@@ -519,13 +513,8 @@ class RestResource(object):
 
     def apply_ordering(self, query):
         ordering = request.args.get('ordering') or ''
-        if ordering:
-            desc, column = ordering.startswith('-'), ordering.lstrip('-')
-            if column in self.model._meta.fields:
-                field = self.model._meta.fields[column]
-                query = query.order_by(field.asc() if not desc else field.desc())
-
-        return query
+        return order_query(query, self.model, ordering,
+                           self.model._meta.fields.__contains__)
 
     def get_request_metadata(self, paginated_query):
         var = paginated_query.page_var
@@ -660,35 +649,26 @@ class RestResource(object):
             self.save_related_objects(obj, data)
             return self.save_object(obj, data)
 
-    def create(self):
+    def _write(self, instance):
         try:
             data = self.read_request_data()
         except ValueError:
             return self.response_bad_request('Request body is not valid JSON.')
 
         try:
-            obj = self.persist_object(self.model(), data)
+            obj = self.persist_object(instance, data)
         except RestForbidden:
             return self.response_forbidden()
         except (IntegrityError, DataError, ValueError, TypeError) as exc:
             return self.response_bad_request(str(exc))
 
         return self.response(self.serialize_object(obj))
+
+    def create(self):
+        return self._write(self.model())
 
     def edit(self, obj):
-        try:
-            data = self.read_request_data()
-        except ValueError:
-            return self.response_bad_request('Request body is not valid JSON.')
-
-        try:
-            obj = self.persist_object(obj, data)
-        except RestForbidden:
-            return self.response_forbidden()
-        except (IntegrityError, DataError, ValueError, TypeError) as exc:
-            return self.response_bad_request(str(exc))
-
-        return self.response(self.serialize_object(obj))
+        return self._write(obj)
 
     def delete(self, obj):
         res = obj.delete_instance(recursive=self.delete_recursive)
@@ -739,9 +719,6 @@ class RestAPI(object):
 
     def unregister(self, model):
         del(self._registry[model])
-
-    def is_registered(self, model):
-        return self._registry.get(model)
 
     def response_auth_failed(self):
         return Response('Authentication failed', 401, {

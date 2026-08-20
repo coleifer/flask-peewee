@@ -2,7 +2,6 @@ import functools
 import os
 
 from flask import Blueprint
-from flask import abort
 from flask import flash
 from flask import g
 from flask import redirect

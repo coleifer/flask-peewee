@@ -1,7 +1,6 @@
 import datetime
 import hmac
 import math
-import random
 import re
 import sys
 from hashlib import sha1
@@ -163,8 +162,7 @@ def get_model_from_dictionary(model, field_dict, strict=False):
             setattr(model_instance, field_name, rel_inst)
         else:
             if isinstance(field_obj, BooleanField):
-                if isinstance(value, str) and value.lower() in ('0', 'f', 'false', ''):
-                    value = False
+                value = convert_boolean(value)
             elif isinstance(field_obj, (DateTimeField, DateField, TimeField)):
                 value = deserialize_datetime(field_obj, value)
 
@@ -248,6 +246,16 @@ def alias_join_path(query, base_model, fks, alias_map, join_type=JOIN.INNER,
                 attr=attr)
         src = dest
     return query, src
+
+
+def order_query(query, model, ordering, is_sortable):
+    if ordering:
+        column = ordering.lstrip('-')
+        if is_sortable(column):
+            field = model._meta.fields[column]
+            return query.order_by(
+                field.desc() if ordering.startswith('-') else field.asc())
+    return query
 
 
 def convert_boolean(s):
