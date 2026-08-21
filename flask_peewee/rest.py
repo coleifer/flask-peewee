@@ -246,9 +246,12 @@ class RestResource(object):
         self.authentication = authentication
         self.allowed_methods = allowed_methods or list(ALL_METHODS)
 
-        self._fields = {self.model: self.fields or self.model._meta.sorted_field_names}
+        # field maps are keyed by path (see get_dictionary_from_model): the
+        # root is (), and each nested resource is grafted in under its field
+        # name below.
+        self._fields = {(): self.fields or self.model._meta.sorted_field_names}
         if self.exclude:
-            self._exclude = {self.model: self.exclude}
+            self._exclude = {(): self.exclude}
         else:
             self._exclude = {}
 
@@ -263,8 +266,12 @@ class RestResource(object):
                 field_obj = self.model._meta.fields[field_name]
                 resource_obj = resource(self.api, field_obj.rel_model, self.authentication, self.allowed_methods)
                 self._resources[field_name] = resource_obj
-                self._fields.update(resource_obj._fields)
-                self._exclude.update(resource_obj._exclude)
+                # graft the child's path-keyed maps in under this field name,
+                # so its root () becomes (field_name,) here.
+                self._fields.update({(field_name,) + p: v
+                                     for p, v in resource_obj._fields.items()})
+                self._exclude.update({(field_name,) + p: v
+                                      for p, v in resource_obj._exclude.items()})
 
                 self._filter_fields.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
                 self._filter_exclude.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])

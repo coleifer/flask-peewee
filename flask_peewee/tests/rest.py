@@ -994,6 +994,34 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual([o['id'] for o in resp_json['objects']], [ids[2]])
 
+    def test_serialize_two_relations_one_model(self):
+        # two relations to one model each get their own path-keyed field set:
+        # one cannot leak the other's fields, and nesting one does not nest the
+        # other. before, both shared _fields keyed by the User class.
+        self.create_users()
+        Link.create(src=self.admin, dst=self.normal, label='x')
+        link = Link.get(Link.label == 'x')
+
+        class PublicUser(RestResource):
+            fields = ('id', 'username')
+
+        class FullUser(RestResource):
+            fields = ('id', 'username', 'email')
+
+        class BothResource(RestResource):
+            include_resources = {'src': PublicUser, 'dst': FullUser}
+
+        out = BothResource(api, Link, Authentication()).serialize_object(link)
+        self.assertEqual(out['src'], {'id': self.admin.id, 'username': 'admin'})
+        self.assertEqual(set(out['dst']), {'id', 'username', 'email'})
+
+        class SrcOnly(RestResource):
+            include_resources = {'src': PublicUser}
+
+        out2 = SrcOnly(api, Link, Authentication()).serialize_object(link)
+        # the undeclared sibling relation stays a scalar id, not a nested dict.
+        self.assertEqual(out2['dst'], self.normal.id)
+
 
 class RestApiUserAuthTestCase(RestApiTestCase):
     def setUp(self):

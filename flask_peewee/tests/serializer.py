@@ -27,13 +27,14 @@ class SerializerTestCase(FlaskPeeweeTestCase):
             'email': '',
         })
 
-        serialized = self.s.serialize_object(self.admin, fields={User: ['id', 'username']})
+        # field maps are keyed by path now: () is the root object.
+        serialized = self.s.serialize_object(self.admin, fields={(): ['id', 'username']})
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',
         })
 
-        serialized = self.s.serialize_object(self.admin, exclude={User: ['password', 'join_date']})
+        serialized = self.s.serialize_object(self.admin, exclude={(): ['password', 'join_date']})
         self.assertEqual(serialized, {
             'id': self.admin.id,
             'username': 'admin',

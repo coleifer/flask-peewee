@@ -114,23 +114,28 @@ def load_class(s):
     mod = sys.modules[path]
     return getattr(mod, klass)
 
-def get_dictionary_from_model(model, fields=None, exclude=None):
+def get_dictionary_from_model(model, fields=None, exclude=None, path=()):
+    # fields/exclude are keyed by path -- the tuple of field names from the
+    # root object (() at the root, ('user',) for a nested fk, and so on) -- so
+    # two relations to one model (from_user / to_user) get their own field set
+    # instead of sharing one keyed by the model class.
     model_class = type(model)
     data = {}
 
     fields = fields or {}
     exclude = exclude or {}
-    curr_exclude = exclude.get(model_class, [])
-    curr_fields = fields.get(model_class, model._meta.sorted_field_names)
+    curr_exclude = exclude.get(path, [])
+    curr_fields = fields.get(path, model._meta.sorted_field_names)
 
     for field_name in curr_fields:
         if field_name in curr_exclude:
             continue
         field_obj = model_class._meta.fields[field_name]
         field_data = model.__data__.get(field_name)
-        if isinstance(field_obj, ForeignKeyField) and field_data and field_obj.rel_model in fields:
+        child_path = path + (field_name,)
+        if isinstance(field_obj, ForeignKeyField) and field_data and child_path in fields:
             rel_obj = getattr(model, field_name)
-            data[field_name] = get_dictionary_from_model(rel_obj, fields, exclude)
+            data[field_name] = get_dictionary_from_model(rel_obj, fields, exclude, child_path)
         else:
             data[field_name] = field_data
     return data

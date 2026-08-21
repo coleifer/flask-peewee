@@ -796,8 +796,11 @@ class Export(object):
         field_dict = {}
         alias_map = {}
 
-        def want(model, name):
-            names = field_dict.setdefault(model, [])
+        # field_dict is keyed by path (see get_dictionary_from_model), the
+        # tuple of fk names from the base, so two fks to one model do not share
+        # a field set.
+        def want(path, name):
+            names = field_dict.setdefault(path, [])
             if name not in names:
                 names.append(name)
 
@@ -807,7 +810,7 @@ class Export(object):
 
         for lookup in self.fields:
             if '__' not in lookup:
-                want(base, lookup)
+                want((), lookup)
                 pick(base._meta.fields[lookup])
                 continue
 
@@ -824,14 +827,13 @@ class Export(object):
             # recurse into each fk on the path, which requires the fk name in the
             # field list and its id at every hop. under a bound join peewee reads
             # that id from the aliased row's primary key, so select each alias pk.
-            src, prefix = base, ()
+            prefix = ()
             for fk in fks:
-                want(src, fk.name)
+                want(prefix, fk.name)
                 prefix += (fk.name,)
                 dest = alias_map[prefix]
                 pick(getattr(dest, fk.rel_field.name))
-                src = fk.rel_model
-            want(model, column)
+            want(prefix, column)
             pick(getattr(alias, column))
 
         if select:
