@@ -9,6 +9,12 @@ flask-peewee
 provides a layer of integration between the `flask <https://flask.palletsprojects.com/>`_
 web framework and the `peewee orm <https://docs.peewee-orm.com/>`_.
 
+The batteries are an admin interface, authentication, and a REST api. It
+deliberately leaves out inline child editing, CSV export, action
+confirmation prompts, translations, and file management. For a richer,
+storage-agnostic admin, see
+`Flask-Admin <https://flask-admin.readthedocs.io/>`_.
+
 Contents:
 
 .. toctree::
@@ -17,10 +23,12 @@ Contents:
 
    installation
    getting-started
+   example
    database
    admin
    auth
    rest-api
+   deployment
    utils
 
 API in depth:

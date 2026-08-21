@@ -586,6 +586,26 @@ class AdminTestCase(BaseAdminTestCase):
                 self.assertEqual(resp.status_code, 200, url)
                 self.assertEqual(json.loads(resp.data)['object_list'], [], url)
 
+    def test_form_field_args(self):
+        # field_args threads through to wtf-peewee's model_form, so labels
+        # and validators can be declared without overriding get_form().
+        from werkzeug.datastructures import MultiDict
+        from wtforms.validators import Length
+
+        class AAdmin(ModelAdmin):
+            field_args = {'a_field': {'label': 'The A',
+                                      'validators': [Length(min=5)]}}
+
+        a_admin = AAdmin(admin, AModel)
+        Form = a_admin.get_form()
+
+        form = Form(MultiDict({'a_field': 'abc'}))
+        self.assertEqual(form.a_field.label.text, 'The A')
+        self.assertFalse(form.validate())
+
+        form = Form(MultiDict({'a_field': 'abcdef'}))
+        self.assertTrue(form.validate())
+
     def test_model_admin_index(self):
         self.create_users()
 

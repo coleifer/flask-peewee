@@ -4,7 +4,7 @@ REST API
 ========
 
 flask-peewee comes with some tools for exposing your project's models via a
-REST API.  There are several components to the ``rest`` module, but the basic
+REST API. There are several components to the ``rest`` module, but the basic
 setup is to create an instance of :py:class:`RestAPI` and then register your
 project's models with subclasses of :py:class:`RestResource`.
 
@@ -12,7 +12,7 @@ Each :py:class:`RestResource` you expose via the API will support, by default,
 the following:
 
 * ``/api/<model name>/``: GET and POST requests
-* ``/api/<model name>/<primary key>/``: GET, PUT and DELETE requests.  POST
+* ``/api/<model name>/<primary key>/``: GET, PUT and DELETE requests. POST
   also edits, and ``POST /<primary key>/delete/`` works as DELETE, for clients
   that cannot issue PUT or DELETE.
 
@@ -60,7 +60,7 @@ Special Python constants are supported when used as querystring parameters:
 Getting started with the API
 ----------------------------
 
-In this documentation we'll start with a very simple API and build it out.  The
+In this documentation we'll start with a very simple API and build it out. The
 complete version of this API is included in the `example app
 <https://github.com/coleifer/flask-peewee/tree/master/example>`_, so feel free
 to refer there.
@@ -68,16 +68,12 @@ to refer there.
 The project will be a simple 'twitter-like' app where users can post short messages
 and "follow" other users.
 
-.. note:: If you're using apache with mod_wsgi and would like to use any of
-    the auth backends that use basic auth, you will need to add the following
-    directive: ``WSGIPassAuthorization On``
-
 
 Project models
 ^^^^^^^^^^^^^^
 
 There are three main models, ``User``, ``Relationship`` and ``Message``, which
-we will expose via the API.  Here is a truncated version of what they look like:
+we will expose via the API. Here is a truncated version of what they look like:
 
 .. code-block:: python
 
@@ -104,8 +100,8 @@ we will expose via the API.  Here is a truncated version of what they look like:
 Creating a RestAPI
 ------------------
 
-The :py:class:`RestAPI` acts as a container for the various :py:class:`RestResource`
-objects we will expose.  By default it binds all resources to ``/api/<model-name>/``.
+The :py:class:`RestAPI` holds the :py:class:`RestResource` objects we will
+expose. By default it binds all resources to ``/api/<model-name>/``.
 
 Here we'll create a simple api and register our models:
 
@@ -209,7 +205,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
       ]
     }
 
-Passwords and email addresses are being exposed.  In order to exclude these fields
+Passwords and email addresses are being exposed. To exclude these fields
 from serialization, subclass :py:class:`RestResource`:
 
 .. code-block:: python
@@ -232,8 +228,8 @@ from serialization, subclass :py:class:`RestResource`:
 
 Now emails and passwords are no longer returned by the API.
 
-``exclude`` is a blacklist.  Its positive counterpart is ``fields``, a
-whitelist of the only fields to serialize.  The resource above could instead expose just
+``exclude`` is a blacklist. Its positive counterpart is ``fields``, a
+whitelist of the only fields to serialize. The resource above could instead expose just
 the username and id:
 
 .. code-block:: python
@@ -244,12 +240,24 @@ the username and id:
 Reach for whichever is more convenient: ``fields`` when you want to expose a
 small, fixed set of columns, ``exclude`` when you want everything but a few.
 
+For computed values, override :py:meth:`~RestResource.prepare_data`. It
+receives each object and its serialized dictionary on the way out:
+
+.. code-block:: python
+
+    class UserResource(RestResource):
+        exclude = ('password', 'email')
+
+        def prepare_data(self, obj, data):
+            data['gravatar'] = obj.gravatar_url()
+            return data
+
 
 Nested resources
 ----------------
 
-By default a foreign key is serialized as the related row's primary key.  Notice
-the ``"user": 1`` in the message output above.  To embed the full related
+By default a foreign key is serialized as the related row's primary key. Notice
+the ``"user": 1`` in the message output above. To embed the full related
 object instead, point ``include_resources`` at the resource that should render it:
 
 .. code-block:: python
@@ -283,7 +291,7 @@ password and email are still excluded):
 
 ``include_resources`` can be nested arbitrarily deep (an included resource may
 itself include resources), and one model can be embedded through more than one
-foreign key.  For example, a ``Relationship`` resource can expand both endpoints:
+foreign key. For example, a ``Relationship`` resource can expand both endpoints:
 
 .. code-block:: python
 
@@ -300,9 +308,9 @@ would get from following each row's relations lazily.
 Nested writes
 ^^^^^^^^^^^^^
 
-Included resources also work on the way in.  A ``POST`` or ``PUT`` whose body
+Included resources also work on the way in. A ``POST`` or ``PUT`` whose body
 carries a nested object (instead of a bare id) creates or updates the related row
-as part of the same request.  Two rules keep that safe:
+as part of the same request. Two rules keep that safe:
 
 * A resource's ``readonly_fields`` are stripped at every level of the
   payload, so a nested object cannot smuggle in a field the resource protects
@@ -312,28 +320,33 @@ as part of the same request.  Two rules keep that safe:
   can never be used to sidestep a resource's authorization.
 
 The entire object graph is saved in a single transaction, so if any nested write
-is rejected the whole request rolls back.  To disable nested writes for a
-resource, set ``nested_writes = False``.  A nested object in the payload is then
+is rejected the whole request rolls back. To disable nested writes for a
+resource, set ``nested_writes = False``. A nested object in the payload is then
 ignored, though the foreign key can still be assigned with a bare id.
 
 
 Validating incoming data
 ------------------------
 
+A write accepts its payload three ways, checked in order: a JSON request
+body (send ``Content-Type: application/json``), a form field named
+``data`` holding a JSON string (the ``curl -d data='{...}'`` convention),
+or plain form fields, one per column.
+
 Write payloads are validated as they are deserialized, and problems surface as
 a 400 with a JSON error rather than a 500 (or worse, bad data):
 
 * A body that is not valid JSON is rejected.
-* Values that cannot be coerced to their field's type are rejected.  This
+* Values that cannot be coerced to their field's type are rejected. This
   includes date/time strings: a value like ``"pub_date": "not-a-date"`` returns
   ``{"error": "Unrecognized date/time value for \"pub_date\": 'not-a-date'"}``
-  instead of being written through to the database.  Both ISO-8601 (what the
+  instead of being written through to the database. Both ISO-8601 (what the
   API itself emits) and the field's own ``formats`` are accepted.
 * Violated database constraints (``NOT NULL``, unique, foreign keys) are
   reported as a 400 as well.
 
 Unrecognized keys in a payload are silently ignored by default, which is
-forgiving but means a typo'd field name is dropped without complaint.  Set
+forgiving but means a typo'd field name is dropped without complaint. Set
 ``reject_unknown_fields = True`` on the resource to get a 400 listing the
 offending keys instead:
 
@@ -359,7 +372,7 @@ e.g. ``user__usernmae``.
 Allowing users to post objects
 ------------------------------
 
-What if we want to create new messages via the Api?  Or modify/delete existing messages?
+What if we want to create new messages via the Api? Or modify/delete existing messages?
 
 .. code-block:: console
 
@@ -374,8 +387,8 @@ What if we want to create new messages via the Api?  Or modify/delete existing m
 The authentication failed because the default authentication mechanism only
 allows read-only access.
 
-In order to allow users to create messages via the API, we need to use a subclass
-of :py:class:`Authentication` that allows ``POST`` requests.  We also want to ensure
+To allow users to create messages via the API, we need to use a subclass
+of :py:class:`Authentication` that allows ``POST`` requests. We also want to ensure
 that the requesting user is a member of the site.
 
 For this we will use the :py:class:`UserAuthentication` class as the default auth
@@ -430,8 +443,8 @@ The response object will look something like this:
       'id': 3
     }
 
-There is a problem with this, however.  Notice how the ``user`` was passed in
-with the POST data?  This effectively will let a user post a message as another user.
+There is a problem with this, however. Notice how the ``user`` was passed in
+with the POST data? This effectively will let a user post a message as another user.
 It also means a user can use PUT requests to modify another user's message:
 
 .. code-block:: python
@@ -455,8 +468,8 @@ The response will look like this:
       'id': 2
     }
 
-This is a problem.  We need a way of ensuring that users can only edit their
-own messages.  Furthermore, when they create messages we need to make sure the
+This is a problem. We need a way of ensuring that users can only edit their
+own messages. Furthermore, when they create messages we need to make sure the
 message is assigned to them.
 
 
@@ -508,7 +521,7 @@ Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/bl
 Locking down a resource
 -----------------------
 
-Suppose we want to restrict normal users from modifying ``User`` resources.  For this
+Suppose we want to restrict normal users from modifying ``User`` resources. For this
 we can use a special subclass of :py:class:`UserAuthentication` that restricts access
 to administrators:
 
@@ -529,14 +542,44 @@ to administrators:
     api.register(User, UserResource, auth=admin_auth)
 
 
+Adding custom endpoints
+-----------------------
+
+A resource's urls come from its ``get_urls()`` method. Extend it to
+expose views alongside the standard list and detail. Here messages gain
+``/api/message/mine/``, the authenticated user's messages. Reads need an
+authentication that sets ``g.user``, so protect GET too:
+
+.. code-block:: python
+
+    from flask import g
+    from flask_peewee.rest import ALL_METHODS
+
+    user_auth = UserAuthentication(auth, protected_methods=ALL_METHODS)
+
+    class MessageResource(RestrictOwnerResource):
+        owner_field = 'user'
+
+        def get_urls(self):
+            return super(MessageResource, self).get_urls() + (
+                ('/mine/', self.require_method(self.api_mine, ['GET'])),
+            )
+
+        def api_mine(self):
+            query = self.get_query().where(Message.user == g.user)
+            return self.paginated_object_list(query)
+
+    api.register(Message, MessageResource, auth=user_auth)
+
+
 Token-based authentication
 --------------------------
 
 :py:class:`UserAuthentication` and :py:class:`AdminAuthentication` use HTTP
-Basic auth, which is handy for humans but awkward for programmatic clients.  For
-API clients, flask-peewee ships token-based authentication classes.  Like all
+Basic auth, which is handy for humans but awkward for programmatic clients. For
+API clients, flask-peewee ships token-based authentication classes. Like all
 authentication classes they only guard the ``protected_methods`` (``POST``,
-``PUT`` and ``DELETE`` by default, with ``GET`` open).  To require auth on reads
+``PUT`` and ``DELETE`` by default, with ``GET`` open). To require auth on reads
 too, pass ``protected_methods=ALL_METHODS`` (a convenience constant equal to
 ``('GET', 'POST', 'PUT', 'DELETE')``) or your own list.
 
@@ -544,7 +587,7 @@ API keys
 ^^^^^^^^
 
 :py:class:`APIKeyAuthentication` authenticates against a model with ``key`` and
-``secret`` fields, supplied as query-string, header, or form parameters.  The
+``secret`` fields, supplied as query-string, header, or form parameters. The
 matched row is stored on ``g.api_key``:
 
 .. code-block:: python
@@ -562,7 +605,7 @@ matched row is stored on ``g.api_key``:
 
 .. warning::
     Because the key and secret can travel in the query string, they may end up
-    in access logs.  Prefer bearer tokens (below) for anything sensitive.
+    in access logs. Prefer bearer tokens (below) for anything sensitive.
 
 Bearer tokens
 ^^^^^^^^^^^^^
@@ -593,7 +636,7 @@ Bearer tokens as users
 :py:class:`UserBearerAuthentication` resolves the token to a user and sets
 ``g.user`` (rather than ``g.api_key``), so bearer tokens work with
 :py:class:`RestrictOwnerResource` and anything else keyed off the authenticated
-user.  The token model carries a foreign key to the user:
+user. The token model carries a foreign key to the user:
 
 .. code-block:: python
 
@@ -611,7 +654,7 @@ user.  The token model carries a foreign key to the user:
     api.register(Message, MessageResource, auth=user_bearer_auth)
 
 A request carrying a valid token is now treated as that token's user: new
-objects are assigned to them, and they may only modify their own.  Set
+objects are assigned to them, and they may only modify their own. Set
 ``user_field = None`` if the token lives directly on the user model instead of
 a separate token table.
 
@@ -619,7 +662,7 @@ a separate token table.
 Filtering records and querying
 ------------------------------
 
-A REST Api is not very useful if it cannot be queried in a meaningful fashion.  To
+A REST Api is not very useful if it cannot be queried in a meaningful fashion. To
 this end, the flask-peewee :py:class:`RestResource` objects support "django-style"
 filtering:
 
@@ -719,20 +762,20 @@ Valid Comparison Operators are:
 
 The ``in`` and ``not_in`` operators accept a comma-separated list and/or
 repeated parameters, so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are
-equivalent.  ``between`` takes exactly two comma-separated values.
+equivalent. ``between`` takes exactly two comma-separated values.
 
 A filter repeated with different values matches any of them, so
-``?username=a&username=b`` is an OR.  Exclusions combine the other way, so
+``?username=a&username=b`` is an OR. Exclusions combine the other way, so
 repeated ``ne`` or negated values exclude every listed value.
 
 .. note::
     Unrecognized filter parameters (a misspelled field, or a field not exposed
     for filtering) are ignored by default, so a typo such as ``?usernam=x``
-    silently returns every row.  The lenient default keeps stray query-string
-    parameters (cache-busters, tracking params) from breaking a request.  Set
+    silently returns every row. The lenient default keeps stray query-string
+    parameters (cache-busters, tracking params) from breaking a request. Set
     ``reject_unknown_filters = True`` on the resource to get a 400 naming the
-    offending parameters instead.  Those stray parameters then 400 as well, so
-    enable it only when clients send clean query strings.  An unknown
+    offending parameters instead. Those stray parameters then 400 as well, so
+    enable it only when clients send clean query strings. An unknown
     ``ordering`` column is always ignored.
 
 
@@ -740,8 +783,8 @@ Restricting what can be filtered
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 By default every field on the model is filterable and joins may be traversed
-into related models.  Since filters come straight off the query string, you will
-often want to lock this down, especially for sensitive columns.  Three
+into related models. Since filters come straight off the query string, you will
+often want to lock this down, especially for sensitive columns. Three
 :py:class:`RestResource` attributes control it:
 
 * ``filter_fields``: a whitelist, only these fields may be filtered on.
@@ -761,15 +804,15 @@ often want to lock this down, especially for sensitive columns.  Three
         filter_exclude = ('password',)   # ...and don't let it be filtered on either
 
 With the default lenient handling (see the note above), tightening this list
-never breaks an otherwise-valid request.  A now-disallowed filter stops
-narrowing the results.  With ``reject_unknown_filters`` set it becomes a 400
+never breaks an otherwise-valid request. A now-disallowed filter stops
+narrowing the results. With ``reject_unknown_filters`` set it becomes a 400
 instead.
 
 
 Sorting results
 ---------------
 
-Results can be sorted by specifying an ``ordering`` as a GET argument.  The ordering
+Results can be sorted by specifying an ``ordering`` as a GET argument. The ordering
 must be a column on the model.
 
 `/api/message/?ordering=pub_date`
@@ -788,8 +831,8 @@ or smaller:
 
 `/api/message/?limit=2`
 
-``paginate_by`` is only the default page size, not a maximum.  A client may
-request a larger page.  To cap how large a page can be requested, set
+``paginate_by`` is only the default page size, not a maximum. A client may
+request a larger page. To cap how large a page can be requested, set
 ``max_paginate_by`` on the resource (it defaults to ``None``, meaning no ceiling).
 Setting ``paginate_by = None`` disables pagination and returns every matching
 object on a single page (still wrapped in the standard ``meta``/``objects``

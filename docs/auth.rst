@@ -4,11 +4,11 @@ Authentication
 ==============
 
 The :py:class:`Auth` class provides a means of authenticating users
-of the site.  It is designed to work out-of-the-box with a simple ``User`` model,
+of the site. It is designed to work out-of-the-box with a simple ``User`` model,
 but can be heavily customized.
 
 The :py:class:`Auth` system is comprised of a single class which is responsible
-for coordinating incoming requests to your project with known users.  It provides
+for coordinating incoming requests to your project with known users. It provides
 the following:
 
 * views for login and logout
@@ -24,7 +24,7 @@ The auth system is also designed to work closely with the :ref:`admin-interface`
 Getting started
 ---------------
 
-In order to provide a method for users to authenticate with your site, instantiate
+To provide a method for users to authenticate with your site, instantiate
 an :py:class:`Auth` backend for your project:
 
 .. code-block:: python
@@ -68,7 +68,7 @@ initially.
 Requiring specific permissions
 ------------------------------
 
-:py:meth:`Auth.login_required` only checks that someone is logged in.  When a
+:py:meth:`Auth.login_required` only checks that someone is logged in. When a
 view should be restricted further, two more decorators are available:
 
 * :py:meth:`Auth.admin_required` additionally requires the user's ``admin``
@@ -77,7 +77,7 @@ view should be restricted further, two more decorators are available:
   decorator that requires a logged-in user for whom it returns a truthy value.
 
 In fact ``login_required`` and ``admin_required`` are nothing more than
-``test_user(lambda user: True)`` and ``test_user(lambda user: user.admin)``.  Use
+``test_user(lambda user: True)`` and ``test_user(lambda user: user.admin)``. Use
 ``test_user`` to express any rule you like:
 
 .. code-block:: python
@@ -107,7 +107,7 @@ Logging users in and out programmatically
 -----------------------------------------
 
 Sometimes you need to establish the session yourself, for instance to log a
-user in immediately after they register.  :py:meth:`Auth.login_user` and
+user in immediately after they register. :py:meth:`Auth.login_user` and
 :py:meth:`Auth.logout_user` do exactly that from within a request:
 
 .. code-block:: python
@@ -118,7 +118,7 @@ user in immediately after they register.  :py:meth:`Auth.login_user` and
 
     auth.login_user(user)   # huey is now logged in for subsequent requests
 
-``logout_user()`` ends the session.  By default it removes only flask-peewee's
+``logout_user()`` ends the session. By default it removes only flask-peewee's
 own session keys, leaving any other data you've stored in the session intact.
 Pass ``clear_session=True`` when constructing :py:class:`Auth` to have logout
 wipe the entire session instead, which also hardens against session fixation:
@@ -126,6 +126,36 @@ wipe the entire session instead, which also hardens against session fixation:
 .. code-block:: python
 
     auth = Auth(app, db, clear_session=True)
+
+``login_user`` marks the session permanent, so
+``PERMANENT_SESSION_LIFETIME`` bounds how long a login lasts (flask
+defaults it to 31 days). The auth views flash their outcomes in the
+``success`` and ``danger`` categories, picked up by any base template
+that renders flashed messages.
+
+
+Adding registration
+-------------------
+
+The auth views cover login and logout. A signup view is a few lines on
+top of :py:meth:`Auth.login_user`:
+
+.. code-block:: python
+
+    @app.route('/signup/', methods=['GET', 'POST'])
+    def signup():
+        if request.method == 'POST':
+            user = auth.User(username=request.form['username'],
+                             email=request.form['email'],
+                             active=True)
+            user.set_password(request.form['password'])
+            user.save()
+            auth.login_user(user)
+            return redirect(url_for('private_timeline'))
+        return render_template('signup.html')
+
+A real signup view also validates the input and handles duplicate
+usernames. The example app's ``/join/`` view shows the uniqueness check.
 
 
 Accessing the user in the templates

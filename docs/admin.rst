@@ -4,7 +4,7 @@ Admin Interface
 ===============
 
 Many web applications ship with an "admin area", where privileged users can
-view and modify content.  By introspecting your application's models, flask-peewee
+view and modify content. By introspecting your application's models, flask-peewee
 can provide you with straightforward, easily-extensible forms for managing your
 application content.
 
@@ -21,7 +21,7 @@ Getting started
 
 To get started with the admin, there are just a couple steps:
 
-1. Instantiate an :py:class:`Auth` backend for your project.  This component
+1. Instantiate an :py:class:`Auth` backend for your project. This component
    provides the security for the admin area
 
     .. code-block:: python
@@ -89,7 +89,7 @@ which looks like this:
         def __str__(self):
             return '%s: %s' % (self.user, self.content)
 
-If we were to simply register this model with the admin, it would look something
+If we register this model with the admin as-is, it would look something
 like this:
 
 .. code-block:: python
@@ -102,7 +102,7 @@ like this:
 .. image:: fp-message-admin-plain.png
 
 A quick way to improve the appearance of this view is to specify which columns
-to display.  To start customizing how the ``Message`` model is displayed in the
+to display. To start customizing how the ``Message`` model is displayed in the
 admin, we'll subclass :py:class:`ModelAdmin`.
 
 .. code-block:: python
@@ -127,7 +127,7 @@ Filtering is available, as is search:
 Searching
 ^^^^^^^^^
 
-Set ``search_fields`` to add a quick-search box above the list.  It runs a
+Set ``search_fields`` to add a quick-search box above the list. It runs a
 case-insensitive substring match over char/text fields and supports ``__``
 traversal into related models, so ``('content', 'user__username')`` searches
 both the message body and the author's username, joining ``User`` automatically:
@@ -144,7 +144,7 @@ Filtering
 ^^^^^^^^^
 
 The list and export views expose per-field filters (equals, less-than, contains,
-etc., chosen by field type).  By default every field is filterable.  Two
+etc., chosen by field type). By default every field is filterable. Two
 attributes narrow that:
 
 * ``filter_fields``: a whitelist of the only fields that may be filtered
@@ -158,16 +158,93 @@ Restricting the queryset
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Suppose privacy is a big concern, and under no circumstances should a user be
-able to see another user's messages, even in the admin.  This can be done by overriding
-the :py:meth:`~ModelAdmin.get_query` method:
+able to see another user's messages, even in the admin. This can be done by
+overriding the :py:meth:`~ModelAdmin.get_query` method:
 
 .. code-block:: python
 
     def get_query(self):
         return self.model.select().where(self.model.user == g.user)
 
-Now a user will only be able to see and edit their own messages.
+Now a user will only be able to see and edit their own messages in the admin.
 
+Restricting access
+^^^^^^^^^^^^^^^^^^
+
+Access to the admin is controlled by :py:meth:`Admin.check_user_permission`,
+which by default requires ``user.admin``. There are no per-model permission
+hooks at present, and registered models are reachable by anyone with access to
+the admin site. To restrict what data is shown, see the :py:meth:`~ModelAdmin.get_query`
+example above.
+
+Customizing forms
+^^^^^^^^^^^^^^^^^
+
+Admin forms use `wtf-peewee <https://github.com/coleifer/wtf-peewee>`_, which
+provides peewee integration for `wtforms <https://github.com/pallets-eco/wtforms>`_.
+The add and edit forms are built by wtf-peewee's ``model_form``.
+
+Which model fields appear on the form is controlled by ``fields`` (a
+whitelist) and ``exclude`` (a blacklist). These shape the form only.
+``columns`` shapes the list view. Here the form omits the timestamp and
+its default fills it in:
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        exclude = ('pub_date',)
+
+To make simple overrides to the default add/edit form, use
+``ModelAdmin.field_args``:
+
+.. code-block:: python
+
+    from wtforms.validators import Length
+
+    class MessageAdmin(ModelAdmin):
+        field_args = {'content': {'label': 'Body',
+                                  'validators': [Length(min=10)]}}
+
+For full control, return any form class from :py:meth:`~ModelAdmin.get_form`.
+This snippet shows how to add a file upload widget to a form (full example in
+:ref:`admin-file-uploads`):
+
+.. code-block:: python
+
+    class PhotoAdmin(ModelAdmin):
+        columns = ['image', 'thumb']
+
+        def get_form(self, adding=False):
+            class PhotoForm(Form):
+                image = HiddenField()
+                image_file = FileField('Image file')
+
+            return PhotoForm
+
+        def save_model(self, instance, form, adding=False):
+            instance = super(PhotoAdmin, self).save_model(instance, form, adding)
+            if 'image_file' in request.files:
+                file = request.files['image_file']
+                instance.save_image(file)
+            return instance
+
+To change how a field type is rendered, subclass the form converter and
+point ``form_converter`` at it. Here every ``TextField`` renders as a
+single-line input instead of a textarea:
+
+.. code-block:: python
+
+    from flask_peewee.admin import AdminModelConverter
+    from peewee import TextField
+    from wtforms import fields
+
+    class SingleLineConverter(AdminModelConverter):
+        def __init__(self, *args, **kwargs):
+            super(SingleLineConverter, self).__init__(*args, **kwargs)
+            self.defaults[TextField] = fields.StringField
+
+    class MessageAdmin(ModelAdmin):
+        form_converter = SingleLineConverter
 
 Overriding Admin Templates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -187,7 +264,7 @@ for an individual ``Model``:
     admin.register(Message, MessageAdmin)
 
 This instructs the admin to use a custom template for the edit page in the Message
-admin.  That template is stored in the application's templates.  It might look
+admin. That template is stored in the application's templates. It might look
 something like this:
 
 .. code-block:: jinja
@@ -204,22 +281,39 @@ There are five templates that can be overridden:
 * delete
 * export
 
+Templates resolve through flask's loader, so a file in your application's
+``templates/`` directory shadows the packaged one of the same name.
+Shipping your own ``auth/login.html`` restyles the login page the same
+way. The auth pages extend ``base.html``, your application's if it
+defines one, else a minimal fallback shipped with flask-peewee.
+
+For smaller changes, extend a packaged template and override its blocks:
+
+* ``admin/base.html``: ``title``, ``theme_css``, ``extra_script``,
+  ``body_class``, ``sidebar``, ``content_title``, ``breadcrumbs``,
+  ``pre_content``, ``content``, ``footer``
+* the model templates (``admin/models/*.html``): ``extra_tabs``,
+  ``export_action``, ``export_tab``, ``tab_index_class``,
+  ``tab_add_class``, ``tab_export_class``, ``extra_form``,
+  ``object_actions``, ``object_action_links``
+* ``admin/panels/default.html``: ``panel_title``, ``panel_content``
+
 
 Nicer display for Foreign Key fields
 ------------------------------------
 
-By default a foreign key renders as a ``<select>`` of the related rows.  How that
+By default a foreign key renders as a ``<select>`` of the related rows. How that
 holds up when the related table is large depends on where it appears:
 
 * In filters, the ``<select>`` is automatically capped at the first 20 rows
   (plus whichever row is currently selected), so the page stays small, but
   only those 20 rows are reachable.
-* In model forms (add/edit), the ``<select>`` is not capped.  Every related
+* In model forms (add/edit), the ``<select>`` is not capped. Every related
   row is rendered, which is slow to load and hammers the database on a large
   table.
 
 To handle large related tables, set ``foreign_key_lookups``, a mapping of the
-foreign-key field name to the related field to search and display on.  This
+foreign-key field name to the related field to search and display on. This
 replaces the plain ``<select>`` with a paginated, type-ahead search backed by the
 model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``, a page
 at a time), so any row is reachable no matter how large the table:
@@ -241,7 +335,7 @@ Filters
 
 Without ``foreign_key_lookups`` the ``user`` filter is a ``<select>`` of the
 first 20 users, fine for a small table, but on a large one you can only filter
-by those first 20.  With it, the ``<select>`` gains an inline type-ahead search
+by those first 20. With it, the ``<select>`` gains an inline type-ahead search
 that repopulates its options from ``ajax_list`` as you type, so any user can be
 selected.
 
@@ -249,8 +343,8 @@ Model forms
 ^^^^^^^^^^^
 
 Without ``foreign_key_lookups`` an add or edit form renders every related row in a
-single ``<select>``, which is slow on a large table.  With it, the field becomes
-a button showing the current selection.  Clicking it opens a modal with a
+single ``<select>``, which is slow on a large table. With it, the field becomes
+a button showing the current selection. Clicking it opens a modal with a
 paginated, type-ahead list:
 
 .. image:: fp-message-fk-btn.png
@@ -262,12 +356,12 @@ Bulk actions
 ------------
 
 Every row in the list view has a checkbox, and the "With selected..."
-dropdown offers "Export" and "Delete" out-of-the-box.  You can add your own
+dropdown offers "Export" and "Delete" out-of-the-box. You can add your own
 bulk operations by subclassing :py:class:`Action` and listing instances in your
 :py:class:`ModelAdmin`'s ``actions`` attribute.
 
 An action implements a single ``callback(self, id_list)`` method, which receives
-the list of primary keys the user checked.  Suppose our ``Message`` model has a
+the list of primary keys the user checked. Suppose our ``Message`` model has a
 ``flagged`` boolean and we want a one-click way to flag the selected rows:
 
 .. code-block:: python
@@ -286,7 +380,7 @@ the list of primary keys the user checked.  Suppose our ``Message`` model has a
 
 The action shows up in the "With selected..." dropdown labeled with its
 ``name``, which defaults to the class name minus the "Action" suffix
-(``FlagAction`` becomes "Flag").  Pass ``name`` to the constructor to override
+(``FlagAction`` becomes "Flag"). Pass ``name`` to the constructor to override
 it, e.g. ``FlagAction(name='Flag as spam')``.
 
 If a callback returns a Flask ``Response``, it is sent to the user as-is, handy
@@ -304,7 +398,7 @@ for generating a download from the selected rows:
                 'Content-Disposition': 'attachment; filename=messages.txt'})
 
 If the callback returns anything else, the user is redirected back to the list
-view.  Submitting an action with no rows selected flashes a warning and
+view. Submitting an action with no rows selected flashes a warning and
 does nothing.
 
 
@@ -312,11 +406,11 @@ Exporting data
 --------------
 
 Every registered model gets an "Export" view (also reachable from the list
-view's "With selected..." dropdown).  It lets you choose which fields to
+view's "With selected..." dropdown). It lets you choose which fields to
 include, across foreign keys too, and downloads the result as a JSON file,
 honoring whatever filters are currently applied.
 
-By default every field is exportable.  Two :py:class:`ModelAdmin` attributes
+By default every field is exportable. Two :py:class:`ModelAdmin` attributes
 restrict that:
 
 * ``export_fields``: a whitelist of field names that may be exported
@@ -328,13 +422,13 @@ restrict that:
         columns = ('username', 'email',)
         export_exclude = ('password',)   # never allow the password hash out
 
-These restrictions are enforced server-side.  Hand-posting a withheld field
+These restrictions are enforced server-side. Hand-posting a withheld field
 name will not dump it.
 
-Related fields are exported nested under their foreign key.  A related model
+Related fields are exported nested under their foreign key. A related model
 defers to its own registered :py:class:`ModelAdmin`'s
 ``export_fields``/``export_exclude``, so once ``UserAdmin`` excludes ``password``
-above, no other model's export can reach ``user__password`` either.  Exporting,
+above, no other model's export can reach ``user__password`` either. Exporting,
 say, the ``user``, ``content`` and ``user__username`` fields of ``Message``
 produces:
 
@@ -347,7 +441,7 @@ produces:
 
 .. note::
     Because related data nests under its foreign key, that foreign key is
-    included automatically.  There is no way to nest a related field without it.
+    included automatically. There is no way to nest a related field without it.
 
 
 Creating admin panels
@@ -355,7 +449,7 @@ Creating admin panels
 
 :py:class:`AdminPanel` classes provide a way of extending the admin dashboard with arbitrary functionality.
 These are displayed as "panels" on the admin dashboard with a customizable
-template.  They may additionally, however, define any views and urls.  These
+template. They may additionally, however, define any views and urls. These
 views will automatically be protected by the same authentication used throughout
 the admin area.
 
@@ -400,7 +494,7 @@ Here's what the panel class looks like:
             return {'note_list': notes}
 
 When the admin dashboard is rendered (``/admin/``), all panels are rendered using
-the templates they specify.  The template is rendered with the context provided
+the templates they specify. The template is rendered with the context provided
 by the panel's ``get_context`` method.
 
 And the template:
@@ -420,16 +514,17 @@ And the template:
       </form>
     {% endblock %}
 
-A panel can provide as many urls and views as you like.  These views will all be
+A panel can provide as many urls and views as you like. These views will all be
 protected by the same authentication as other parts of the admin area.
 
+.. _admin-file-uploads:
 
 Handling File Uploads
 ---------------------
 
 Flask and wtforms both provide support for handling file uploads (on the server
-and generating form fields).  Peewee, however, does not have a "file field" --
-generally I store a path to a file on disk and thus use a ``CharField`` for
+and generating form fields). Peewee, however, does not have a "file field".
+I generally store a path to a file on disk and thus use a ``CharField`` for
 the storage.
 
 Here's a very simple example of a "photo" model and a ``ModelAdmin`` that enables

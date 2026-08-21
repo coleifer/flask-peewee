@@ -80,7 +80,7 @@ installing
 example app
 -----------
 
-the project ships with an example app, which is a silly twitter clone.  to
+the project ships with an example app, which is a silly twitter clone. to
 start the example app, ``cd`` into the "example" directory and execute
 the ``run_example.py`` script::
 

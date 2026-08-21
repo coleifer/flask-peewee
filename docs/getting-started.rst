@@ -3,9 +3,6 @@
 Getting Started
 ===============
 
-The goal of this document is to help get you up and running quickly.  So without
-further ado, let's get started.
-
 .. note::
     Hopefully you have some familiarity with the `flask framework <https://flask.palletsprojects.com/>`_ and
     the `peewee orm <https://docs.peewee-orm.com/>`_, but if not those links
@@ -50,7 +47,7 @@ configured any templates or views yet.
 Creating a simple model
 -----------------------
 
-Let's add a simple model.  Before we can do that, though, it is necessary to
+Let's add a simple model. Before we can do that, though, it is necessary to
 initialize the peewee database wrapper and configure the database:
 
 .. code-block:: python
@@ -79,7 +76,7 @@ initialize the peewee database wrapper and configure the database:
 
 
 What this does is provides us with request handlers which connect to the database
-on each request and close it when the request is finished.  It also provides a
+on each request and close it when the request is finished. It also provides a
 base model class which is configured to work with the database specified in the
 configuration.
 
@@ -105,7 +102,7 @@ Setting up a simple base template
 ---------------------------------
 
 We'll need a simple template to serve as the base template for our app, so create
-a folder named ``templates``.  In the ``templates`` folder create a file ``base.html``
+a folder named ``templates``. In the ``templates`` folder create a file ``base.html``
 and add the following:
 
 .. code-block:: html
@@ -124,7 +121,7 @@ Adding users to the site
 ------------------------
 
 Before we can edit these ``Note`` models in the admin, we'll need to have some
-way of authenticating users on the site.  This is where :py:class:`Auth` comes in.
+way of authenticating users on the site. This is where :py:class:`Auth` comes in.
 :py:class:`Auth` provides a ``User`` model and views for logging in and logging out,
 among other things, and is required by the :py:class:`Admin`.
 
@@ -193,7 +190,7 @@ following:
 Managing content using the admin area
 -------------------------------------
 
-Now we're ready to add the admin.  Place the following lines of code after
+Now we're ready to add the admin. Place the following lines of code after
 the initialization of the ``Auth`` class:
 
 .. code-block:: python
@@ -206,7 +203,7 @@ the initialization of the ``Auth`` class:
     admin.setup()
 
 
-We now have a functioning admin site!  Of course, we'll need a user to log in
+We now have a functioning admin site! Of course, we'll need a user to log in
 with, so open up an interactive python shell in the directory alongside the app
 and run the following:
 
@@ -226,13 +223,13 @@ It should now be possible to:
 
 .. image:: fp-getting-started.png
 
-The dashboard is pretty empty right now.  Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/).  If you navigate now to the note
+The dashboard is pretty empty right now. Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/). If you navigate now to the note
 modeladmin you will see something like this:
 
 .. image:: fp-note-admin.png
 
 This is pretty lousy so let's clean it up to display the message and when it was
-published.  We can do that by customizing the columns displayed.  Edit the app with
+published. We can do that by customizing the columns displayed. Edit the app with
 the following changes:
 
 .. code-block:: python
@@ -272,7 +269,7 @@ Exposing content using a REST API
 
 Adding a REST API is very similar to how we added the :py:class:`Admin` interface.
 We will create a :py:class:`RestAPI` object, and then register our project's models
-with it.  If we want to customize things, we can subclass :py:class:`RestResource`.
+with it. If we want to customize things, we can subclass :py:class:`RestResource`.
 
 The first step, then, is to create the :py:class:`RestAPI` object:
 
@@ -284,7 +281,7 @@ The first step, then, is to create the :py:class:`RestAPI` object:
     api = RestAPI(app)
     api.setup()
 
-This doesn't do anything yet, we need to register models with it first.  Let's
+This doesn't do anything yet, we need to register models with it first. Let's
 register the ``Note`` model from earlier:
 
 .. code-block:: python
@@ -329,7 +326,7 @@ You should see something like the following:
     }
 
 Suppose we want it to also be possible for registered users to be able to POST
-messages using the API.  If you try and make a POST right now, you will get a
+messages using the API. If you try and make a POST right now, you will get a
 ``401`` response:
 
 .. code-block:: console
@@ -349,10 +346,10 @@ our :py:class:`RestAPI`.
 
 .. note::
     The default authentication mechanism for the API only accepts GET requests.
-    In order to handle POST/PUT/DELETE you will need to use a subclass of the
+    To handle POST/PUT/DELETE you will need to use a subclass of the
     :py:class:`Authentication` class.
 
-In order to allow users of the site to post notes, we will use the :py:class:`UserAuthentication`
+To allow users of the site to post notes, we will use the :py:class:`UserAuthentication`
 subclass, which requires that API requests be made with HTTP Basic auth and that the
 auth credentials match those of one of the ``auth.User`` models.
 
@@ -381,7 +378,7 @@ Now we can post new notes using a command-line tool like curl:
 You can see that it returns a serialized copy of the new ``Note`` object.
 
 .. note::
-    This is just a small example of what you can do with the Rest API.  Refer to
+    This is a small example of what you can do with the Rest API. Refer to
     the :ref:`Rest API docs <rest-api>` for more detailed information, including
 
     * limiting access on a per-model basis

@@ -115,6 +115,10 @@ class ModelAdmin(object):
     exclude = None
     fields = None
 
+    # per-field wtforms kwargs passed through to wtf-peewee's model_form,
+    # e.g. {'content': {'label': 'Body', 'validators': [...]}}
+    field_args = None
+
     form_converter = AdminModelConverter
 
     # User-defined bulk actions. List or tuple of Action instances.
@@ -188,6 +192,7 @@ class ModelAdmin(object):
             allow_pk=allow_pk,
             only=self.fields,
             exclude=self.exclude,
+            field_args=self.field_args,
             converter=self.form_converter(self),
         )
 
