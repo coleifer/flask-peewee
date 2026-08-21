@@ -74,6 +74,9 @@ class PaginatedQuery(object):
         # a windowed list of page numbers around the current page, with None
         # marking gaps (rendered as an ellipsis), e.g. [1, None, 4, 5, 6, None, 20].
         total = self.get_pages()
+        if total == 0:
+            # an empty result set has no pages to page through.
+            return []
         current = min(self.get_page(), total)
         pages = sorted(set(
             [1, total] +

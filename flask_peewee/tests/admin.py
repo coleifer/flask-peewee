@@ -860,6 +860,13 @@ class AdminTestCase(BaseAdminTestCase):
 
     def test_pagination_page_range(self):
         user = self.create_user('paginate', 'paginate')
+
+        # an empty result set has no pages, so no page numbers to render.
+        with self.flask_app.test_request_context('/?page=1'):
+            pq = PaginatedQuery(Note.select(), 20)
+            self.assertEqual(pq.get_pages(), 0)
+            self.assertEqual(pq.get_page_range(), [])
+
         for i in range(95):
             Note.create(user=user, message='n%d' % i)
 
