@@ -58,7 +58,7 @@ You can also directly pass the Peewee database instance to the
     sqlite_db = SqliteDatabase('example.db')
     db = Database(app, sqlite_db)
 
-    class Blob(db.Model):
+    class Blog(db.Model):
         name = CharField()  # ...
 
 The database initialization can be deferred in order to support more dynamic

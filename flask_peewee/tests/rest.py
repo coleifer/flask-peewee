@@ -994,6 +994,42 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual([o['id'] for o in resp_json['objects']], [ids[2]])
 
+    def test_not_in_filter(self):
+        # not_in splits comma-separated values exactly like in. it used to
+        # bind the whole string as a single value and match every row.
+        users = self.create_users()
+        notes = [Note.create(user=u, message=u.username) for u in users]
+        ids = [n.id for n in notes]
+        resp = self.app.get('/api/note/?id__not_in=%s,%s&ordering=id'
+                            % (ids[0], ids[1]))
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['id'] for o in resp_json['objects']], [ids[2]])
+
+        resp = self.app.get('/api/note/?id__not_in=%s&id__not_in=%s&ordering=id'
+                            % (ids[0], ids[1]))
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['id'] for o in resp_json['objects']], [ids[2]])
+
+    def test_between_filter(self):
+        # between takes two comma-separated bounds, inclusive. a malformed
+        # value is a 400, not an uncaught TypeError.
+        users = self.create_users()
+        notes = [Note.create(user=users[0], message=str(i)) for i in range(5)]
+        ids = [n.id for n in notes]
+        resp = self.app.get('/api/note/?id__between=%s,%s&ordering=id'
+                            % (ids[1], ids[3]))
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['id'] for o in resp_json['objects']], ids[1:4])
+
+        resp = self.app.get('/api/note/?-id__between=%s,%s&ordering=id'
+                            % (ids[1], ids[3]))
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['id'] for o in resp_json['objects']],
+                         [ids[0], ids[4]])
+
+        resp = self.app.get('/api/note/?id__between=%s' % ids[1])
+        self.assertEqual(resp.status_code, 400)
+
     def test_serialize_two_relations_one_model(self):
         # two relations to one model each get their own path-keyed field set:
         # one cannot leak the other's fields, and nesting one does not nest the

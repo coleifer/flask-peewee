@@ -20,7 +20,6 @@ Creating a flask app
 --------------------
 
 First, be sure you have :ref:`installed flask-peewee and its dependencies <installation>`.
-You can verify by running the test suite: ``python runtests.py``.
 
 After ensuring things are installed, open a new file called "app.py" and enter the
 following code:
@@ -194,7 +193,7 @@ following:
 Managing content using the admin area
 -------------------------------------
 
-**Now** we're ready to add the admin.  Place the following lines of code after
+Now we're ready to add the admin.  Place the following lines of code after
 the initialization of the ``Auth`` class:
 
 .. code-block:: python
@@ -207,9 +206,9 @@ the initialization of the ``Auth`` class:
     admin.setup()
 
 
-We now have a functioning admin site!  Of course, we'll need a user log in with,
-so open up an interactive python shell in the directory alongside the app and run
-the following:
+We now have a functioning admin site!  Of course, we'll need a user to log in
+with, so open up an interactive python shell in the directory alongside the app
+and run the following:
 
 .. code-block:: python
 
@@ -259,7 +258,7 @@ Let's go ahead and add the ``auth.User`` model to the admin as well:
     auth.register_admin(admin)
     admin.setup()
 
-The admin supports themes. Here is how to use the *crux* theme, for example:
+The admin supports themes. Here is how to use the ``crux`` theme, for example:
 
 .. code-block:: python
 

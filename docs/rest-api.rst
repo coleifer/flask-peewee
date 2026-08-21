@@ -11,8 +11,10 @@ project's models with subclasses of :py:class:`RestResource`.
 Each :py:class:`RestResource` you expose via the API will support, by default,
 the following:
 
-* ``/api/<model name>/`` -- GET and POST requests
-* ``/api/<model name>/<primary key>/`` -- GET, PUT and DELETE requests
+* ``/api/<model name>/``: GET and POST requests
+* ``/api/<model name>/<primary key>/``: GET, PUT and DELETE requests.  POST
+  also edits, and ``POST /<primary key>/delete/`` works as DELETE, for clients
+  that cannot issue PUT or DELETE.
 
 Also, you can filter results by columns on the model using django-style syntax,
 for example:
@@ -29,11 +31,17 @@ Full operations:
 * ``__gte``: greater-than or equal to
 * ``__ne``: not equal to
 * ``__in``: in set
+* ``__not_in``: not in set
 * ``__is``: is, ``?field__is=None`` or ``?-field__is=None`` for NOT NULL
 * ``__is_not``: is not, ``?field__is_not=None``
+* ``__is_null``: takes true/false, ``?field__is_null=true`` for IS NULL
 * ``__like``: wild-card matching, case-sensitive
 * ``__ilike``: wild-card matching, case-insensitive
+* ``__contains``: substring match, case-insensitive
+* ``__startswith``, ``__endswith``: prefix / suffix match, case-insensitive
 * ``__regexp``: regular-expression matching (database-specific)
+* ``__iregexp``: like ``regexp`` but case-insensitive
+* ``__between``: two comma-separated bounds, inclusive, ``?id__between=2,5``
 
 To negate an operation, prefix it with the ``-`` character, e.g. the following
 are equivalent:
@@ -68,7 +76,7 @@ and "follow" other users.
 Project models
 ^^^^^^^^^^^^^^
 
-There are three main models - ``User``, ``Relationship`` and ``Message`` - which
+There are three main models, ``User``, ``Relationship`` and ``Message``, which
 we will expose via the API.  Here is a truncated version of what they look like:
 
 .. code-block:: python
@@ -127,6 +135,7 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
       "meta": {
         "model": "message",
         "next": "",
+        "object_count": 2,
         "page_count": 1,
         "page": 1,
         "previous": ""
@@ -173,6 +182,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
       "meta": {
         "model": "user",
         "next": "",
+        "object_count": 2,
         "page": 1,
         "page_count": 1,
         "previous": ""
@@ -222,8 +232,8 @@ from serialization, subclass :py:class:`RestResource`:
 
 Now emails and passwords are no longer returned by the API.
 
-``exclude`` is a blacklist; its positive counterpart is ``fields``, a whitelist
-of the *only* fields to serialize.  The resource above could instead expose just
+``exclude`` is a blacklist.  Its positive counterpart is ``fields``, a
+whitelist of the only fields to serialize.  The resource above could instead expose just
 the username and id:
 
 .. code-block:: python
@@ -239,7 +249,7 @@ Nested resources
 ----------------
 
 By default a foreign key is serialized as the related row's primary key.  Notice
-the ``"user": 1`` in the message output above.  To embed the *full* related
+the ``"user": 1`` in the message output above.  To embed the full related
 object instead, point ``include_resources`` at the resource that should render it:
 
 .. code-block:: python
@@ -271,8 +281,8 @@ password and email are still excluded):
       "id": 1
     }
 
-``include_resources`` can be nested arbitrarily deep -- an included resource may
-itself include resources -- and one model can be embedded through more than one
+``include_resources`` can be nested arbitrarily deep (an included resource may
+itself include resources), and one model can be embedded through more than one
 foreign key.  For example, a ``Relationship`` resource can expand both endpoints:
 
 .. code-block:: python
@@ -283,18 +293,18 @@ foreign key.  For example, a ``Relationship`` resource can expand both endpoints
             'to_user': UserResource,
         }
 
-The whole nested tree is loaded in a single query -- one ``JOIN`` per included
-foreign key -- so embedding related objects does *not* incur the N+1 queries you
+The whole nested tree is loaded in a single query, one ``JOIN`` per included
+foreign key, so embedding related objects does not incur the N+1 queries you
 would get from following each row's relations lazily.
 
 Nested writes
 ^^^^^^^^^^^^^
 
-Included resources also work on the way *in*: a ``POST`` or ``PUT`` whose body
+Included resources also work on the way in.  A ``POST`` or ``PUT`` whose body
 carries a nested object (instead of a bare id) creates or updates the related row
 as part of the same request.  Two rules keep that safe:
 
-* A resource's ``readonly_fields`` are stripped at **every** level of the
+* A resource's ``readonly_fields`` are stripped at every level of the
   payload, so a nested object cannot smuggle in a field the resource protects
   (e.g. slipping ``"admin": true`` into a nested user).
 * Each nested write must pass the child resource's own ``check_post`` /
@@ -303,8 +313,8 @@ as part of the same request.  Two rules keep that safe:
 
 The entire object graph is saved in a single transaction, so if any nested write
 is rejected the whole request rolls back.  To disable nested writes for a
-resource -- silently ignoring any nested object in the payload -- set
-``nested_writes = False``; the foreign key can still be assigned with a bare id.
+resource, set ``nested_writes = False``.  A nested object in the payload is then
+ignored, though the foreign key can still be assigned with a bare id.
 
 
 Validating incoming data
@@ -334,7 +344,8 @@ offending keys instead:
 
 .. code-block:: console
 
-    $ curl -d '{"contnet": "hello"}' http://127.0.0.1:5000/api/message/
+    $ curl -u admin:admin -H 'Content-Type: application/json' \
+        -d '{"contnet": "hello"}' http://127.0.0.1:5000/api/message/
 
     {"error": "Unrecognized field(s): contnet"}
 
@@ -425,7 +436,7 @@ It also means a user can use PUT requests to modify another user's message:
 
 .. code-block:: python
 
-    # continued from above -- edit another user's message (id=2)
+    # continued from above, edit another user's message (id=2)
     resp = requests.put(
         'http://127.0.0.1:5000/api/message/2/',
         json={'content': 'haxed you, bro'},
@@ -444,7 +455,7 @@ The response will look like this:
       'id': 2
     }
 
-This is a problem -- we need a way of ensuring that users can only edit their
+This is a problem.  We need a way of ensuring that users can only edit their
 own messages.  Furthermore, when they create messages we need to make sure the
 message is assigned to them.
 
@@ -490,8 +501,8 @@ It is fine to modify our own message, though (message with id=1):
 
 Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
 
-* PUT / DELETE -- verify the authenticated user is the owner of the object
-* POST -- assign the authenticated user as the owner of the new object
+* PUT / DELETE: verify the authenticated user is the owner of the object
+* POST: assign the authenticated user as the owner of the new object
 
 
 Locking down a resource
@@ -525,7 +536,7 @@ Token-based authentication
 Basic auth, which is handy for humans but awkward for programmatic clients.  For
 API clients, flask-peewee ships token-based authentication classes.  Like all
 authentication classes they only guard the ``protected_methods`` (``POST``,
-``PUT`` and ``DELETE`` by default -- ``GET`` is open).  To require auth on reads
+``PUT`` and ``DELETE`` by default, with ``GET`` open).  To require auth on reads
 too, pass ``protected_methods=ALL_METHODS`` (a convenience constant equal to
 ``('GET', 'POST', 'PUT', 'DELETE')``) or your own list.
 
@@ -557,8 +568,8 @@ Bearer tokens
 ^^^^^^^^^^^^^
 
 :py:class:`BearerAuthentication` reads a token from the standard
-``Authorization: Bearer <token>`` header -- so the credential stays out of the
-query string and logs -- and looks it up in a model with a ``token`` field.
+``Authorization: Bearer <token>`` header, keeping the credential out of the
+query string and logs, and looks it up in a model with a ``token`` field.
 The matched row is stored on ``g.api_key``:
 
 .. code-block:: python
@@ -579,7 +590,7 @@ high-entropy tokens (override ``get_key`` to keep them hashed at rest).
 Bearer tokens as users
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-:py:class:`UserBearerAuthentication` resolves the token to a *user* and sets
+:py:class:`UserBearerAuthentication` resolves the token to a user and sets
 ``g.user`` (rather than ``g.api_key``), so bearer tokens work with
 :py:class:`RestrictOwnerResource` and anything else keyed off the authenticated
 user.  The token model carries a foreign key to the user:
@@ -624,6 +635,7 @@ This call will return only messages by the ``User`` with id=2:
       "meta": {
         "model": "message",
         "next": "",
+        "object_count": 1,
         "page": 1,
         "page_count": 1,
         "previous": ""
@@ -650,6 +662,7 @@ Joins can be traversed using the django double-underscore notation:
       "meta": {
         "model": "message",
         "next": "",
+        "object_count": 2,
         "page": 1,
         "page_count": 1,
         "previous": ""
@@ -682,34 +695,45 @@ It is also supported to use different comparison operators with the same double-
       "meta": {
         "model": "user",
         "next": "",
+        "object_count": 1,
         "page": 1,
         "page_count": 1,
         "previous": ""
-    },
-    "objects": [{
-        "username": "admin",
-        "admin": true,
-        "email": "admin@admin",
-        "active": true,
-        "password": "214de$25",
-        "id": 1
-        }]
+      },
+      "objects": [
+        {
+          "username": "admin",
+          "admin": true,
+          "join_date": "2026-09-16T18:34:49",
+          "active": true,
+          "id": 1
+        }
+      ]
     }
 
 
 Valid Comparison Operators are:
-    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'is', 'is_not', 'like', 'ilike', 'regexp'
+    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'not_in', 'is', 'is_not',
+    'is_null', 'like', 'ilike', 'contains', 'startswith', 'endswith',
+    'regexp', 'iregexp', 'between'
 
-The ``in`` operator accepts a comma-separated list and/or repeated parameters,
-so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are equivalent.
+The ``in`` and ``not_in`` operators accept a comma-separated list and/or
+repeated parameters, so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are
+equivalent.  ``between`` takes exactly two comma-separated values.
+
+A filter repeated with different values matches any of them, so
+``?username=a&username=b`` is an OR.  Exclusions combine the other way, so
+repeated ``ne`` or negated values exclude every listed value.
 
 .. note::
-    Unrecognized filter parameters -- a misspelled field, or a field not exposed
-    for filtering -- are **ignored** rather than rejected, so a typo such as
-    ``?usernam=x`` silently returns every row.  This is intentional: it keeps
-    stray query-string parameters (cache-busters, tracking params, etc.) from
-    breaking a request.  Double-check your filter names if a query returns more
-    than you expect.  An unknown ``ordering`` column is likewise ignored.
+    Unrecognized filter parameters (a misspelled field, or a field not exposed
+    for filtering) are ignored by default, so a typo such as ``?usernam=x``
+    silently returns every row.  The lenient default keeps stray query-string
+    parameters (cache-busters, tracking params) from breaking a request.  Set
+    ``reject_unknown_filters = True`` on the resource to get a 400 naming the
+    offending parameters instead.  Those stray parameters then 400 as well, so
+    enable it only when clients send clean query strings.  An unknown
+    ``ordering`` column is always ignored.
 
 
 Restricting what can be filtered
@@ -720,10 +744,10 @@ into related models.  Since filters come straight off the query string, you will
 often want to lock this down, especially for sensitive columns.  Three
 :py:class:`RestResource` attributes control it:
 
-* ``filter_fields`` -- a whitelist; only these fields may be filtered on.
-* ``filter_exclude`` -- a blacklist of fields that may never be filtered on (use
+* ``filter_fields``: a whitelist, only these fields may be filtered on.
+* ``filter_exclude``: a blacklist of fields that may never be filtered on (use
   ``__`` notation for related columns, e.g. ``user__password``).
-* ``filter_recursive`` -- set to ``False`` to forbid filtering across foreign
+* ``filter_recursive``: set to ``False`` to forbid filtering across foreign
   keys entirely (no ``user__...`` lookups at all).
 
 .. code-block:: python
@@ -736,9 +760,10 @@ often want to lock this down, especially for sensitive columns.  Three
         exclude = ('password',)          # don't serialize the hash...
         filter_exclude = ('password',)   # ...and don't let it be filtered on either
 
-Because an unrecognized filter is ignored rather than rejected (see the note
-above), tightening this list can never break an otherwise-valid request.  A
-now-disallowed filter stops narrowing the results.
+With the default lenient handling (see the note above), tightening this list
+never breaks an otherwise-valid request.  A now-disallowed filter stops
+narrowing the results.  With ``reject_unknown_filters`` set it becomes a 400
+instead.
 
 
 Sorting results
@@ -758,12 +783,12 @@ Limiting results and pagination
 -------------------------------
 
 By default, resources are paginated 20 per-page (the ``paginate_by`` attribute).
-Specify a ``limit`` in the querystring to request a different page size -- larger
+Specify a ``limit`` in the querystring to request a different page size, larger
 or smaller:
 
 `/api/message/?limit=2`
 
-``paginate_by`` is only the default page size, not a maximum -- a client may
+``paginate_by`` is only the default page size, not a maximum.  A client may
 request a larger page.  To cap how large a page can be requested, set
 ``max_paginate_by`` on the resource (it defaults to ``None``, meaning no ceiling).
 Setting ``paginate_by = None`` disables pagination and returns every matching
@@ -778,6 +803,7 @@ of results are available, along with the total number of pages:
     "meta": {
       "model": "message",
       "next": "/api/message/?limit=1&page=3",
+      "object_count": 5,
       "page": 2,
       "page_count": 5,
       "previous": "/api/message/?limit=1&page=1"

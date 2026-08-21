@@ -62,14 +62,14 @@ Getting objects
         # assume url was /?page=3
         obj_list = pq.get_list()  # returns 3rd page of results
         
-        pq.get_page() # returns "3"
+        pq.get_page() # returns 3
         
         pq.get_pages() # returns total objects / objects-per-page
 
         pq.get_count() # total number of matching rows
 
-        # a windowed list of page numbers for pagination controls; None marks a
-        # gap to render as an ellipsis. On page 10 of 20 it returns:
+        # a windowed list of page numbers for pagination controls. None
+        # marks a gap to render as an ellipsis. On page 10 of 20 it returns:
         pq.get_page_range()  # [1, None, 7, 8, 9, 10, 11, 12, 13, None, 20]
 
     ``get_page_range(window=N)`` controls how many pages are shown on either side

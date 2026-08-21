@@ -29,7 +29,7 @@ create/edit/delete functionality for your project's models.
 
 .. image:: https://media.charlesleifer.com/blog/photos/im-1783454777-579.png
 
-or you can use one of the themes. Here is the *crux* theme:
+or you can use one of the themes. Here is the ``crux`` theme:
 
 .. image:: https://media.charlesleifer.com/blog/photos/fp-crux-full.png
 
@@ -45,23 +45,23 @@ provides a RESTful interface for your project's models.
       "meta": {
         "model": "user",
         "next": "",
+        "object_count": 2,
         "page": 1,
+        "page_count": 1,
         "previous": ""
       },
       "objects": [
         {
           "username": "admin",
           "admin": true,
-          "email": "",
-          "join_date": "2025-09-16 18:34:49",
+          "join_date": "2025-09-16T18:34:49",
           "active": true,
           "id": 1
         },
         {
           "username": "coleifer",
           "admin": false,
-          "email": "coleifer@gmail.com",
-          "join_date": "2025-09-16 18:35:56",
+          "join_date": "2025-09-16T18:35:56",
           "active": true,
           "id": 2
         }

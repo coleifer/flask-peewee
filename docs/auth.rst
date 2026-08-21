@@ -3,7 +3,7 @@
 Authentication
 ==============
 
-The :py:class:`Authentication` class provides a means of authenticating users
+The :py:class:`Auth` class provides a means of authenticating users
 of the site.  It is designed to work out-of-the-box with a simple ``User`` model,
 but can be heavily customized.
 
@@ -41,7 +41,8 @@ an :py:class:`Auth` backend for your project:
     auth = Auth(app, db)
 
 .. note::
-    ``user`` is reserverd keyword in Postgres. Pass db_table to Auth to override db table.
+    ``user`` is a reserved word in Postgres. Pass ``db_table`` to
+    :py:class:`Auth` to override the table name.
 
 Marking areas of the site as login required
 -------------------------------------------
@@ -67,12 +68,12 @@ initially.
 Requiring specific permissions
 ------------------------------
 
-:py:meth:`Auth.login_required` only checks that *someone* is logged in.  When a
+:py:meth:`Auth.login_required` only checks that someone is logged in.  When a
 view should be restricted further, two more decorators are available:
 
-* :py:meth:`Auth.admin_required` -- additionally requires the user's ``admin``
+* :py:meth:`Auth.admin_required` additionally requires the user's ``admin``
   flag to be set.
-* :py:meth:`Auth.test_user` -- takes a predicate ``fn(user)`` and builds a
+* :py:meth:`Auth.test_user` takes a predicate ``fn(user)`` and builds a
   decorator that requires a logged-in user for whom it returns a truthy value.
 
 In fact ``login_required`` and ``admin_required`` are nothing more than
@@ -111,7 +112,7 @@ user in immediately after they register.  :py:meth:`Auth.login_user` and
 
 .. code-block:: python
 
-    user = User.create(username='huey', email='huey@example.com', ...)
+    user = User(username='huey', email='huey@example.com', active=True)
     user.set_password('meow')
     user.save()
 
@@ -120,8 +121,7 @@ user in immediately after they register.  :py:meth:`Auth.login_user` and
 ``logout_user()`` ends the session.  By default it removes only flask-peewee's
 own session keys, leaving any other data you've stored in the session intact.
 Pass ``clear_session=True`` when constructing :py:class:`Auth` to have logout
-wipe the *entire* session instead, a simple hardening step against session
-fixation:
+wipe the entire session instead, which also hardens against session fixation:
 
 .. code-block:: python
 
@@ -152,11 +152,14 @@ of changes it may be necessary to override methods in both the :py:class:`Auth` 
 
 Unless you want to override the default behavior of the :py:class:`Auth` class' mechanism
 for actually authenticating users (which you may want to do if relying on a 3rd-party
-for auth) -- you will want to be sure your ``User`` model implements two methods:
+for auth), be sure your ``User`` model implements two methods:
 
-* ``set_password(password)`` -- takes a raw password and stores an encrypted version on model
-* ``check_password(password)`` -- returns whether or not the supplied password matches
+* ``set_password(password)``: takes a raw password and stores an encrypted version on model
+* ``check_password(password)``: returns whether or not the supplied password matches
   the one stored on the model instance
+
+The default ``authenticate`` and ``get_logged_in_user`` queries also expect
+``username``, ``password`` and ``active`` fields on the model.
 
 .. note::
     The :py:class:`BaseUser` mixin provides default implementations of these two methods.
@@ -170,34 +173,33 @@ Here's a simple example of extending the auth system to use a custom user model:
     app = Flask(__name__)
     db = Database(app)
     
-    # create our custom user model. note that we're mixing in BaseUser in order to
-    # use the default auth methods it implements, "set_password" and "check_password"
+    # create our custom user model, mixing in BaseUser for the default
+    # "set_password" and "check_password" implementations
     class User(db.Model, BaseUser):
         username = CharField()
         password = CharField()
         email = CharField()
-        
+        active = BooleanField(default=True)
+
         # ... our custom fields ...
-        is_superuser = BooleanField()
+        is_superuser = BooleanField(default=False)
     
     
     # create a modeladmin for it
     class UserAdmin(ModelAdmin):
         columns = ('username', 'email', 'is_superuser',)
 
-        # Make sure the user's password is hashed, after it's been changed in
-        # the admin interface. If we don't do this, the password will be saved
-        # in clear text inside the database and login will be impossible.
+        # Hash a changed password before the save, so the raw password is
+        # never written to the database.
         def save_model(self, instance, form, adding=False):
             orig_password = instance.password
+            form.populate_obj(instance)
 
-            user = super(UserAdmin, self).save_model(instance, form, adding)
+            if form.password.data != orig_password:
+                instance.set_password(form.password.data)
 
-            if orig_password != form.password.data:
-                user.set_password(form.password.data)
-                user.save()
-
-            return user
+            instance.save(force_insert=adding)
+            return instance
     
     
     # subclass Auth so we can return our custom classes

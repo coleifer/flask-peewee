@@ -5,7 +5,7 @@
     <p>{{ note.user.username }}: {{ note.message }}</p>
   {% endfor %}
   <form method="post" action="{{ url_for(panel.get_url_name('create')) }}">
-    <input type="hidden" value="{{ request.url }}" />
+    <input type="hidden" name="next" value="{{ request.url }}" />
     <p><textarea name="message" class="form-control"></textarea></p>
     <button type="submit" class="btn btn-secondary btn-sm">Save</button>
   </form>

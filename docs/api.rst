@@ -42,7 +42,7 @@ Admin
     :param prefix: url to bind admin to, defaults to ``/admin``
     :param name: name of the admin blueprint, defaults to ``admin``
     :param branding: display name shown in the navbar and page titles
-    :param theme: name of an admin theme stylesheet; ``'<theme>'`` loads
+    :param theme: name of an admin theme stylesheet.  ``'<theme>'`` loads
         ``static/css/admin-<theme>.css`` on top of the base ``admin.css``,
         e.g. ``theme='crisp'``. Defaults to ``None``, which serves the base
         stylesheet only. For full control (e.g. a stylesheet hosted outside
@@ -108,7 +108,7 @@ Admin
         .. code-block:: python
 
             # register all models, etc
-            admin.register(...)
+            admin.register(BlogModel)
 
             # finish up initialization of the admin object
             admin.setup()
@@ -118,16 +118,16 @@ Admin
                 app.run()
 
         .. note::
-            call ``setup()`` **after** registering your models and panels
+            call ``setup()`` after registering your models and panels
 
     .. py:method:: check_user_permission(user)
 
-        Check whether the given user has permission to access to the admin area.  The
-        default implementation simply checks whether the ``admin`` field is checked,
+        Check whether the given user has permission to access the admin area.  The
+        default implementation checks whether the ``admin`` field is set,
         but you can provide your own logic.
 
-        This method simply controls access to the admin area as a whole.  In the
-        event the user is **not** permitted to access the admin (this function
+        This method controls access to the admin area as a whole.  In the
+        event the user is not permitted to access the admin (this function
         returns ``False``), they will receive a HTTP Response Forbidden (403).
 
         Default implementation:
@@ -144,7 +144,7 @@ Admin
 
         Decorator that ensures the requesting user has permission.  The implementation
         first checks whether the requesting user is logged in, and if not redirects
-        to the login view.  If the user *is* logged in, it calls :py:meth:`~Admin.check_user_permission`.
+        to the login view.  If the user is logged in, it calls :py:meth:`~Admin.check_user_permission`.
         Only if this call returns ``True`` is the actual view function called.
 
     .. py:method:: get_urls()
@@ -205,6 +205,36 @@ Exposing Models with the ModelAdmin
 
         Only allow filtering on the given fields
 
+    .. py:attribute:: max_filter_depth = 3
+
+        How many foreign-key hops the filter and export field trees may
+        traverse into related models
+
+    .. py:attribute:: search_fields
+
+        Char/text field names for the quick-search box, with ``__`` traversal
+        into related models.  Empty (the default) hides the search box
+
+    .. py:attribute:: foreign_key_lookups
+
+        Mapping of foreign-key field name to the related field to search and
+        display on, e.g. ``{'user': 'username'}``.  Replaces the plain
+        ``<select>`` with a paginated type-ahead picker
+
+    .. py:attribute:: actions
+
+        List of :py:class:`Action` instances to offer in the list view's
+        "With selected..." dropdown
+
+    .. py:attribute:: export_fields
+
+        Whitelist of field names that may be exported
+
+    .. py:attribute:: export_exclude
+
+        Blacklist of field names withheld from export.  Related models are
+        restricted by their own registered ModelAdmin's settings
+
     .. py:attribute:: exclude
 
         A list of field names to exclude from the "add" and "edit" forms
@@ -245,9 +275,9 @@ Exposing Models with the ModelAdmin
         .. code-block:: python
 
             class UserAdmin(ModelAdmin):
-                def get_query():
+                def get_query(self):
                     # ask the auth system for the currently logged-in user
-                    current_user = self.auth.get_logged_in_user()
+                    current_user = self.admin.auth.get_logged_in_user()
 
                     # if they are not a superuser, only show them their own
                     # account in the admin
@@ -280,14 +310,14 @@ Exposing Models with the ModelAdmin
     .. py:method:: get_add_form()
 
         Allows you to specify a different form when adding new instances versus
-        editing existing instances.  The default implementation simply calls
+        editing existing instances.  The default implementation calls
         :py:meth:`~ModelAdmin.get_form`.
 
-    .. py:method:: get_edit_form()
+    .. py:method:: get_edit_form(instance)
 
         Allows you to specify a different form when editing existing instances versus
-        adding new instances.  The default implementation simply calls
-        :py:meth:`~ModelAdmin.get_form`.
+        adding new instances.  Receives the instance being edited.  The default
+        implementation calls :py:meth:`~ModelAdmin.get_form`.
 
     .. py:method:: get_filter_form()
 
@@ -303,22 +333,21 @@ Exposing Models with the ModelAdmin
         Method responsible for persisting changes to the database.  Called by both
         the add and the edit views.
 
-        Here is an example from the default ``auth.User`` :py:class:`ModelAdmin`,
-        in which the password is displayed as a sha1, but if the user is adding
-        or edits the existing password, it re-hashes:
+        Here is the implementation from the default ``auth.User``
+        :py:class:`ModelAdmin`, which re-hashes a changed password before the
+        single save so the raw password is never written to the database:
 
         .. code-block:: python
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password
+                form.populate_obj(instance)
 
-                user = super(UserAdmin, self).save_model(instance, form, adding)
+                if form.password.data != orig_password:
+                    instance.set_password(form.password.data)
 
-                if orig_password != form.password.data:
-                    user.set_password(form.password.data)
-                    user.save()
-
-                return user
+                instance.save(force_insert=adding)
+                return instance
 
         :param instance: an unsaved model instance
         :param form: a validated form instance
@@ -383,15 +412,8 @@ Extending admin functionality using AdminPanel
     the admin.  These are displayed as "panels" on the admin dashboard with a customizable
     template.  They may additionally, however, define any views and urls.  These
     views will automatically be protected by the same authentication used throughout
-    the admin area.
-
-    Some example use-cases for AdminPanels might be:
-
-    * Display some at-a-glance functionality in the dashboard, like stats on new
-      user signups.
-    * Provide a set of views that should only be visible to site administrators,
-      for example a mailing-list app.
-    * Control global site settings, turn on and off features, etc.
+    the admin area.  See :ref:`admin-interface` for example use-cases and a
+    worked panel.
 
     .. py:attribute:: template_name
 
@@ -427,7 +449,7 @@ Extending admin functionality using AdminPanel
     .. py:method:: get_template_name()
 
         Return the template used to render this panel in the dashboard.  By default
-        simply returns the template stored under :py:attr:`AdminPanel.template_name`.
+        returns the template stored under :py:attr:`AdminPanel.template_name`.
 
     .. py:method:: get_context()
 
@@ -437,14 +459,14 @@ Extending admin functionality using AdminPanel
 
     .. py:method:: render()
 
-        Render the panel template with the context -- this is what gets displayed
+        Render the panel template with the context.  This is what gets displayed
         in the admin dashboard.
 
 
 Auth
 ----
 
-.. py:class:: Auth(app, db[, user_model=None[, prefix='/accounts']], db_table='user')
+.. py:class:: Auth(app, db[, user_model[, prefix[, name[, clear_session[, default_next_url[, db_table]]]]]])
 
     The class that provides methods for authenticating users and tracking
     users across requests.  It also provides a model for persisting users to
@@ -491,8 +513,14 @@ Auth
     :param app: flask application to bind admin to
     :param db: :py:class:`Database` database wrapper for flask app
     :param user_model: ``User`` model to use
-    :param prefix: url to bind authentication views to, defaults to /accounts/
-    :param db_table: Create db table using db_table name. ``user`` is reserved keyword in postgres.
+    :param prefix: url to bind authentication views to, defaults to ``/accounts``
+    :param name: name of the auth blueprint, defaults to ``auth``
+    :param clear_session: wipe the entire session on logout, rather than just
+        the auth keys
+    :param default_next_url: where to redirect after login or logout when no
+        ``?next=`` is given, defaults to ``/``
+    :param db_table: table name for the default ``User`` model (``user`` is a
+        reserved word in postgres)
 
     .. py:attribute:: default_next_url = '/'
 
@@ -536,24 +564,24 @@ Auth
         model.  Specifically addresses the need to re-hash passwords when changing
         them via the admin.
 
-        The default implementation includes an override of the :py:meth:`ModelAdmin.save_model`
-        method to intelligently hash passwords:
+        The default implementation overrides :py:meth:`ModelAdmin.save_model`
+        to hash a changed password before the save:
 
         .. code-block:: python
 
             class UserAdmin(model_admin):
                 columns = ['username', 'email', 'active', 'admin']
+                export_exclude = ('password',)
 
                 def save_model(self, instance, form, adding=False):
                     orig_password = instance.password
+                    form.populate_obj(instance)
 
-                    user = super(UserAdmin, self).save_model(instance, form, adding)
+                    if form.password.data != orig_password:
+                        instance.set_password(form.password.data)
 
-                    if orig_password != form.password.data:
-                        user.set_password(form.password.data)
-                        user.save()
-
-                    return user
+                    instance.save(force_insert=adding)
+                    return instance
 
         :param model_admin: subclass of :py:class:`ModelAdmin` to use as the base class
         :rtype: a subclass of :py:class:`ModelAdmin` suitable for use with the ``User`` model
@@ -594,11 +622,10 @@ Auth
 
         :param user: ``User`` instance
 
-    .. py:method:: logout_user(user)
+    .. py:method:: logout_user()
 
-        Mark the requesting user as logged-out
-
-        :param user: ``User`` instance
+        Mark the requesting user as logged-out, removing the auth keys from
+        the session (or the whole session with ``clear_session``)
 
 
 The BaseUser mixin
@@ -638,7 +665,7 @@ Database
     with the database specified by the application's config.
 
     :param app: a ``Flask`` instance or ``None`` (for deferred initialization).
-    :param db: a peewee database instance or ``None``. If None then the
+    :param database: a peewee database instance or ``None``. If None then the
         database can be configured via the ``app.config`` settings.
 
     To configure the database specify a database engine and name:
@@ -683,10 +710,10 @@ Database
         sqlite_db = SqliteDatabase('example.db')
         db.init_app(app, sqlite_db)
 
-    .. py:method:: init_app([app=None[, database=None]])
+    .. py:method:: init_app(app[, database=None])
 
         :param app: a ``Flask`` instance.
-        :param db: a peewee database instance or ``None``. If None then the
+        :param database: a peewee database instance or ``None``. If None then the
             database will be configured via the ``app.config`` settings.
 
         Initialize the Database wrapper with a Flask app you intend to use,
@@ -745,7 +772,7 @@ REST API
 
         Register the API ``BluePrint`` and configure urls.
 
-        .. warning:: This must be called **after** registering your resources.
+        .. warning:: This must be called after registering your resources.
 
 
 RESTful Resources and their subclasses
@@ -779,8 +806,8 @@ RESTful Resources and their subclasses
         The default page size for a given API query.
 
         .. note:: A different page size can be requested by specifying a
-            ``limit``.  ``paginate_by`` is only the default, not a maximum;
-            use ``max_paginate_by`` to cap what a client may request.
+            ``limit``.  ``paginate_by`` is only the default, not a maximum.
+            Use ``max_paginate_by`` to cap what a client may request.
 
     .. py:attribute:: max_paginate_by = None
 
@@ -792,11 +819,11 @@ RESTful Resources and their subclasses
 
     .. py:attribute:: exclude = None
 
-        A list or tuple of fields to **not** expose when serializing
+        A list or tuple of fields to omit when serializing
 
     .. py:attribute:: filter_exclude
 
-        A list of fields that **cannot** be used to filter API results
+        A list of fields that may never be used to filter API results
 
     .. py:attribute:: filter_fields
 
@@ -805,6 +832,10 @@ RESTful Resources and their subclasses
     .. py:attribute:: filter_recursive = True
 
         Allow filtering on related resources
+
+    .. py:attribute:: max_filter_depth = 3
+
+        How many foreign-key hops filtering may traverse into related models
 
     .. py:attribute:: readonly_fields = None
 
@@ -819,6 +850,13 @@ RESTful Resources and their subclasses
         rejected with a 400 listing them, instead of the keys being silently
         ignored.  Read-only fields are stripped, not rejected, and a foreign
         key may be written by field name or column name (``user`` / ``user_id``).
+
+    .. py:attribute:: reject_unknown_filters = False
+
+        When ``True``, a query-string filter that matches no filterable field
+        is rejected with a 400 naming it, instead of being silently ignored.
+        Stray non-filter query parameters get the same 400, so enable this
+        only for APIs whose clients send clean query strings.
 
     .. py:attribute:: include_resources
 
@@ -838,7 +876,7 @@ RESTful Resources and their subclasses
             /* messages without "include_resources" */
             {
               "content": "flask and peewee, together at last!",
-              "pub_date": "2026-09-16 18:36:15",
+              "pub_date": "2026-09-16T18:36:15",
               "id": 1,
               "user": 2
             },
@@ -846,16 +884,22 @@ RESTful Resources and their subclasses
             /* messages with "include_resources = {'user': UserResource} */
             {
               "content": "flask and peewee, together at last!",
-              "pub_date": "2026-09-16 18:36:15",
+              "pub_date": "2026-09-16T18:36:15",
               "id": 1,
               "user": {
                 "username": "coleifer",
                 "active": true,
-                "join_date": "2026-09-16 18:35:56",
+                "join_date": "2026-09-16T18:35:56",
                 "admin": false,
                 "id": 2
               }
             }
+
+    .. py:attribute:: nested_writes = True
+
+        Whether a nested object in a write payload may create or update the
+        related row.  When ``False`` a nested object is ignored, though the
+        foreign key may still be assigned by bare id.
 
     .. py:attribute:: delete_recursive = True
 
@@ -871,7 +915,7 @@ RESTful Resources and their subclasses
             class UserResource(RestResource):
                 def get_query(self):
                     # only return "active" users
-                    return self.model.select().where(active=True)
+                    return self.model.select().where(self.model.active == True)
 
         :rtype: a ``SelectQuery`` containing the model instances to expose
 
@@ -910,8 +954,11 @@ RESTful Resources and their subclasses
         A view that dispatches based on the HTTP verb to either:
 
         * GET: :py:meth:`~RestResource.object_detail`
-        * PUT: :py:meth:`~RestResource.edit`
+        * PUT or POST: :py:meth:`~RestResource.edit`
         * DELETE: :py:meth:`~RestResource.delete`
+
+        ``POST /<pk>/delete/`` is also accepted as an alias for DELETE, for
+        clients that cannot issue PUT or DELETE requests.
 
         :rtype: ``Response``
 
@@ -956,9 +1003,11 @@ RESTful Resources and their subclasses
 
         :rtype: Boolean indicating whether to allow the request to continue
 
-    .. py:method:: check_post()
+    .. py:method:: check_post([obj=None])
 
         A hook for pre-authorizing a POST request.  By default returns ``True``.
+        ``obj`` is provided when the POST addresses an existing object (a
+        detail-url edit or a nested write), and is ``None`` for a create.
 
         :rtype: Boolean indicating whether to allow the request to continue
 
@@ -997,7 +1046,7 @@ RESTful Resources and their subclasses
     .. py:method:: set_owner(obj, user)
 
         Mark the object as being owned by the provided user.  The default implementation
-        simply calls ``setattr``.
+        calls ``setattr``.
 
         :param obj: the ``Model`` instance being accessed via the API
         :param user: an authenticated ``User`` instance
@@ -1008,9 +1057,9 @@ Authenticating requests to the API
 
 .. py:class:: Authentication([protected_methods=None])
 
-    Not to be confused with the ``auth.Authentication`` class, this class provides
-    a single method, ``authorize``, which is used to determine whether to allow
-    a given request to the API.
+    Not to be confused with the :py:class:`Auth` class in ``flask_peewee.auth``,
+    this class provides a single method, ``authorize``, which is used to
+    determine whether to allow a given request to the API.
 
     :param protected_methods: A list or tuple of HTTP verbs to require auth for
 
@@ -1073,13 +1122,6 @@ Authenticating requests to the API
 
     .. code-block:: python
 
-    Authenticates API requests by requiring the requesting user be a registered
-    ``auth.User``.  Credentials are supplied using HTTP basic auth.
-
-    Example usage:
-
-    .. code-block:: python
-
         from auth import auth # import the Auth object used by our project
 
         from flask_peewee.rest import RestAPI, RestResource, UserAuthentication, AdminAuthentication
@@ -1137,6 +1179,43 @@ Authenticating requests to the API
 
     :param model: a :py:class:`Database.Model` subclass to persist API keys.
     :param protected_methods: A list or tuple of HTTP verbs to require auth for
+
+
+.. py:class:: BearerAuthentication(model[, protected_methods=None])
+
+    Authenticates requests by a token in the ``Authorization: Bearer <token>``
+    header, looked up in ``model``'s ``token`` field.  The matched row is
+    stored on ``g.api_key``.  See :ref:`rest-api` for examples.
+
+    :param model: model persisting the tokens
+    :param protected_methods: A list or tuple of HTTP verbs to require auth for
+
+    .. py:attribute:: token_field = 'token'
+
+        Name of the column holding the token.
+
+    .. py:method:: get_key(token)
+
+        Look the token up and return the matching row, or ``None``.  Override
+        to store tokens hashed at rest.
+
+
+.. py:class:: UserBearerAuthentication(model[, protected_methods=None])
+
+    :py:class:`BearerAuthentication` that resolves the token to a user and
+    sets ``g.user``, so it works with :py:class:`RestrictOwnerResource`.  The
+    token model carries a foreign key to the user in :py:attr:`user_field`.
+
+    .. py:attribute:: user_field = 'user'
+
+        Name of the token model's foreign key to the user.  Set to ``None``
+        when the token lives on the user model itself.
+
+
+.. py:data:: ALL_METHODS
+
+    ``('GET', 'POST', 'PUT', 'DELETE')``.  Pass as ``protected_methods`` to
+    require authentication on reads as well as writes.
 
 
 Utilities
@@ -1212,12 +1291,12 @@ Utilities
     .. code-block:: python
 
         query = Blog.select().where(Blog.active==True)
-        pq = PaginatedQuery(query)
+        pq = PaginatedQuery(query, 20)
 
         # assume url was /?page=3
         obj_list = pq.get_list()  # returns 3rd page of results
 
-        pq.get_page() # returns "3"
+        pq.get_page() # returns 3
 
         pq.get_pages() # returns total objects / objects-per-page
 

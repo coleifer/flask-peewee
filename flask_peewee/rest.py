@@ -370,13 +370,20 @@ class RestResource(object):
         op_fn = DJANGO_MAP[op]
         make = lambda value: ~op_fn(field, value) if negated else op_fn(field, value)
 
-        if op == 'in':
-            # `in` values may be given comma-separated and/or as repeated
+        if op in ('in', 'not_in'):
+            # in/not_in values may be given comma-separated and/or as repeated
             # params, e.g. ?id__in=1,2&id__in=3 -> [1, 2, 3].
             values = []
             for arg in arg_list:
                 values.extend(v.strip() for v in str(arg).split(','))
             return query.where(make(values))
+
+        if op == 'between':
+            # each value is one "low,high" pair. repeated pairs combine below.
+            arg_list = [[v.strip() for v in str(arg).split(',')]
+                        for arg in arg_list]
+            if any(len(pair) != 2 for pair in arg_list):
+                raise ValueError('between requires two comma-separated values')
 
         # a match ORs its values ("any of"), an exclusion ANDs them ("none
         # of"). the "-" prefix flips one into the other. without this a

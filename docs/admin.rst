@@ -3,7 +3,7 @@
 Admin Interface
 ===============
 
-Many web applications ship with an "admin area", where priveleged users can
+Many web applications ship with an "admin area", where privileged users can
 view and modify content.  By introspecting your application's models, flask-peewee
 can provide you with straightforward, easily-extensible forms for managing your
 application content.
@@ -12,7 +12,7 @@ Here's a screen-shot of the admin dashboard:
 
 .. image:: fp-admin.png
 
-You can also try out a custom theme. Here is the *crux* theme:
+You can also try out a custom theme. Here is the ``crux`` theme:
 
 .. image:: fp-crux-full.png
 
@@ -21,8 +21,8 @@ Getting started
 
 To get started with the admin, there are just a couple steps:
 
-1. Instantiate an :py:class:`Auth` backend for your project -- this component
-   is responsible for providing the security for the admin area
+1. Instantiate an :py:class:`Auth` backend for your project.  This component
+   provides the security for the admin area
 
     .. code-block:: python
 
@@ -144,11 +144,11 @@ Filtering
 ^^^^^^^^^
 
 The list and export views expose per-field filters (equals, less-than, contains,
-etc., chosen by field type).  By default every field is filterable; two
+etc., chosen by field type).  By default every field is filterable.  Two
 attributes narrow that:
 
-* ``filter_fields`` -- a whitelist of the only fields that may be filtered
-* ``filter_exclude`` -- a blacklist of fields to hide from filtering
+* ``filter_fields``: a whitelist of the only fields that may be filtered
+* ``filter_exclude``: a blacklist of fields to hide from filtering
 
 Both accept ``__`` notation for related fields, so
 ``filter_exclude = ('user__password',)`` keeps a sensitive related column out of
@@ -158,7 +158,7 @@ Restricting the queryset
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Suppose privacy is a big concern, and under no circumstances should a user be
-able to see another user's messages -- even in the admin.  This can be done by overriding
+able to see another user's messages, even in the admin.  This can be done by overriding
 the :py:meth:`~ModelAdmin.get_query` method:
 
 .. code-block:: python
@@ -211,14 +211,14 @@ Nicer display for Foreign Key fields
 By default a foreign key renders as a ``<select>`` of the related rows.  How that
 holds up when the related table is large depends on where it appears:
 
-* In **filters**, the ``<select>`` is automatically capped at the first 20 rows
-  (plus whichever row is currently selected), so the page never balloons, but
+* In filters, the ``<select>`` is automatically capped at the first 20 rows
+  (plus whichever row is currently selected), so the page stays small, but
   only those 20 rows are reachable.
-* In **model forms** (add/edit), the ``<select>`` is *not* capped: every related
+* In model forms (add/edit), the ``<select>`` is not capped.  Every related
   row is rendered, which is slow to load and hammers the database on a large
   table.
 
-To handle large related tables, set ``foreign_key_lookups`` -- a mapping of the
+To handle large related tables, set ``foreign_key_lookups``, a mapping of the
 foreign-key field name to the related field to search and display on.  This
 replaces the plain ``<select>`` with a paginated, type-ahead search backed by the
 model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``, a page
@@ -229,6 +229,10 @@ at a time), so any row is reachable no matter how large the table:
     class MessageAdmin(ModelAdmin):
         columns = ('user', 'content', 'pub_date',)
         foreign_key_lookups = {'user': 'username'}
+
+In both contexts the candidate rows come from the related model's registered
+admin, so rows hidden by its :py:meth:`~ModelAdmin.get_query` are never
+offered.
 
 The widget differs between the two contexts:
 
@@ -245,9 +249,9 @@ Model forms
 ^^^^^^^^^^^
 
 Without ``foreign_key_lookups`` an add or edit form renders every related row in a
-single ``<select>``, the case worth avoiding on a large table.  With it, the
-field becomes a button showing the current selection; clicking it opens a modal
-with a paginated, type-ahead list:
+single ``<select>``, which is slow on a large table.  With it, the field becomes
+a button showing the current selection.  Clicking it opens a modal with a
+paginated, type-ahead list:
 
 .. image:: fp-message-fk-btn.png
 
@@ -257,8 +261,8 @@ with a paginated, type-ahead list:
 Bulk actions
 ------------
 
-Every row in the list view has a checkbox, and the **"With selected..."**
-dropdown offers *Export* and *Delete* out-of-the-box.  You can add your own
+Every row in the list view has a checkbox, and the "With selected..."
+dropdown offers "Export" and "Delete" out-of-the-box.  You can add your own
 bulk operations by subclassing :py:class:`Action` and listing instances in your
 :py:class:`ModelAdmin`'s ``actions`` attribute.
 
@@ -282,8 +286,8 @@ the list of primary keys the user checked.  Suppose our ``Message`` model has a
 
 The action shows up in the "With selected..." dropdown labeled with its
 ``name``, which defaults to the class name minus the "Action" suffix
-(``FlagAction`` becomes "Flag").  Pass ``name`` (and optionally ``description``)
-to the constructor to override it, e.g. ``FlagAction(name='Flag as spam')``.
+(``FlagAction`` becomes "Flag").  Pass ``name`` to the constructor to override
+it, e.g. ``FlagAction(name='Flag as spam')``.
 
 If a callback returns a Flask ``Response``, it is sent to the user as-is, handy
 for generating a download from the selected rows:
@@ -307,16 +311,16 @@ does nothing.
 Exporting data
 --------------
 
-Every registered model gets an **Export** view (also reachable from the list
-view's "With selected..." dropdown).  It lets you choose which fields to include
--- across foreign keys, too -- and downloads the result as a JSON file, honoring
-whatever filters are currently applied.
+Every registered model gets an "Export" view (also reachable from the list
+view's "With selected..." dropdown).  It lets you choose which fields to
+include, across foreign keys too, and downloads the result as a JSON file,
+honoring whatever filters are currently applied.
 
 By default every field is exportable.  Two :py:class:`ModelAdmin` attributes
 restrict that:
 
-* ``export_fields`` -- a whitelist of field names that may be exported
-* ``export_exclude`` -- a blacklist of field names to withhold
+* ``export_fields``: a whitelist of field names that may be exported
+* ``export_exclude``: a blacklist of field names to withhold
 
 .. code-block:: python
 
@@ -324,12 +328,11 @@ restrict that:
         columns = ('username', 'email',)
         export_exclude = ('password',)   # never allow the password hash out
 
-These restrictions are enforced **server-side**: hand-posting a withheld field
-name will not dump it, so ``export_exclude = ('password',)`` is a real guarantee
-rather than a merely-hidden checkbox.
+These restrictions are enforced server-side.  Hand-posting a withheld field
+name will not dump it.
 
 Related fields are exported nested under their foreign key.  A related model
-defers to *its own* registered :py:class:`ModelAdmin`'s
+defers to its own registered :py:class:`ModelAdmin`'s
 ``export_fields``/``export_exclude``, so once ``UserAdmin`` excludes ``password``
 above, no other model's export can reach ``user__password`` either.  Exporting,
 say, the ``user``, ``content`` and ``user__username`` fields of ``Message``
@@ -397,7 +400,7 @@ Here's what the panel class looks like:
             return {'note_list': notes}
 
 When the admin dashboard is rendered (``/admin/``), all panels are rendered using
-the templates the specify.  The template is rendered with the context provided
+the templates they specify.  The template is rendered with the context provided
 by the panel's ``get_context`` method.
 
 And the template:
@@ -411,7 +414,7 @@ And the template:
         <p>{{ note.user.username }}: {{ note.message }}</p>
       {% endfor %}
       <form method="post" action="{{ url_for(panel.get_url_name('create')) }}">
-        <input type="hidden" value="{{ request.url }}" />
+        <input type="hidden" name="next" value="{{ request.url }}" />
         <p><textarea name="message" class="form-control"></textarea></p>
         <button type="submit" class="btn btn-secondary btn-sm">Save</button>
       </form>
