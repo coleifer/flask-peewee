@@ -686,6 +686,23 @@ class RestApiValidationTestCase(RestApiTestCase):
         self.assertIn('_pk', self.response_json(resp)['error'])
         self.assertEqual(HModel.select().count(), 0)
 
+    def test_reject_unknown_filters(self):
+        # HResource opts in: a query-string filter on an unknown field is a 400
+        # naming the offender, not the full unfiltered collection.
+        resp = self.app.get('/api/hmodel/?h_feild=x')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('h_feild', self.response_json(resp)['error'])
+
+        # a real filter still works.
+        resp = self.app.get('/api/hmodel/?h_field=clean')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_unknown_filters_ignored_by_default(self):
+        # a default resource stays lenient: an unknown filter is ignored, not a
+        # 400, preserving the historical behavior.
+        resp = self.app.get('/api/amodel/?bogus=x')
+        self.assertEqual(resp.status_code, 200)
+
     def test_reject_unknown_fields_nested(self):
         # unknown keys inside a nested foreign-key dict are reported with the
         # __ path notation.

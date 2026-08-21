@@ -95,11 +95,8 @@ class APIKeyAuthentication(Authentication):
 
 class BearerAuthentication(Authentication):
     """
-    Token auth via the ``Authorization: Bearer <token>`` header. Requires a
-    model with a token field (default "token"), which is looked up to authorize
-    the request. Unlike APIKeyAuthentication the credential rides in a header
-    rather than the query-string, so it does not leak into access logs. Store
-    high-entropy tokens; to keep them hashed at rest, override get_key.
+    Token auth via the ``Authorization: Bearer <token>`` header (requires a
+    model with a token field, default "token").
     """
     token_field = 'token'
 
@@ -138,10 +135,7 @@ class BearerAuthentication(Authentication):
 
 class UserBearerAuthentication(BearerAuthentication):
     """
-    Bearer-token auth that resolves the token to a *user* and sets g.user, so
-    it drives RestrictOwnerResource and the rest of the user-auth stack. The
-    token model has a foreign key to the user (default "user"); set
-    user_field=None if the token lives directly on the user model.
+    Bearer-token auth that resolves the token to a *user* and sets g.user.
     """
     user_field = 'user'
 
@@ -216,13 +210,15 @@ class RestResource(object):
     readonly_fields = None
 
     # when True, a write payload containing unrecognized keys is rejected with
-    # a 400 listing them, instead of the keys being silently ignored --
-    # protects clients against typo'd field names. Read-only fields are
-    # stripped, not rejected, so echoing back a GET response still works.
+    # a 400 listing them.
     reject_unknown_fields = False
 
-    # exclude certian fields from being exposed as filters -- for related fields
-    # use "__" notation, e.g. user__password
+    # when True, a query-string filter that matches no filterable field returns
+    # a 400.
+    reject_unknown_filters = False
+
+    # exclude certian fields from being exposed as filters, for related fields
+    # use "__", e.g. user__password
     filter_exclude = None
     filter_fields = None
     filter_recursive = True
@@ -336,6 +332,13 @@ class RestResource(object):
             for child_prefix, child_node in node.children.items():
                 fk = node.model._meta.fields[child_prefix]
                 queue.append((child_node, prefix + child_prefix + '__', fks + [fk]))
+
+        # keys left in raw_filters matched no filterable field (a typo, or a
+        # field not exposed as a filter). reject them when the resource opts
+        # in, else fall through and ignore them as before.
+        if raw_filters and self.reject_unknown_filters:
+            raise ValueError('Unrecognized filter(s): %s'
+                             % ', '.join(sorted(raw_filters)))
 
         # phase 2: join each related path through its own alias (peewee's
         # filter()/ensure_join would collapse two fks to one model onto a
@@ -618,8 +621,12 @@ class RestResource(object):
         query = self.get_query()
         query = self.apply_ordering(query)
 
-        # process any filters
-        query = self.process_query(query)
+        # process any filters, translating an unknown-filter rejection into a
+        # 400 (see reject_unknown_filters).
+        try:
+            query = self.process_query(query)
+        except ValueError as exc:
+            return self.response_bad_request(str(exc))
 
         # eager-load nested relations (avoids N+1 during serialization). This
         # runs after process_query so it composes with the DQ-based filter

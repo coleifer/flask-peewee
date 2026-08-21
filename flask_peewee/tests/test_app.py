@@ -292,8 +292,9 @@ class GResource(RestResource):
     nested_writes = False
 
 class HResource(RestResource):
-    # write payloads containing unrecognized keys are rejected with a 400.
+    # unrecognized keys are rejected with a 400, on writes and on filters.
     reject_unknown_fields = True
+    reject_unknown_filters = True
 
 class AdminOnlyUserResource(UserResource):
     # user writes (even nested) require an admin -- exercises check_*
