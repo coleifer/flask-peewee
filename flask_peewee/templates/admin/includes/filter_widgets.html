@@ -24,9 +24,9 @@
               {% if 'Select' in f.value_field.type %}
                 {{ f.value_field(id='filter-value-' ~ loop.index, class='form-select form-select-sm w-auto') }}
               {% elif f.input_type %}
-                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto', type=f.input_type, value=f.value) }}
+                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto', type=f.input_type) }}
               {% else %}
-                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto', value=f.value) }}
+                {{ f.value_field(id='filter-value-' ~ loop.index, class='form-control form-control-sm w-auto') }}
               {% endif %}
             </div>
           {% endfor %}
