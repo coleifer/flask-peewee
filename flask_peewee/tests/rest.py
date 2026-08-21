@@ -954,6 +954,29 @@ class RestApiBasicTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual([o['label'] for o in resp_json['objects']], ['b-to-a'])
 
+    def test_negated_filter_multiple_values(self):
+        # two negated values of one field exclude both. the old code built
+        # NOT a OR NOT b, which matched every row.
+        users = self.create_users()
+        for u in users:
+            Note.create(user=u, message=u.username)
+        resp = self.app.get('/api/note/?-user__username=admin'
+                            '&-user__username=normal&ordering=id')
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['message'] for o in resp_json['objects']],
+                         ['inactive'])
+
+    def test_ne_filter_multiple_values(self):
+        # ne is an exclusion too, so repeated values AND even without the "-"
+        # prefix: id != a AND id != b, not the vacuous OR.
+        users = self.create_users()
+        notes = [Note.create(user=u, message=u.username) for u in users]
+        ids = [n.id for n in notes]
+        resp = self.app.get('/api/note/?id__ne=%s&id__ne=%s&ordering=id'
+                            % (ids[0], ids[1]))
+        resp_json = self.response_json(resp)
+        self.assertEqual([o['id'] for o in resp_json['objects']], [ids[2]])
+
 
 class RestApiUserAuthTestCase(RestApiTestCase):
     def setUp(self):

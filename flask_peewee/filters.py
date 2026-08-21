@@ -27,6 +27,10 @@ class QueryFilter(object):
     # for operations that take a count or year rather than a date.
     input_type = None
 
+    # how repeated values of this op combine: OR for a match ("any of"), AND
+    # for an exclusion ("none of"), else a repeated exclusion is vacuous.
+    combine = operator.or_
+
     def __init__(self, field, name, options=None):
         self.field = field
         self.name = name
@@ -57,6 +61,7 @@ class EqualQueryFilter(QueryFilter):
 
 class NotEqualQueryFilter(QueryFilter):
     key = 'ne'
+    combine = operator.and_
 
     def query(self, value):
         return self.field != value
@@ -239,6 +244,7 @@ class BooleanEqualQueryFilter(EqualQueryFilter):
 
 class BooleanNotEqualQueryFilter(BooleanEqualQueryFilter):
     key = 'ne'
+    combine = operator.and_
 
     def query(self, value):
         return self.field != value
@@ -542,8 +548,9 @@ class FilterForm(object):
                     if bound_field is not field:
                         bound = type(query_filter)(
                             bound_field, query_filter.name, query_filter.options)
-                    op_groups.setdefault(query_filter.key, []).append(
-                        bound.query(value))
+                    group = op_groups.setdefault(
+                        query_filter.key, (query_filter.combine, []))
+                    group[1].append(bound.query(value))
 
                     # `form` only binds the first occurrence of each
                     # parameter, so give each row its own form bound to just
@@ -559,11 +566,12 @@ class FilterForm(object):
                         'value_field': self.resolve_form_field(row_form, qf_v),
                     })
 
-                # repeated uses of one operation are OR'd together, e.g.
-                # eq a, eq b -> "a or b" -- while distinct operations are
-                # AND'd, e.g. gt 8, lt 12 -> a range.
-                for exprs in op_groups.values():
-                    query = query.where(reduce(operator.or_, exprs))
+                # repeated uses of one match op OR together (eq a, eq b matches
+                # either). an exclusion ANDs instead (ne a, ne b excludes both).
+                # distinct ops AND, as separate where() calls (gt 8, lt 12 is a
+                # range).
+                for combine, exprs in op_groups.values():
+                    query = query.where(reduce(combine, exprs))
 
         return form, query, cleaned
 

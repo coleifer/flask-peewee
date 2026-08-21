@@ -976,6 +976,20 @@ class AdminFilterTestCase(BaseAdminTestCase):
 
             self.assertEqual([o.d_field for o in query.get_list()], ['d2'])
 
+    def test_filter_ne_multiple_values(self):
+        # two "not equal" values for one field exclude both, rather than the
+        # old OR that left every row matching.
+        self.create_users()
+        for i in range(1, 4):
+            AModel.create(a_field='a%d' % i)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            c.get('/admin/amodel/?fo_a_field=ne&fv_a_field=a1'
+                  '&fo_a_field=ne&fv_a_field=a2')
+            query = self.get_context('query')
+            self.assertEqual([o.a_field for o in query.get_list()], ['a3'])
+
     def assertFieldTree(self, expected):
         field_tree = self.get_context('field_tree')
 

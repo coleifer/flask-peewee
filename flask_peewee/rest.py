@@ -203,6 +203,10 @@ class RestResource(object):
                         'True': True, 'true': True,
                         'None': None, 'none': None}
 
+    # ops whose predicate excludes values instead of matching them. repeated
+    # values of an exclusion combine with AND, not OR (see apply_filter).
+    NEGATIVE_OPS = frozenset({'ne', 'is_not', 'not_in'})
+
     # serializing: dictionary of model -> field names to restrict output
     fields = None
     exclude = None
@@ -357,10 +361,13 @@ class RestResource(object):
             for arg in arg_list:
                 values.extend(v.strip() for v in str(arg).split(','))
             return query.where(make(values))
-        elif len(arg_list) == 1:
-            return query.where(make(arg_list[0]))
-        else:
-            return query.where(reduce(operator.or_, [make(val) for val in arg_list]))
+
+        # a match ORs its values ("any of"), an exclusion ANDs them ("none
+        # of"). the "-" prefix flips one into the other. without this a
+        # repeated exclusion is vacuous: id != 1 OR id != 2 matches every row.
+        exclude = negated ^ (op in self.NEGATIVE_OPS)
+        combine = operator.and_ if exclude else operator.or_
+        return query.where(reduce(combine, [make(val) for val in arg_list]))
 
     def get_serializer(self):
         return Serializer()
