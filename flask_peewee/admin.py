@@ -21,6 +21,7 @@ from flask_peewee.filters import FilterModelConverter
 from flask_peewee.forms import BaseModelConverter
 from flask_peewee.forms import AjaxSelectWidget
 from flask_peewee.forms import LimitedModelSelectField
+from flask_peewee.forms import ScopedModelSelectField
 from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import alias_field
@@ -35,7 +36,6 @@ from werkzeug.datastructures import CombinedMultiDict
 from werkzeug.datastructures import Headers
 from wtforms import fields
 from wtfpeewee.fields import ModelHiddenField
-from wtfpeewee.fields import ModelSelectField
 from wtfpeewee.orm import model_form
 
 
@@ -54,7 +54,8 @@ class AdminModelConverter(BaseModelConverter):
         if field.name in (self.model_admin.foreign_key_lookups or ()):
             form_field = ModelHiddenField(model=field.rel_model, **kwargs)
         else:
-            form_field = ModelSelectField(model=field.rel_model, **kwargs)
+            query = self.model_admin.admin.get_query_for(field.rel_model)
+            form_field = ScopedModelSelectField(query=query, **kwargs)
         return field.name, form_field
 
 
@@ -67,7 +68,8 @@ class AdminFilterModelConverter(FilterModelConverter):
         if field.name in (self.model_admin.foreign_key_lookups or ()):
             data_source = url_for(self.model_admin.get_url_name('ajax_list'))
             kwargs['widget'] = AjaxSelectWidget(data_source, field.name)
-        form_field = LimitedModelSelectField(model=field.rel_model, **kwargs)
+        query = self.model_admin.admin.get_query_for(field.rel_model)
+        form_field = LimitedModelSelectField(query=query, **kwargs)
         return field.name, form_field
 
 
@@ -383,11 +385,11 @@ class ModelAdmin(object):
         for query, fk in obj.dependencies():
             if not fk.null:
                 sq = fk.model.select().where(query)
-                collected = [rel_obj for rel_obj in sq.execute().iterator()]
+                collected = list(sq.execute().iterator())
                 if collected:
                     objects.append((0, fk.model, collected))
 
-        return sorted(objects, key=lambda i: (i[0], i[1].__name__))
+        return sorted(objects, key=lambda i: i[1].__name__)
 
     def delete(self):
         if request.method == 'GET':
@@ -846,6 +848,5 @@ class Export(object):
                 yield json.dumps(obj_data).encode('utf-8')
             yield b'\n]'
         headers = Headers()
-        headers.add('Content-Type', 'application/javascript')
         headers.add('Content-Disposition', 'attachment; filename=%s' % filename)
-        return Response(generate(), mimetype='text/javascript', headers=headers, direct_passthrough=True)
+        return Response(generate(), mimetype='application/json', headers=headers, direct_passthrough=True)

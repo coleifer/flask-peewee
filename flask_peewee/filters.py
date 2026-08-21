@@ -319,8 +319,7 @@ class FilterMapping(object):
         return [f(field, field.verbose_name, field.choices) for f in self.timestamp]
 
     def convert_boolean(self, field):
-        boolean_choices = [('True', '1', 'False', '')]
-        return [f(field, field.verbose_name, boolean_choices) for f in self.boolean]
+        return [f(field, field.verbose_name, field.choices) for f in self.boolean]
 
     def convert_foreign_key(self, field):
         return [f(field, field.verbose_name, field.choices) for f in self.foreign_key]

@@ -2,7 +2,7 @@ from peewee import BooleanField
 
 from wtforms import widgets
 from wtfpeewee.fields import BooleanSelectField
-from wtfpeewee.fields import ModelSelectField
+from wtfpeewee.fields import SelectQueryField
 from wtfpeewee.fields import wtf_choice
 from wtfpeewee.orm import ModelConverter
 
@@ -37,7 +37,21 @@ class AjaxSelectWidget(widgets.Select):
 ChosenAjaxSelectWidget = AjaxSelectWidget
 
 
-class LimitedModelSelectField(ModelSelectField):
+class ScopedModelSelectField(SelectQueryField):
+    """
+    Like wtfpeewee's ModelSelectField, but the candidate rows come from an
+    explicit query rather than model.select().  The admin passes the related
+    model's registered get_query(), so a picker never offers rows that admin
+    scopes out.  Falls back to model.select() when no query is given.
+    """
+    def __init__(self, label=None, validators=None, model=None, query=None, **kwargs):
+        if query is None:
+            query = model.select()
+        super(ScopedModelSelectField, self).__init__(
+            label, validators, query=query, **kwargs)
+
+
+class LimitedModelSelectField(ScopedModelSelectField):
     limit = 20
 
     def iter_choices(self):

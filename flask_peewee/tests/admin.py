@@ -8,6 +8,7 @@ from flask import request
 from flask import session
 from flask import url_for
 
+from flask_peewee.admin import AdminFilterModelConverter
 from flask_peewee.admin import AdminPanel
 from flask_peewee.admin import Export
 from flask_peewee.admin import ModelAdmin
@@ -540,6 +541,33 @@ class AdminTestCase(BaseAdminTestCase):
             data = json.loads(resp.data.decode('utf8'))
             self.assertEqual(data['object_list'], [])
 
+    def test_fk_select_respects_related_get_query(self):
+        # the non-ajax FK pickers (edit-form select, filter-form select) draw
+        # candidates from the related admin's get_query(), so a scoped-out row
+        # is never offered. the ajax picker is covered above.
+        ScopedItem.create(label='visible')
+        ScopedItem.create(label='hidden', hidden=True)
+
+        class PlainRefAdmin(ModelAdmin):
+            pass  # no foreign_key_lookups -> plain <select>, not ajax
+
+        ref_admin = PlainRefAdmin(admin, ScopedRef)
+        item_fk = ScopedRef._meta.fields['item']
+
+        with self.flask_app.test_request_context():
+            # edit-form select: bind the form and read the field's query.
+            add_form = ref_admin.get_add_form()()
+            edit_labels = [o.label for o in add_form.item.query]
+
+            # filter-form select: the converter carries the scoped query.
+            _, filter_field = AdminFilterModelConverter(ref_admin) \
+                .handle_foreign_key(ScopedRef, item_fk)
+            filter_labels = [o.label for o in filter_field.kwargs['query']]
+
+        for labels in (edit_labels, filter_labels):
+            self.assertIn('visible', labels)
+            self.assertNotIn('hidden', labels)
+
     def test_ajax_list_bad_field_returns_empty(self):
         # the /_ajax/ route exists on every admin, so it must not 500 on inputs
         # it accepts: no field, a real fk the admin did not configure for
@@ -820,6 +848,7 @@ class AdminTestCase(BaseAdminTestCase):
         self.assertEqual(len(data), 3)
         self.assertEqual(empty_data, [])
         self.assertEqual(counts, [])
+        self.assertEqual(resp.mimetype, 'application/json')
 
     def test_export_excludes_sensitive_fields(self):
         self.create_users()
