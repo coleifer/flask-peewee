@@ -785,6 +785,42 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(json.loads(resp.data), [{'username': 'admin'}])
 
+    def test_export_streams_without_count(self):
+        # the stream places separators with a first-row flag, not a pre-count,
+        # so it issues no COUNT and cannot emit a stale comma when the row set
+        # changes mid-iteration.
+        import logging
+        users = self.create_users()
+        for user in users:
+            Note.create(user=user, message='note-%s' % user.username)
+
+        counts = []
+        class H(logging.Handler):
+            def emit(self, record):
+                if 'COUNT(' in record.getMessage().upper():
+                    counts.append(record.getMessage())
+        logger = logging.getLogger('peewee')
+        level, handler = logger.level, H()
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+        try:
+            with self.flask_app.test_client() as c:
+                self.login(c)
+                resp = c.post('/admin/note/export/', data={'fields': ['message']})
+                data = json.loads(resp.data)
+
+                # an empty result set still streams valid JSON.
+                empty = c.post('/admin/note/export/?fo_id=eq&fv_id=0',
+                               data={'fields': ['id']})
+                empty_data = json.loads(empty.data)
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+
+        self.assertEqual(len(data), 3)
+        self.assertEqual(empty_data, [])
+        self.assertEqual(counts, [])
+
     def test_export_excludes_sensitive_fields(self):
         self.create_users()
 

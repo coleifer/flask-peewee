@@ -832,14 +832,18 @@ class Export(object):
         prepared_query, field_dict = self.prepare_query()
 
         def generate():
-            i = prepared_query.count()
+            # prefix the separator from the second row on, rather than keying
+            # commas off a pre-count. a count taken before iteration can
+            # disagree with the rows actually streamed (a concurrent insert or
+            # delete), producing a missing or trailing comma and invalid JSON.
             yield b'[\n'
+            first = True
             for obj in prepared_query:
-                i -= 1
+                if not first:
+                    yield b',\n'
+                first = False
                 obj_data = serializer.serialize_object(obj, field_dict)
                 yield json.dumps(obj_data).encode('utf-8')
-                if i > 0:
-                    yield b',\n'
             yield b'\n]'
         headers = Headers()
         headers.add('Content-Type', 'application/javascript')
