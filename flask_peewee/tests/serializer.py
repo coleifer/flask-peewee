@@ -107,9 +107,10 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         d, model_list = self.d.deserialize_object(User(), s)
         self.assertEqual(d, self.admin)
 
-    def test_deserialize_drops_non_field_keys(self):
-        # fields and fk column names ("user_id") are honored, "_pk" is dropped.
-        # _pk has a setter, so accepting it would retarget the row.
+    def test_deserialize_drops_underscore_keys(self):
+        # lenient deserialization sets non-field keys on the instance (the fk
+        # column name "user_id", a user property), but drops underscore-prefixed
+        # peewee internals like "_pk", which would otherwise retarget the row.
         self.create_users()
         note = Note.create(user=self.admin, message='original')
         other = Note.create(user=self.normal, message='other')
@@ -117,9 +118,11 @@ class SerializerTestCase(FlaskPeeweeTestCase):
         deserialized, models = self.d.deserialize_object(note, {
             'message': 'edited',
             '_pk': other.id,
+            'scratch': 'kept',
         })
+        self.assertEqual(deserialized.id, note.id)      # _pk dropped
         self.assertEqual(deserialized.message, 'edited')
-        self.assertEqual(deserialized.id, note.id)
+        self.assertEqual(deserialized.scratch, 'kept')  # non-underscore set
 
         # a foreign key written by column name still lands.
         via_column, models = self.d.deserialize_object(Note(), {

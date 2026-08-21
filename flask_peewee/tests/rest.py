@@ -677,6 +677,15 @@ class RestApiValidationTestCase(RestApiTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(HModel.get(h_field='x').a, a)
 
+    def test_reject_unknown_fields_blocks_pk(self):
+        # strict mode 400s a "_pk" key like any other unknown, so the lenient
+        # underscore guard is not the only thing standing between a payload and
+        # a retargeted row.
+        resp = self.post_to('/api/hmodel/', {'h_field': 'x', '_pk': 99})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('_pk', self.response_json(resp)['error'])
+        self.assertEqual(HModel.select().count(), 0)
+
     def test_reject_unknown_fields_nested(self):
         # unknown keys inside a nested foreign-key dict are reported with the
         # __ path notation.
@@ -1096,9 +1105,10 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         self.assertFalse(User.select().where(User.id == 99999).exists())
 
     def test_write_pk_payload_ignored(self):
-        # a "_pk" in the body must not retarget the row: the addressed row is
-        # the only one a write may touch. Before the guard a PUT edited a
-        # different row and a POST clobbered one via update-instead-of-insert.
+        # a "_pk" in the body must not retarget the row, even on a lenient
+        # (default) resource. The addressed row is the only one a write may
+        # touch. Before the underscore guard a PUT edited a different row and a
+        # POST clobbered one via update-instead-of-insert.
         self.create_notes()
 
         # PUT at admin_note carrying normal_note's pk edits admin_note only.
