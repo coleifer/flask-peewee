@@ -107,6 +107,10 @@ class ModelAdmin(object):
     # into related models, e.g. 'user__username'. empty -> no search box.
     search_fields = None
 
+    # max related-model hops when auto-building the filter and export field
+    # trees, so a long or densely linked fk graph cannot explode them.
+    max_filter_depth = 3
+
     # form parameters, lists of fields
     exclude = None
     fields = None
@@ -170,6 +174,7 @@ class ModelAdmin(object):
             self.filter_mapping(),
             self.filter_fields,
             self.filter_exclude,
+            self.max_filter_depth,
         )
 
     def process_filters(self, query):
@@ -447,12 +452,16 @@ class ModelAdmin(object):
         return [model._meta.fields[name] for name in allowed]
 
     def collect_related_fields(self, model, accum, path, seen=None):
-        seen = seen or set()
+        # `seen` is the fk path to this model (breaks cycles without collapsing
+        # two paths to one model), and len(path) bounds the walk to
+        # max_filter_depth hops.
+        seen = seen or frozenset()
         path_str = '__'.join(path)
         for field in model._meta.sorted_fields:
-            if isinstance(field, ForeignKeyField) and field not in seen:
-                seen.add(field)
-                self.collect_related_fields(field.rel_model, accum, path + [field.name], seen)
+            if isinstance(field, ForeignKeyField) and field not in seen \
+                    and len(path) < self.max_filter_depth:
+                self.collect_related_fields(
+                    field.rel_model, accum, path + [field.name], seen | {field})
             elif model != self.model and field.name in self.get_export_fields(model):
                 accum.setdefault((model, path_str), [])
                 accum[(model, path_str)].append(field)

@@ -227,6 +227,10 @@ class RestResource(object):
     filter_fields = None
     filter_recursive = True
 
+    # max related-model hops when building the filter field tree, so a long or
+    # densely linked fk graph cannot explode it.
+    max_filter_depth = 3
+
     # mapping of field name to resource class
     include_resources = None
 
@@ -269,7 +273,9 @@ class RestResource(object):
                 self._filter_fields.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
                 self._filter_exclude.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])
 
-        self._field_tree = make_field_tree(self.model, self._filter_fields, self._filter_exclude, self.filter_recursive)
+        self._field_tree = make_field_tree(
+            self.model, self._filter_fields, self._filter_exclude,
+            self.filter_recursive, max_depth=self.max_filter_depth)
 
     def authorize(self):
         return self.authentication.authorize()

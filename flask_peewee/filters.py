@@ -332,12 +332,13 @@ class FieldTreeNode(object):
         self.children = children or {}
 
 
-def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
+def make_field_tree(model, fields, exclude, force_recursion=False, seen=None,
+                    max_depth=3):
     no_explicit_fields = fields is None # assume we want all of them
     if no_explicit_fields:
         fields = model._meta.sorted_field_names
     exclude = exclude or []
-    seen = seen or set()
+    seen = seen or frozenset()
 
     model_fields = []
     children = {}
@@ -350,8 +351,11 @@ def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
         if field_obj.name in fields and not isinstance(field_obj, BlobField):
             model_fields.append(field_obj)
 
-        if isinstance(field_obj, ForeignKeyField):
-            seen.add(field_obj)
+        # `seen` is the foreign-key path to this model, so a cycle is broken
+        # without collapsing two distinct paths to one model onto a single
+        # branch (a shared set did that). max_depth bounds the walk so a long
+        # or densely linked schema cannot explode the tree.
+        if isinstance(field_obj, ForeignKeyField) and len(seen) < max_depth:
             if no_explicit_fields:
                 rel_fields = None
             else:
@@ -366,7 +370,9 @@ def make_field_tree(model, fields, exclude, force_recursion=False, seen=None):
                 rx.replace('%s__' % field_obj.name, '') \
                     for rx in exclude if rx.startswith('%s__' % field_obj.name)
             ]
-            children[field_obj.name] = make_field_tree(field_obj.rel_model, rel_fields, rel_exclude, force_recursion, seen)
+            children[field_obj.name] = make_field_tree(
+                field_obj.rel_model, rel_fields, rel_exclude, force_recursion,
+                seen | {field_obj}, max_depth)
 
     return FieldTreeNode(model, model_fields, children)
 
@@ -384,13 +390,15 @@ class FilterForm(object):
     field_value_prefix = 'fv_'
     field_relation_prefix = 'fr_'
 
-    def __init__(self, model, model_converter, filter_mapping, fields=None, exclude=None):
+    def __init__(self, model, model_converter, filter_mapping, fields=None,
+                 exclude=None, max_depth=3):
         self.model = model
         self.model_converter = model_converter
         self.filter_mapping = filter_mapping
 
         # convert fields and exclude into a tree
-        self._field_tree = make_field_tree(model, fields, exclude)
+        self._field_tree = make_field_tree(model, fields, exclude,
+                                           max_depth=max_depth)
 
         self._query_filters = self.load_query_filters()
         self._filter_lookup = dict(

@@ -16,6 +16,7 @@ from flask_peewee.serializer import Serializer
 from flask_peewee.filters import FilterForm
 from flask_peewee.filters import FilterMapping
 from flask_peewee.filters import FilterModelConverter
+from flask_peewee.filters import make_field_tree
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
@@ -1061,6 +1062,71 @@ class AdminFilterTestCase(BaseAdminTestCase):
                   '&fo_a_field=ne&fv_a_field=a2')
             query = self.get_context('query')
             self.assertEqual([o.a_field for o in query.get_list()], ['a3'])
+
+    def test_related_tree_diamond(self):
+        # two foreign keys to one model must each expand that model's subtree,
+        # for filters and for export. a shared `seen` set let only the first
+        # path through, so the second lost the nested fields.
+        import peewee
+        mem = peewee.SqliteDatabase(':memory:')
+
+        class M(peewee.Model):
+            class Meta:
+                database = mem
+
+        class Grp(M):
+            name = peewee.CharField()
+
+        class Usr(M):
+            username = peewee.CharField()
+            grp = peewee.ForeignKeyField(Grp)
+
+        class Lnk(M):
+            src = peewee.ForeignKeyField(Usr, backref='s')
+            dst = peewee.ForeignKeyField(Usr, backref='d')
+            label = peewee.CharField()
+
+        # filter tree: both fk paths reach grp.
+        tree = make_field_tree(Lnk, None, [])
+        self.assertEqual(list(tree.children['src'].children), ['grp'])
+        self.assertEqual(list(tree.children['dst'].children), ['grp'])
+
+        # export: both nested paths collect Grp's columns.
+        accum = ModelAdmin(admin, Lnk).collect_related_fields(Lnk, {}, [])
+        paths = {path for (_model, path) in accum}
+        self.assertIn('src__grp', paths)
+        self.assertIn('dst__grp', paths)
+
+    def test_related_tree_depth_cap(self):
+        # the walk stops after max_filter_depth (3) hops, so a long fk chain
+        # cannot explode the tree.
+        import peewee
+        mem = peewee.SqliteDatabase(':memory:')
+
+        class M(peewee.Model):
+            class Meta:
+                database = mem
+
+        class C4(M):
+            v = peewee.CharField()
+
+        class C3(M):
+            nxt = peewee.ForeignKeyField(C4)
+
+        class C2(M):
+            nxt = peewee.ForeignKeyField(C3)
+
+        class C1(M):
+            nxt = peewee.ForeignKeyField(C2)
+
+        class C0(M):
+            nxt = peewee.ForeignKeyField(C1)
+
+        tree = make_field_tree(C0, None, [])
+        hop3 = tree.children['nxt'].children['nxt'].children['nxt']  # C3
+        # C3's own fk is still filterable by id, but C4 is beyond the cap.
+        self.assertIn('nxt', [f.name for f in hop3.fields])
+        self.assertEqual(list(hop3.children), [])
 
     def assertFieldTree(self, expected):
         field_tree = self.get_context('field_tree')
