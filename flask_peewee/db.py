@@ -35,6 +35,8 @@ class Database(object):
                 return connect(config)
             except (RuntimeError, ValueError):
                 raise ImproperlyConfigured('Invalid database URL with scheme "%s"' % config.split(':', 1)[0])
+        elif isinstance(config, (peewee.Database, Proxy)):
+            return config
 
         self.database_config = dict(config)
         try:
