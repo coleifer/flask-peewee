@@ -123,6 +123,21 @@ Filtering is available, as is search:
 
 .. image:: fp-message-admin.png
 
+Columns are not limited to field names. A name in ``columns`` may also be a
+model method, or a ``ModelAdmin`` method taking the row instance, and the
+return value is displayed. Computed columns are not sortable. Headers come
+from the name, so ``word_count`` becomes "Word Count". Return a
+``markupsafe.Markup`` to display HTML, as the thumbnail column in
+:ref:`admin-file-uploads` does.
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        columns = ('user', 'content', 'posted',)
+
+        def posted(self, obj):
+            return obj.pub_date.strftime('%b %d, %Y')
+
 Searching
 ^^^^^^^^^
 
