@@ -186,6 +186,15 @@ class Link(db.Model):
     label = TextField(default='')
 
 
+class Entry(db.Model):
+    # exercises EntryAdmin's readonly_fields and fieldsets. status is listed
+    # in no fieldset, so it renders in the trailing unlabeled section.
+    title = CharField()
+    body = TextField(default='')
+    status = CharField(default='draft')
+    created = DateTimeField(default=datetime.datetime.now)
+
+
 class NotePanel(AdminPanel):
     template_name = 'admin/notes.html'
 
@@ -244,6 +253,14 @@ class ScopedItemAdmin(ModelAdmin):
 class ScopedRefAdmin(ModelAdmin):
     foreign_key_lookups = {'item': 'label'}
 
+class EntryAdmin(ModelAdmin):
+    # mirrors the readonly_fields/fieldsets example in docs/admin.rst.
+    readonly_fields = ('created',)
+    fieldsets = [
+        ('Content', {'fields': ('title', 'body')}),
+        ('Meta', {'fields': ('created',), 'collapsed': True}),
+    ]
+
 
 auth.register_admin(admin)
 admin.register(AModel, AAdmin)
@@ -255,6 +272,7 @@ admin.register(Message, MessageAdmin)
 admin.register(Note, NoteAdmin)
 admin.register(ScopedItem, ScopedItemAdmin)
 admin.register(ScopedRef, ScopedRefAdmin)
+admin.register(Entry, EntryAdmin)
 admin.register_panel('Notes', NotePanel)
 
 

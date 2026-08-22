@@ -1,0 +1,12 @@
+{% from 'macros/forms.html' import admin_field, admin_readonly_field, section_rows %}
+{% for label, collapsed, rows in sections %}
+  {% if collapsed %}
+    <details class="mb-3">
+      {% if label %}<summary class="fw-semibold border-bottom pb-2 mb-3">{{ label }}</summary>{% endif %}
+      {{ section_rows(rows) }}
+    </details>
+  {% else %}
+    {% if label %}<legend>{{ label }}</legend>{% endif %}
+    {{ section_rows(rows) }}
+  {% endif %}
+{% endfor %}

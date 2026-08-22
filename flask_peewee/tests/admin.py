@@ -24,6 +24,7 @@ from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import DModel
+from flask_peewee.tests.test_app import Entry
 from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
@@ -39,6 +40,8 @@ from flask_peewee.utils import make_password
 
 from peewee import CharField
 from peewee import ForeignKeyField
+from wtforms.fields import FieldList
+from wtforms.fields import StringField
 from wtfpeewee.orm import model_form
 
 
@@ -127,6 +130,7 @@ class AdminTestCase(BaseAdminTestCase):
             admin._registry[BModel],
             admin._registry[CModel],
             admin._registry[DModel],
+            admin._registry[Entry],
             admin._registry[Message],
             admin._registry[Note],
             admin._registry[ScopedItem],
@@ -1026,6 +1030,183 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertEqual(note.message, 'testing')
 
 
+class AdminFieldsetTestCase(BaseAdminTestCase):
+    def setUp(self):
+        super(AdminFieldsetTestCase, self).setUp()
+        db.database.drop_tables([Entry])
+        db.database.create_tables([Entry])
+
+    def create_entry(self):
+        return Entry.create(title='t1', body='b1',
+                            created=datetime.datetime(2024, 1, 2, 3, 4, 5))
+
+    def test_readonly_edit_and_add(self):
+        self.create_users()
+        entry = self.create_entry()
+        entry_admin = admin._registry[Entry]
+
+        # readonly_fields alone, without fieldsets.
+        entry_admin.fieldsets = None
+        try:
+            with self.flask_app.test_client() as c:
+                self.login(c)
+
+                # edit renders an inert value row instead of an input.
+                body = c.get('/admin/entry/%d/' % entry.id).data.decode('utf-8')
+                self.assertTrue('form-control-plaintext' in body)
+                self.assertTrue('Created' in body)
+                self.assertTrue('2024-01-02 03:04:05' in body)
+                self.assertTrue('name="created' not in body)
+
+                frm = self.get_context('form')
+                self.assertEqual(sorted(frm._fields), ['body', 'status', 'title'])
+
+                # the readonly row keeps its model-field position, after status.
+                self.assertTrue(body.index('name="status"') <
+                                body.index('form-control-plaintext'))
+
+                # add omits the readonly field entirely.
+                body = c.get('/admin/entry/add/').data.decode('utf-8')
+                self.assertTrue('form-control-plaintext' not in body)
+                self.assertTrue('Created' not in body)
+                self.assertTrue('name="created' not in body)
+        finally:
+            del entry_admin.fieldsets
+
+    def test_readonly_not_posted(self):
+        self.create_users()
+        entry = self.create_entry()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # a crafted post naming the readonly column does not change it.
+            resp = c.post('/admin/entry/%d/' % entry.id, data={
+                'title': 'edited',
+                'body': 'b2',
+                'status': 'live',
+                'created': '2030-12-31 23:59:59',
+                'created-date': '2030-12-31',
+                'created-time': '23:59:59',
+            })
+            self.assertRedirect(resp)
+
+            obj = Entry.get(Entry.id == entry.id)
+            self.assertEqual(obj.title, 'edited')
+            self.assertEqual(obj.created, datetime.datetime(2024, 1, 2, 3, 4, 5))
+
+            # same on add, the column falls back to its default.
+            resp = c.post('/admin/entry/add/', data={
+                'title': 't2',
+                'body': '',
+                'status': 'draft',
+                'created-date': '2030-12-31',
+                'created-time': '23:59:59',
+            })
+            self.assertRedirect(resp)
+            obj = Entry.get(Entry.title == 't2')
+            self.assertNotEqual(obj.created, datetime.datetime(2030, 12, 31, 23, 59, 59))
+
+    def test_fieldsets_render(self):
+        self.create_users()
+        entry = self.create_entry()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            body = c.get('/admin/entry/%d/' % entry.id).data.decode('utf-8')
+
+            # sections in order: Content legend, its fields, the collapsed
+            # Meta details holding the inert readonly row, then the unlisted
+            # field in a trailing unlabeled section.
+            positions = [
+                body.index('<legend>Content</legend>'),
+                body.index('name="title"'),
+                body.index('name="body"'),
+                body.index('<details class="mb-3">'),
+                body.index('Meta</summary>'),
+                body.index('form-control-plaintext'),
+                body.index('2024-01-02 03:04:05'),
+                body.index('</details>'),
+                body.index('name="status"'),
+            ]
+            self.assertEqual(positions, sorted(positions))
+            self.assertTrue('name="created' not in body)
+
+            # add keeps the sections but skips the readonly row.
+            body = c.get('/admin/entry/add/').data.decode('utf-8')
+            self.assertTrue('<legend>Content</legend>' in body)
+            self.assertTrue('Meta</summary>' in body)
+            self.assertTrue('name="status"' in body)
+            self.assertTrue('form-control-plaintext' not in body)
+            self.assertTrue('name="created' not in body)
+
+    def test_form_sections(self):
+        self.create_users()
+        entry = self.create_entry()
+        entry_admin = admin._registry[Entry]
+
+        def summarize(sections):
+            return [(label, collapsed,
+                     [f.name if f is not None else lbl for f, lbl, v in rows])
+                    for label, collapsed, rows in sections]
+
+        form = entry_admin.get_edit_form(entry)(obj=entry)
+        sections = entry_admin.get_form_sections(form, entry)
+        self.assertEqual(summarize(sections), [
+            ('Content', False, ['title', 'body']),
+            ('Meta', True, ['Created']),
+            (None, False, ['status']),
+        ])
+
+        # the readonly row resolves the instance value.
+        self.assertEqual(sections[1][2][0][2], entry.created)
+
+        # adding: same sections, readonly row dropped.
+        form = entry_admin.get_add_form()()
+        self.assertEqual(summarize(entry_admin.get_form_sections(form)), [
+            ('Content', False, ['title', 'body']),
+            ('Meta', True, []),
+            (None, False, ['status']),
+        ])
+
+    def test_readonly_with_whitelist(self):
+        class SubsetAdmin(ModelAdmin):
+            fields = ('title', 'created')
+            readonly_fields = ('created',)
+
+        form = SubsetAdmin(admin, Entry).get_form()()
+        self.assertEqual(list(form._fields), ['title'])
+
+        # a whitelist that is entirely readonly yields an empty form rather
+        # than falling through to every field.
+        class LockedAdmin(ModelAdmin):
+            fields = ('created',)
+            readonly_fields = ('created',)
+
+        form = LockedAdmin(admin, Entry).get_form()()
+        self.assertEqual(list(form._fields), [])
+
+    def test_falsy_form_field(self):
+        self.create_users()
+        entry = self.create_entry()
+        entry_admin = admin._registry[Entry]
+
+        # an empty bound FieldList is falsy. the row dispatch must test
+        # field None, not truthiness, or this renders as a readonly row.
+        class ListForm(entry_admin.get_form()):
+            extras = FieldList(StringField('Extra'))
+
+        entry_admin.get_form = lambda adding=False: ListForm
+        try:
+            with self.flask_app.test_client() as c:
+                self.login(c)
+                body = c.get('/admin/entry/%d/' % entry.id).data.decode('utf-8')
+                self.assertTrue('id="extras"' in body)
+                self.assertEqual(body.count('form-control-plaintext'), 1)
+        finally:
+            del entry_admin.get_form
+
+
 class LinkAdmin(ModelAdmin):
     filter_fields = ('src', 'dst', 'src__username', 'dst__username')
     search_fields = ('label', 'dst__username')
@@ -1353,6 +1534,7 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
             admin._registry[BModel],
             admin._registry[CModel],
             admin._registry[DModel],
+            admin._registry[Entry],
             admin._registry[Message],
             admin._registry[Note],
             admin._registry[ScopedItem],

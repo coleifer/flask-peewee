@@ -14,6 +14,15 @@
   {% endif %}
 {% endmacro %}
 
+{% macro admin_readonly_field(label, value) %}
+  <div class="row mb-3">
+    <label class="col-sm-3 col-form-label">{{ label }}</label>
+    <div class="col-sm-9">
+      <div class="form-control-plaintext">{{ value }}</div>
+    </div>
+  </div>
+{% endmacro %}
+
 {% macro admin_field(field) %}
   <div class="row mb-3">
     {{ field.label(class="col-sm-3 col-form-label") }}
@@ -27,4 +36,11 @@
       {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error|e }}</div>{% endfor %}
     </div>
   </div>
+{% endmacro %}
+
+{% macro section_rows(rows) %}
+  {% for field, label, value in rows %}
+    {# an empty bound FieldList is falsy, so dispatch on none rather than truthiness. #}
+    {% if field is not none %}{{ admin_field(field) }}{% else %}{{ admin_readonly_field(label, value) }}{% endif %}
+  {% endfor %}
 {% endmacro %}

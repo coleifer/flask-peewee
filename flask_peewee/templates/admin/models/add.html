@@ -19,9 +19,12 @@
     <fieldset>
       {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
       <legend>Add a new {{ admin.fix_underscores(model_admin.get_display_name()) }}</legend>
-      {% for field in form %}
+      {% if model_admin.fieldsets or model_admin.readonly_fields %}
+        {% set sections = model_admin.get_form_sections(form) %}
+        {% include "admin/includes/form_sections.html" %}
+      {% else %}{% for field in form %}
         {{ admin_field(field) }}
-      {% endfor %}
+      {% endfor %}{% endif %}
       {% block extra_form %}{% endblock %}
       <div class="form-actions d-flex gap-2">
         <button class="btn btn-primary" name="save" type="submit">Save</button>

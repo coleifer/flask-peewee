@@ -89,8 +89,7 @@ which looks like this:
         def __str__(self):
             return '%s: %s' % (self.user, self.content)
 
-If we register this model with the admin as-is, it would look something
-like this:
+Register this model with the admin:
 
 .. code-block:: python
 
@@ -102,8 +101,8 @@ like this:
 .. image:: fp-message-admin-plain.png
 
 A quick way to improve the appearance of this view is to specify which columns
-to display. To start customizing how the ``Message`` model is displayed in the
-admin, we'll subclass :py:class:`ModelAdmin`.
+to display in the list-view. To start customizing how the ``Message`` model is
+displayed in the admin, we'll subclass :py:class:`ModelAdmin`.
 
 .. code-block:: python
 
@@ -157,16 +156,17 @@ the filter UI entirely.
 Restricting the queryset
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Suppose privacy is a big concern, and under no circumstances should a user be
-able to see another user's messages, even in the admin. This can be done by
+Suppose privacy is a concern, and under no circumstances should a user be able
+to see another user's messages, even in the admin. This can be done by
 overriding the :py:meth:`~ModelAdmin.get_query` method:
 
 .. code-block:: python
 
     def get_query(self):
+        # The auth framework sets the currently-authenticated user as g.user:
         return self.model.select().where(self.model.user == g.user)
 
-Now a user will only be able to see and edit their own messages in the admin.
+Now a user will only be able to interact with their own messages in the admin.
 
 Restricting access
 ^^^^^^^^^^^^^^^^^^
@@ -185,13 +185,13 @@ provides peewee integration for `wtforms <https://github.com/pallets-eco/wtforms
 The add and edit forms are built by wtf-peewee's ``model_form``.
 
 Which model fields appear on the form is controlled by ``fields`` (a
-whitelist) and ``exclude`` (a blacklist). These shape the form only.
-``columns`` shapes the list view. Here the form omits the timestamp and
-its default fills it in:
+whitelist) and ``exclude`` (a blacklist). Example:
 
 .. code-block:: python
 
     class MessageAdmin(ModelAdmin):
+        # Assume this is set automatically by the model code and should
+        # not be editable.
         exclude = ('pub_date',)
 
 To make simple overrides to the default add/edit form, use
@@ -202,11 +202,15 @@ To make simple overrides to the default add/edit form, use
     from wtforms.validators import Length
 
     class MessageAdmin(ModelAdmin):
-        field_args = {'content': {'label': 'Body',
-                                  'validators': [Length(min=10)]}}
+        field_args = {
+            'content': {
+                'label': 'Body',
+                'validators': [Length(min=10)]
+            },
+        }
 
 For full control, return any form class from :py:meth:`~ModelAdmin.get_form`.
-This snippet shows how to add a file upload widget to a form (full example in
+This example shows how to add a file upload widget to a form (see also
 :ref:`admin-file-uploads`):
 
 .. code-block:: python
@@ -245,6 +249,29 @@ single-line input instead of a textarea:
 
     class MessageAdmin(ModelAdmin):
         form_converter = SingleLineConverter
+
+Readonly fields and fieldsets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``readonly_fields`` lists fields to display as static data on the edit view.
+Readonly fields are resolved like a list column, and can be a field, model
+attribute, callable, or ``ModelAdmin`` method.
+
+``fieldsets`` groups the form into sections, rendered in order. Each entry
+is a ``(label, options)`` pair. The options dict lists the section's
+``fields`` and may set ``collapsed``, which renders the section as a closed
+``<details>`` element. A ``None`` label makes an unlabeled section. Fields
+left out of every entry render in a trailing unlabeled section. Readonly
+names may appear in a fieldset and render as value rows there.
+
+.. code-block:: python
+
+    class EntryAdmin(ModelAdmin):
+        readonly_fields = ('created',)
+        fieldsets = [
+            ('Content', {'fields': ('title', 'body')}),
+            ('Meta', {'fields': ('created',), 'collapsed': True}),
+        ]
 
 Overriding Admin Templates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -299,24 +326,22 @@ For smaller changes, extend a packaged template and override its blocks:
 * ``admin/panels/default.html``: ``panel_title``, ``panel_content``
 
 
-Nicer display for Foreign Key fields
-------------------------------------
+Foreign key display
+-------------------
 
-By default a foreign key renders as a ``<select>`` of the related rows. How that
-holds up when the related table is large depends on where it appears:
+By default a foreign key renders as a ``<select>`` of the related rows.
 
-* In filters, the ``<select>`` is automatically capped at the first 20 rows
+* In filters, the ``<select>`` is automatically limited to the first 20 rows
   (plus whichever row is currently selected), so the page stays small, but
   only those 20 rows are reachable.
-* In model forms (add/edit), the ``<select>`` is not capped. Every related
-  row is rendered, which is slow to load and hammers the database on a large
-  table.
+* In model forms (add/edit), the ``<select>`` is **not** limited. Every related
+  row is rendered.
 
-To handle large related tables, set ``foreign_key_lookups``, a mapping of the
-foreign-key field name to the related field to search and display on. This
-replaces the plain ``<select>`` with a paginated, type-ahead search backed by the
-model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``, a page
-at a time), so any row is reachable no matter how large the table:
+To handle large related tables, ``foreign_key_lookups`` allows a mapping from
+foreign-key field name to the related field to search and display. This
+replaces the plain ``<select>`` with a paginated, type-ahead search backed by
+the model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``,
+a page at a time), so any row is reachable no matter how large the table:
 
 .. code-block:: python
 
@@ -325,27 +350,10 @@ at a time), so any row is reachable no matter how large the table:
         foreign_key_lookups = {'user': 'username'}
 
 In both contexts the candidate rows come from the related model's registered
-admin, so rows hidden by its :py:meth:`~ModelAdmin.get_query` are never
-offered.
+admin (if one exists), determined by its :py:meth:`~ModelAdmin.get_query`.
 
-The widget differs between the two contexts:
-
-Filters
-^^^^^^^
-
-Without ``foreign_key_lookups`` the ``user`` filter is a ``<select>`` of the
-first 20 users, fine for a small table, but on a large one you can only filter
-by those first 20. With it, the ``<select>`` gains an inline type-ahead search
-that repopulates its options from ``ajax_list`` as you type, so any user can be
-selected.
-
-Model forms
-^^^^^^^^^^^
-
-Without ``foreign_key_lookups`` an add or edit form renders every related row in a
-single ``<select>``, which is slow on a large table. With it, the field becomes
-a button showing the current selection. Clicking it opens a modal with a
-paginated, type-ahead list:
+Specifying foreign-key lookups is a best-practice when the related table is
+large.
 
 .. image:: fp-message-fk-btn.png
 
@@ -357,7 +365,7 @@ Bulk actions
 
 Every row in the list view has a checkbox, and the "With selected..."
 dropdown offers "Export" and "Delete" out-of-the-box. You can add your own
-bulk operations by subclassing :py:class:`Action` and listing instances in your
+bulk operations by subclassing :py:class:`Action` and referencing them in your
 :py:class:`ModelAdmin`'s ``actions`` attribute.
 
 An action implements a single ``callback(self, id_list)`` method, which receives

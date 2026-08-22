@@ -94,8 +94,8 @@ class ModelAdmin(object):
     paginate_by = 20
     filter_paginate_by = 15
 
-    # columns to display in the list index - can be field names or callables on
-    # a model instance, though in the latter case they will not be sortable
+    # columns to display in the list index - can be field names, model
+    # attributes, or callables on a model instance or the ModelAdmin.
     columns = None
 
     # exclude certian fields from being exposed as filters -- for related fields
@@ -114,6 +114,15 @@ class ModelAdmin(object):
     # form parameters, lists of fields
     exclude = None
     fields = None
+
+    # field names to render as readonly values, shown only on the edit page.
+    # Can be field names, model attributes, callables or ModelAdmin methods.
+    readonly_fields = None
+
+    # ((label, {'fields': [...], 'collapsed': True}), ...) groups the add and
+    # edit forms into sections. label None for an unlabeled section. Fields
+    # left out of every entry render in a trailing unlabeled section.
+    fieldsets = None
 
     # per-field wtforms kwargs passed through to wtf-peewee's model_form,
     # e.g. {'content': {'label': 'Body', 'validators': [...]}}
@@ -188,10 +197,22 @@ class ModelAdmin(object):
 
     def get_form(self, adding=False):
         allow_pk = adding and not self.model._meta.auto_increment
+        only, exclude = self.fields, self.exclude
+        readonly = self.readonly_fields or ()
+        if readonly:
+            if only:
+                only = [f for f in only if f not in readonly]
+                if not only:
+                    # model_form treats an empty "only" as no whitelist at
+                    # all, which would expose every field.
+                    only = None
+                    exclude = [f.name for f in self.model._meta.sorted_fields]
+            else:
+                exclude = list(exclude or ()) + list(readonly)
         return model_form(self.model,
             allow_pk=allow_pk,
-            only=self.fields,
-            exclude=self.exclude,
+            only=only,
+            exclude=exclude,
             field_args=self.field_args,
             converter=self.form_converter(self),
         )
@@ -201,6 +222,47 @@ class ModelAdmin(object):
 
     def get_edit_form(self, instance):
         return self.get_form()
+
+    def get_form_sections(self, form, instance=None):
+        """
+        Group the form into (label, collapsed, rows) sections for rendering.
+        A row is (field, label, value), a bound form field or, with field
+        None, an inert readonly value. Readonly rows are dropped when
+        instance is None (the add page).
+        """
+        readonly = self.readonly_fields or ()
+
+        def rows(names):
+            accum = []
+            for name in names:
+                if name in form:
+                    accum.append((form[name], None, None))
+                elif name in readonly and instance is not None:
+                    accum.append((
+                        None,
+                        self.admin.get_verbose_name(self.model, name),
+                        self.admin.get_model_field(instance, name)))
+            return accum
+
+        # form fields and readonly names interleaved in model-field order,
+        # with readonly names that are not columns (methods) at the end.
+        names = [f.name for f in self.model._meta.sorted_fields
+                 if f.name in form or f.name in readonly]
+        names += [f.name for f in form if f.name not in names]
+        names += [n for n in readonly if n not in names]
+
+        if not self.fieldsets:
+            return [(None, False, rows(names))]
+
+        sections, seen = [], set()
+        for label, options in self.fieldsets:
+            seen.update(options['fields'])
+            sections.append((label, options.get('collapsed', False),
+                             rows(options['fields'])))
+        leftover = [n for n in names if n not in seen]
+        if leftover:
+            sections.append((None, False, rows(leftover)))
+        return sections
 
     def get_query(self):
         return self.model.select()
