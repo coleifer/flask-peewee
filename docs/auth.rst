@@ -118,10 +118,14 @@ user in immediately after they register. :py:meth:`Auth.login_user` and
 
     auth.login_user(user)   # huey is now logged in for subsequent requests
 
+``login_user()`` clears the session before writing the login keys, so
+session state from before authentication does not survive login. This
+defends against session fixation.
+
 ``logout_user()`` ends the session. By default it removes only flask-peewee's
 own session keys, leaving any other data you've stored in the session intact.
 Pass ``clear_session=True`` when constructing :py:class:`Auth` to have logout
-wipe the entire session instead, which also hardens against session fixation:
+wipe the entire session too:
 
 .. code-block:: python
 

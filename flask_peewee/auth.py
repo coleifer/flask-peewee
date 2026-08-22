@@ -161,6 +161,8 @@ class Auth(object):
         return user
 
     def login_user(self, user):
+        # drop pre-login session state (session fixation).
+        session.clear()
         session['logged_in'] = True
         session['user_pk'] = user._pk
         session.permanent = True
