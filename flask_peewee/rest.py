@@ -16,7 +16,6 @@ from flask_peewee.serializer import Serializer
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import alias_field
 from flask_peewee.utils import convert_boolean
-from flask_peewee.utils import get_object_or_404
 from flask_peewee.utils import order_query
 from flask_peewee.utils import slugify
 from functools import reduce
@@ -484,6 +483,9 @@ class RestResource(object):
     def response_forbidden(self):
         return self.response_error('Forbidden', 403)
 
+    def response_not_found(self):
+        return self.response_error('Not found', 404)
+
     def response_bad_method(self):
         return self.response_error('Unsupported method "%s"' % request.method, 405)
 
@@ -534,7 +536,10 @@ class RestResource(object):
             return self.create()
 
     def api_detail(self, pk, method=None):
-        obj = get_object_or_404(self.get_query(), self.pk==pk)
+        try:
+            obj = self.get_query().where(self.pk==pk).get()
+        except self.model.DoesNotExist:
+            return self.response_not_found()
 
         method = method or request.method
 
@@ -765,9 +770,9 @@ class RestAPI(object):
         del(self._registry[model])
 
     def response_auth_failed(self):
-        return Response('Authentication failed', 401, {
+        return Response(json.dumps({'error': 'Authentication failed'}), 401, {
             'WWW-Authenticate': 'Basic realm="Login Required"'
-        })
+        }, mimetype='application/json')
 
     def auth_wrapper(self, func, provider):
         @functools.wraps(func)

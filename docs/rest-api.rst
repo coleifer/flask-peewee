@@ -369,6 +369,20 @@ Unknown keys inside a nested object are reported with the ``__`` path notation,
 e.g. ``user__usernmae``.
 
 
+Error responses
+---------------
+
+Every error the API returns is a JSON object with a single ``error`` key,
+whether it is a 400, 401, 403, 404 or 405. A 401 also carries the
+``WWW-Authenticate`` challenge header.
+
+.. code-block:: console
+
+    $ curl http://127.0.0.1:5000/api/message/9999/
+
+    {"error": "Not found"}
+
+
 Allowing users to post objects
 ------------------------------
 
@@ -380,9 +394,9 @@ What if we want to create new messages via the Api? Or modify/delete existing me
 
     HTTP/1.1 401 UNAUTHORIZED
     WWW-Authenticate: Basic realm="Login Required"
-    Content-Type: text/html; charset=utf-8
+    Content-Type: application/json
 
-    Authentication failed
+    {"error": "Authentication failed"}
 
 The authentication failed because the default authentication mechanism only
 allows read-only access.

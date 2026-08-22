@@ -336,10 +336,12 @@ messages using the API. If you try and make a POST right now, you will get a
     Server: Werkzeug/3.2.0.dev0 Python/3.13.5
     Date: Tue, 07 Jul 2026 18:41:49 GMT
     WWW-Authenticate: Basic realm="Login Required"
-    Content-Type: text/html; charset=utf-8
-    Content-Length: 21
+    Content-Type: application/json
+    Content-Length: 34
     Vary: Cookie
     Connection: close
+
+    {"error": "Authentication failed"}
 
 This is because we have not configured any :py:class:`Authentication` method for
 our :py:class:`RestAPI`.

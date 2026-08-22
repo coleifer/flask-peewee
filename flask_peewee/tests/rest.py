@@ -1059,6 +1059,27 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertEqual(out2['dst'], self.normal.id)
 
 
+class RestApiErrorsTestCase(RestApiTestCase):
+    def assertJSONError(self, resp, status, message):
+        self.assertEqual(resp.status_code, status)
+        self.assertEqual(resp.content_type, 'application/json')
+        self.assertEqual(self.response_json(resp), {'error': message})
+
+    def test_missing_object(self):
+        resp = self.app.get('/api/note/1/')
+        self.assertJSONError(resp, 404, 'Not found')
+
+    def test_bad_method(self):
+        resp = self.app.get('/api/note/1/delete/')
+        self.assertJSONError(resp, 405, 'Unsupported method "GET"')
+
+    def test_auth_failed(self):
+        resp = self.app.post('/api/note/', data='{}')
+        self.assertJSONError(resp, 401, 'Authentication failed')
+        self.assertEqual(resp.headers['WWW-Authenticate'],
+                         'Basic realm="Login Required"')
+
+
 class RestApiUserAuthTestCase(RestApiTestCase):
     def setUp(self):
         super(RestApiUserAuthTestCase, self).setUp()
