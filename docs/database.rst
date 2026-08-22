@@ -47,6 +47,13 @@ be passed to the database driver when connecting:
         name = CharField()
         # .. etc.
 
+The configuration may instead be a database URL. Any scheme supported by
+``playhouse.db_url`` works:
+
+.. code-block:: python
+
+    DATABASE = 'sqlite:///example.db'
+
 You can also directly pass the Peewee database instance to the
 :py:class:`Database` helper:
 

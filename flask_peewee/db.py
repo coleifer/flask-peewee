@@ -28,7 +28,15 @@ class Database(object):
         self.register_handlers(app)
 
     def load_database(self, app):
-        self.database_config = dict(app.config['DATABASE'])
+        config = app.config['DATABASE']
+        if isinstance(config, str):
+            from playhouse.db_url import connect
+            try:
+                return connect(config)
+            except (RuntimeError, ValueError):
+                raise ImproperlyConfigured('Invalid database URL with scheme "%s"' % config.split(':', 1)[0])
+
+        self.database_config = dict(config)
         try:
             self.database_name = self.database_config.pop('name')
             self.database_engine = self.database_config.pop('engine')

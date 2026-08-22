@@ -3,6 +3,7 @@ import unittest
 from flask import Flask
 from peewee import Proxy
 from peewee import SqliteDatabase
+from peewee import TextField
 
 from flask_peewee.db import Database
 from flask_peewee.exceptions import ImproperlyConfigured
@@ -19,6 +20,27 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertTrue(isinstance(db.database, SqliteDatabase))
         self.assertEqual(db.database.database, ':memory:')
         self.assertTrue(db.database is db.Model._meta.database)
+
+    def test_initialize_url(self):
+        app = Flask(__name__)
+        app.config.update({'DATABASE': 'sqlite:///:memory:'})
+
+        db = Database(app)
+        self.assertTrue(isinstance(db.database, SqliteDatabase))
+        self.assertEqual(db.database.database, ':memory:')
+        self.assertTrue(db.database is db.Model._meta.database)
+
+        class Note(db.Model):
+            content = TextField()
+
+        db.database.create_tables([Note])
+        Note.create(content='alpha')
+        self.assertEqual([note.content for note in Note.select()], ['alpha'])
+
+    def test_initialize_url_bad_scheme(self):
+        app = Flask(__name__)
+        app.config.update({'DATABASE': 'bogus:///app.db'})
+        self.assertRaises(ImproperlyConfigured, Database, app)
 
     def test_initialize_explicit(self):
         app = Flask(__name__)
