@@ -245,6 +245,7 @@ class Auth(object):
         self.app.template_context_processors[None].append(self.get_context_user)
 
     def setup(self):
+        self.app.extensions.setdefault('flask_peewee', {})['auth'] = self
         self.configure_routes()
         self.register_blueprint()
         self.register_handlers()

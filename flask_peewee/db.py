@@ -26,6 +26,7 @@ class Database(object):
             raise ImproperlyConfigured('Database plugin has already been initialized.')
 
         self.register_handlers(app)
+        self.register_cli(app)
 
     def load_database(self, app):
         config = app.config['DATABASE']
@@ -64,6 +65,23 @@ class Database(object):
 
         return BaseModel
 
+    def get_models(self):
+        accum = []
+        stack = [self.Model]
+        while stack:
+            klass = stack.pop()
+            for model in klass.__subclasses__():
+                if model not in accum:
+                    accum.append(model)
+                    stack.append(model)
+        return accum
+
+    def get_shell_context(self):
+        context = {'db': self, 'database': self.database}
+        for model in self.get_models():
+            context[model.__name__] = model
+        return context
+
     def connect_db(self):
         if self.database.is_closed():
             self.database.connect()
@@ -75,3 +93,10 @@ class Database(object):
     def register_handlers(self, app):
         app.before_request(self.connect_db)
         app.teardown_request(self.close_db)
+
+    def register_cli(self, app):
+        from flask_peewee.cli import fp
+
+        app.extensions.setdefault('flask_peewee', {})['db'] = self
+        app.cli.add_command(fp)
+        app.shell_context_processor(self.get_shell_context)

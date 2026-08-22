@@ -204,8 +204,9 @@ the initialization of the ``Auth`` class:
 
 
 We now have a functioning admin site! Of course, we'll need a user to log in
-with, so open up an interactive python shell in the directory alongside the app
-and run the following:
+with. Run ``flask fp createsuperuser`` (see :ref:`cli`), or open up an
+interactive python shell in the directory alongside the app and run the
+following:
 
 .. code-block:: python
 

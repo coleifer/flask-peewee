@@ -25,6 +25,8 @@ Contents:
    getting-started
    example
    database
+   cli
+   migrations
    admin
    auth
    rest-api
