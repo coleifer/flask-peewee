@@ -852,7 +852,7 @@ REST API
         :param model: ``Model`` to expose via API
         :param provider: subclass of :py:class:`RestResource` to use for this model
         :param auth: authentication type to use for this resource, falling back to :py:attr:`RestAPI.default_auth`
-        :param allowed_methods: ``list`` of HTTP verbs to allow, defaults to ``['GET', 'POST', 'PUT', 'DELETE']``
+        :param allowed_methods: ``list`` of HTTP verbs to allow, defaults to ``['GET', 'POST', 'PUT', 'PATCH', 'DELETE']``
 
     .. py:method:: setup()
 
@@ -987,6 +987,16 @@ RESTful Resources and their subclasses
         related row. When ``False`` a nested object is ignored, though the
         foreign key may still be assigned by bare id.
 
+    .. py:attribute:: allow_bulk = False
+
+        When ``True``, POST also accepts a JSON list of objects, created in
+        one transaction. An object that fails validation rolls the whole
+        batch back with a 400 naming its index.
+
+    .. py:attribute:: max_bulk = 100
+
+        Maximum number of objects accepted in one bulk POST.
+
     .. py:attribute:: delete_recursive = True
 
         Recursively delete dependencies
@@ -1040,7 +1050,7 @@ RESTful Resources and their subclasses
         A view that dispatches based on the HTTP verb to either:
 
         * GET: :py:meth:`~RestResource.object_detail`
-        * PUT or POST: :py:meth:`~RestResource.edit`
+        * PUT, PATCH or POST: :py:meth:`~RestResource.edit`
         * DELETE: :py:meth:`~RestResource.delete`
 
         ``POST /<pk>/delete/`` is also accepted as an alias for DELETE, for
@@ -1069,7 +1079,8 @@ RESTful Resources and their subclasses
 
     .. py:method:: edit()
 
-        Edits an existing ``Model`` instance, updating it with the deserialized PUT body.
+        Edits an existing ``Model`` instance, updating it with the deserialized
+        PUT or PATCH body.
 
         :rtype: ``Response`` containing serialized edited object
 
@@ -1106,6 +1117,13 @@ RESTful Resources and their subclasses
     .. py:method:: check_put(obj)
 
         A hook for pre-authorizing a PUT request. By default returns ``True``.
+
+        :rtype: Boolean indicating whether to allow the request to continue
+
+    .. py:method:: check_patch(obj)
+
+        A hook for pre-authorizing a PATCH request. Delegates to
+        :py:meth:`~RestResource.check_put`, so overriding that covers both.
 
         :rtype: Boolean indicating whether to allow the request to continue
 
@@ -1306,8 +1324,8 @@ Authenticating requests to the API
 
 .. py:data:: ALL_METHODS
 
-    ``('GET', 'POST', 'PUT', 'DELETE')``. Pass as ``protected_methods`` to
-    require authentication on reads as well as writes.
+    ``('GET', 'POST', 'PUT', 'PATCH', 'DELETE')``. Pass as ``protected_methods``
+    to require authentication on reads as well as writes.
 
 
 Utilities

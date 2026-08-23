@@ -148,6 +148,11 @@ class BearerDoc(db.Model):
     data = TextField()
 
 
+class BulkItem(db.Model):
+    data = TextField()
+    flag = BooleanField(default=False)
+
+
 class ApiToken(db.Model):
     token = CharField()
     user = ForeignKeyField(User)
@@ -328,6 +333,11 @@ class HResource(RestResource):
     reject_unknown_fields = True
     reject_unknown_filters = True
 
+class BulkItemResource(RestResource):
+    allow_bulk = True
+    max_bulk = 3
+    readonly_fields = ('flag',)
+
 class AdminOnlyUserResource(UserResource):
     # user writes (even nested) require an admin -- exercises check_*
     # enforcement on nested writes.
@@ -352,6 +362,7 @@ bearer_auth = KeyBearerAuthentication(APIKey, ALL_METHODS)
 
 class TweetResource(RestrictOwnerResource):
     owner_field = 'user'
+    allow_bulk = True
 
 # resolves a token (ApiToken.token) to ApiToken.user and sets g.user
 user_bearer_auth = UserBearerAuthentication(ApiToken)
@@ -375,6 +386,7 @@ api.register(FModel, FResource, auth=dummy_auth)
 api.register(GModel, GResource, auth=dummy_auth)
 api.register(HModel, HResource, auth=dummy_auth)
 api.register(Link, auth=dummy_auth)
+api.register(BulkItem, BulkItemResource, auth=dummy_auth)
 
 
 # views

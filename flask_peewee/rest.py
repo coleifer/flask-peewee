@@ -24,7 +24,10 @@ from functools import reduce
 # every HTTP method the REST API handles. Pass as protected_methods to require
 # authentication on reads as well as writes, e.g.
 # BearerAuthentication(Token, ALL_METHODS).
-ALL_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
+ALL_METHODS = ('GET', 'POST', 'PUT', 'PATCH', 'DELETE')
+
+# errors raised while persisting a write, reported to the client as a 400.
+PERSIST_ERRORS = (IntegrityError, DataError, ValueError, TypeError)
 
 
 class RestForbidden(Exception):
@@ -36,7 +39,7 @@ class RestForbidden(Exception):
 class Authentication(object):
     def __init__(self, protected_methods=None):
         if protected_methods is None:
-            protected_methods = ['POST', 'PUT', 'DELETE']
+            protected_methods = ['POST', 'PUT', 'PATCH', 'DELETE']
 
         self.protected_methods = protected_methods
 
@@ -233,6 +236,11 @@ class RestResource(object):
     # this resource's payload. When False, a nested object is ignored (the FK
     # can still be set by scalar id).
     nested_writes = True
+
+    # when True, POST also accepts a JSON list of up to max_bulk objects,
+    # created in one transaction.
+    allow_bulk = False
+    max_bulk = 100
 
     # delete behavior
     delete_recursive = True
@@ -506,7 +514,7 @@ class RestResource(object):
     def get_urls(self):
         return (
             ('/', self.require_method(self.api_list, ['GET', 'POST'])),
-            ('/<pk>/', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'DELETE'])),
+            ('/<pk>/', self.require_method(self.api_detail, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])),
             ('/<pk>/delete/', self.require_method(self.post_delete, ['POST', 'DELETE'])),
         )
 
@@ -518,6 +526,10 @@ class RestResource(object):
 
     def check_put(self, obj):
         return True
+
+    def check_patch(self, obj):
+        # api_detail dispatches check_* by method name, so PATCH needs a hook.
+        return self.check_put(obj)
 
     def check_delete(self, obj):
         return True
@@ -548,7 +560,7 @@ class RestResource(object):
 
         if method == 'GET':
             return self.object_detail(obj)
-        elif method in ('PUT', 'POST'):
+        elif method in ('PUT', 'PATCH', 'POST'):
             return self.edit(obj)
         elif method == 'DELETE':
             return self.delete(obj)
@@ -698,23 +710,55 @@ class RestResource(object):
             self.save_related_objects(obj, data)
             return self.save_object(obj, data)
 
-    def _write(self, instance):
+    def _write(self, instance, bulk=False):
         try:
             data = self.read_request_data()
         except ValueError:
             return self.response_bad_request('Request body is not valid JSON.')
 
+        if bulk and isinstance(data, list):
+            return self.create_bulk(data)
+        if not isinstance(data, dict):
+            return self.response_bad_request(
+                'Request body must be a JSON object.')
+
         try:
             obj = self.persist_object(instance, data)
         except RestForbidden:
             return self.response_forbidden()
-        except (IntegrityError, DataError, ValueError, TypeError) as exc:
+        except PERSIST_ERRORS as exc:
             return self.response_bad_request(str(exc))
 
         return self.response(self.serialize_object(obj))
 
     def create(self):
-        return self._write(self.model())
+        return self._write(self.model(), bulk=self.allow_bulk)
+
+    def create_bulk(self, data):
+        if len(data) > self.max_bulk:
+            return self.response_bad_request(
+                'Bulk create accepts at most %s objects.' % self.max_bulk)
+
+        objects = []
+        try:
+            # a failing item rolls back the whole batch. persist_object's own
+            # atomic() nests here as a savepoint.
+            with self.model._meta.database.atomic():
+                for i, item in enumerate(data):
+                    if not isinstance(item, dict):
+                        raise ValueError(
+                            'Object at index %s is not a JSON object.' % i)
+                    try:
+                        objects.append(self.persist_object(self.model(), item))
+                    except PERSIST_ERRORS as exc:
+                        raise ValueError('Object at index %s: %s' % (i, exc))
+        except RestForbidden:
+            return self.response_forbidden()
+        except ValueError as exc:
+            return self.response_bad_request(str(exc))
+
+        return self.response(
+            {'objects': [self.serialize_object(obj) for obj in objects]})
 
     def edit(self, obj):
         return self._write(obj)
@@ -725,8 +769,8 @@ class RestResource(object):
 
 
 class RestrictOwnerResource(RestResource):
-    # restrict edits (PUT and a POST to a detail url) and DELETE to the owner of
-    # the object, and stamp the current user as owner on any create.
+    # restrict edits (PUT/PATCH and a POST to a detail url) and DELETE to the
+    # owner of the object, and stamp the current user as owner on any create.
     owner_field = 'user'
 
     def validate_owner(self, user, obj):

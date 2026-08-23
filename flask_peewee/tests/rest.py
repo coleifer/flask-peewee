@@ -16,6 +16,7 @@ from flask_peewee.tests.test_app import ApiToken
 from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import BearerDoc
+from flask_peewee.tests.test_app import BulkItem
 from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
@@ -40,12 +41,15 @@ from flask_peewee.utils import make_password
 class RestApiTestCase(FlaskPeeweeTestCase):
     def setUp(self):
         super(RestApiTestCase, self).setUp()
-        models = [TestModel, APIKey, BearerDoc]
+        models = [TestModel, APIKey, BearerDoc, BulkItem]
         db.database.drop_tables(models)
         db.database.create_tables(models)
 
     def response_json(self, response):
         return json.loads(response.data.decode('utf8'))
+
+    def post_to(self, url, data):
+        return self.app.post(url, data=json.dumps(data))
 
     def auth_headers(self, username, password):
         data = '%s:%s' % (username, password)
@@ -205,9 +209,6 @@ class RestApiResourceTestCase(RestApiTestCase):
             'f_field': 'f2',
             'e': None,
         })
-
-    def post_to(self, url, data):
-        return self.app.post(url, data=json.dumps(data))
 
     def test_resources_create(self):
         # a model
@@ -448,6 +449,25 @@ class RestApiResourceTestCase(RestApiTestCase):
             },
         })
 
+    def test_resource_patch_partial(self):
+        # PATCH edits like PUT, changing only the fields present in the body.
+        self.create_test_models()
+
+        resp = self.app.patch('/api/bmodel/%s/' % self.b2.id,
+                              data=json.dumps({'b_field': 'b2-patched'}))
+        self.assertEqual(resp.status_code, 200)
+
+        b_obj = BModel.get(id=self.b2.id)
+        self.assertEqual(b_obj.a, self.a2)
+        self.assertEqual(self.response_json(resp), {
+            'id': b_obj.id,
+            'b_field': 'b2-patched',
+            'a': {
+                'id': self.a2.id,
+                'a_field': 'a2',
+            },
+        })
+
     def test_resource_edit_by_fk(self):
         self.create_test_models()
 
@@ -606,9 +626,6 @@ class RestApiValidationTestCase(RestApiTestCase):
         for M in (DModel, CModel, BDetails, BModel, AModel):
             M.delete().execute()
 
-    def post_to(self, url, data):
-        return self.app.post(url, data=json.dumps(data))
-
     def test_resource_filter_fields_not_mutated(self):
         class ChildResource(RestResource):
             pass
@@ -724,6 +741,64 @@ class RestApiValidationTestCase(RestApiTestCase):
         resp = self.post_to('/api/hmodel/%s/' % h.id, data)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(HModel.get(HModel.id == h.id).h_field, 'edited')
+
+    def test_non_dict_body_rejected(self):
+        # a JSON body that is not an object (list, string, number) is a 400.
+        # Regression: a list used to raise AttributeError in the deserializer.
+        for body in ([{'a_field': 'x'}], 'x', 3):
+            resp = self.post_to('/api/amodel/', body)
+            self.assertEqual(resp.status_code, 400)
+            self.assertIn('JSON object', self.response_json(resp)['error'])
+        self.assertEqual(AModel.select().count(), 0)
+
+        # same on PUT to a detail url.
+        a = AModel.create(a_field='a1')
+        resp = self.app.put('/api/amodel/%s/' % a.id, data=json.dumps(['x']))
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(AModel.get(id=a.id).a_field, 'a1')
+
+
+class RestApiBulkTestCase(RestApiTestCase):
+    def test_bulk_create(self):
+        resp = self.post_to('/api/bulkitem/', [{'data': 'a'}, {'data': 'b'}])
+        self.assertEqual(resp.status_code, 200)
+
+        items = list(BulkItem.select().order_by(BulkItem.id))
+        self.assertEqual([i.data for i in items], ['a', 'b'])
+        self.assertEqual(self.response_json(resp), {'objects': [
+            {'id': items[0].id, 'data': 'a', 'flag': False},
+            {'id': items[1].id, 'data': 'b', 'flag': False},
+        ]})
+
+    def test_bulk_rolls_back_on_invalid_item(self):
+        # the second item violates NOT NULL. The error names its index and the
+        # first item's insert is rolled back.
+        resp = self.post_to('/api/bulkitem/', [{'data': 'a'}, {}])
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('index 1', self.response_json(resp)['error'])
+        self.assertEqual(BulkItem.select().count(), 0)
+
+        # a non-dict item is rejected the same way.
+        resp = self.post_to('/api/bulkitem/', [{'data': 'a'}, 'x'])
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('index 1', self.response_json(resp)['error'])
+        self.assertEqual(BulkItem.select().count(), 0)
+
+    def test_bulk_cap(self):
+        # BulkItemResource sets max_bulk = 3.
+        resp = self.post_to('/api/bulkitem/',
+                            [{'data': str(i)} for i in range(4)])
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(BulkItem.select().count(), 0)
+
+    def test_bulk_scrubs_readonly(self):
+        # readonly_fields are stripped from every item, not just the first.
+        resp = self.post_to('/api/bulkitem/', [
+            {'data': 'a', 'flag': True},
+            {'data': 'b', 'flag': True},
+        ])
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([i.flag for i in BulkItem.select()], [False, False])
 
 
 class RestApiBasicTestCase(RestApiTestCase):
@@ -1207,6 +1282,21 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertAPINote(resp_json, note)
 
+    def test_auth_patch(self):
+        # PATCH is a protected method like PUT.
+        self.create_notes()
+
+        serialized = json.dumps({'message': 'patched'})
+        url = '/api/note/%s/' % self.admin_note.id
+
+        resp = self.app.patch(url, data=serialized)
+        self.assertEqual(resp.status_code, 401)
+
+        resp = self.app.patch(url, data=serialized,
+                              headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Note.get(id=self.admin_note.id).message, 'patched')
+
     def test_readonly_field_mass_assignment(self):
         # UserResource marks "admin" read-only; an authorized editor still
         # cannot escalate a user's privileges through the request body.
@@ -1519,6 +1609,23 @@ class RestApiOwnerAuthTestCase(RestApiTestCase):
 
         resp_json = self.response_json(resp)
         self.assertAPIMessage(resp_json, message)
+
+    def test_auth_patch(self):
+        # PATCH must clear the same owner check as PUT.
+        self.create_messages()
+
+        serialized = json.dumps({'content': 'patched'})
+        url = '/api/message/%s/' % self.normal_message.id
+
+        resp = self.app.patch(url, data=serialized,
+                              headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 403)
+
+        resp = self.app.patch(url, data=serialized,
+                              headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Message.get(id=self.normal_message.id).content,
+                         'patched')
 
     def test_auth_edit_via_post(self):
         # a POST to a detail url is an edit, so it must clear the owner check
@@ -1902,6 +2009,19 @@ class RestApiUserBearerAuthTestCase(RestApiTestCase):
                           headers=self.bearer('nope'))
             self.assertEqual(resp.status_code, 401)
             self.assertEqual(Tweet.select().count(), 0)
+
+    def test_bulk_create_stamps_owner(self):
+        # TweetResource allows bulk. save_object stamps each created row with
+        # the authenticated user.
+        resp = self.app.post('/api/tweet/',
+                             data=json.dumps([{'content': 'a'},
+                                              {'content': 'b'}]),
+                             headers=self.bearer('ntok'))
+        self.assertEqual(resp.status_code, 200)
+
+        tweets = list(Tweet.select().order_by(Tweet.id))
+        self.assertEqual([t.content for t in tweets], ['a', 'b'])
+        self.assertEqual([t.user for t in tweets], [self.normal, self.normal])
 
     def test_owner_restriction_via_token(self):
         # a tweet owned by normal; admin's token is a different user and must

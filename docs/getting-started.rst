@@ -349,7 +349,7 @@ our :py:class:`RestAPI`.
 
 .. note::
     The default authentication mechanism for the API only accepts GET requests.
-    To handle POST/PUT/DELETE you will need to use a subclass of the
+    To handle POST/PUT/PATCH/DELETE you will need to use a subclass of the
     :py:class:`Authentication` class.
 
 To allow users of the site to post notes, we will use the :py:class:`UserAuthentication`

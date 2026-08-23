@@ -12,9 +12,12 @@ Each :py:class:`RestResource` you expose via the API will support, by default,
 the following:
 
 * ``/api/<model name>/``: GET and POST requests
-* ``/api/<model name>/<primary key>/``: GET, PUT and DELETE requests. POST
-  also edits, and ``POST /<primary key>/delete/`` works as DELETE, for clients
-  that cannot issue PUT or DELETE.
+* ``/api/<model name>/<primary key>/``: GET, PUT, PATCH and DELETE requests.
+  POST also edits, and ``POST /<primary key>/delete/`` works as DELETE, for
+  clients that cannot issue PUT or DELETE.
+
+PUT and PATCH share partial-update semantics, changing only the fields
+present in the request body.
 
 Also, you can filter results by columns on the model using django-style syntax,
 for example:
@@ -336,7 +339,7 @@ or plain form fields, one per column.
 Write payloads are validated as they are deserialized, and problems surface as
 a 400 with a JSON error rather than a 500 (or worse, bad data):
 
-* A body that is not valid JSON is rejected.
+* A body that is not valid JSON, or whose JSON is not an object, is rejected.
 * Values that cannot be coerced to their field's type are rejected. This
   includes date/time strings: a value like ``"pub_date": "not-a-date"`` returns
   ``{"error": "Unrecognized date/time value for \"pub_date\": 'not-a-date'"}``
@@ -381,6 +384,30 @@ whether it is a 400, 401, 403, 404 or 405. A 401 also carries the
     $ curl http://127.0.0.1:5000/api/message/9999/
 
     {"error": "Not found"}
+
+
+Bulk creation
+-------------
+
+A POST body is normally a single JSON object. Set ``allow_bulk = True`` on a
+resource and POST a JSON list to create many objects in one request:
+
+.. code-block:: python
+
+    class MessageResource(RestResource):
+        allow_bulk = True
+
+.. code-block:: console
+
+    $ curl -u admin:admin -H 'Content-Type: application/json' \
+        -d '[{"user": 1, "content": "one"}, {"user": 1, "content": "two"}]' \
+        http://127.0.0.1:5000/api/message/
+
+Each object passes through the same validation as a single create, and the
+whole batch is saved in one transaction. An object that fails returns a 400
+naming its index and nothing is saved. A list longer than ``max_bulk``
+objects (default 100) is rejected. On success the response is
+``{"objects": [...]}`` with the created objects in order.
 
 
 Allowing users to post objects
@@ -491,7 +518,7 @@ Restricting API access on a per-model basis
 -------------------------------------------
 
 flask-peewee comes with a special subclass of :py:class:`RestResource` that
-restricts POST/PUT/DELETE requests to prevent users from modifying another user's
+restricts POST/PUT/PATCH/DELETE requests to prevent users from modifying another user's
 content.
 
 .. code-block:: python
@@ -528,7 +555,7 @@ It is fine to modify our own message, though (message with id=1):
 
 Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
 
-* PUT / DELETE: verify the authenticated user is the owner of the object
+* PUT / PATCH / DELETE: verify the authenticated user is the owner of the object
 * POST: assign the authenticated user as the owner of the new object
 
 
@@ -593,9 +620,10 @@ Token-based authentication
 Basic auth, which is handy for humans but awkward for programmatic clients. For
 API clients, flask-peewee ships token-based authentication classes. Like all
 authentication classes they only guard the ``protected_methods`` (``POST``,
-``PUT`` and ``DELETE`` by default, with ``GET`` open). To require auth on reads
-too, pass ``protected_methods=ALL_METHODS`` (a convenience constant equal to
-``('GET', 'POST', 'PUT', 'DELETE')``) or your own list.
+``PUT``, ``PATCH`` and ``DELETE`` by default, with ``GET`` open). To require
+auth on reads too, pass ``protected_methods=ALL_METHODS`` (a convenience
+constant equal to ``('GET', 'POST', 'PUT', 'PATCH', 'DELETE')``) or your own
+list.
 
 API keys
 ^^^^^^^^
