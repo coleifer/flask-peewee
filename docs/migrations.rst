@@ -7,7 +7,7 @@ The :ref:`CLI <cli>` migration commands wrap ``playhouse.migrations``,
 available in peewee 4.4 or newer. Peewee migrations are python scripts, applied
 in numeric order and recorded by name in a history table. Each script defines
 ``up(migrator, db)`` and, if it can be reverted, ``down(migrator, db)``. The
-migrator is a :ref:`SchemaMigrator <https://docs.peewee-orm.com/en/latest/peewee/db_tools.html#migration-api>`_ (docs).
+migrator is a `SchemaMigrator <https://docs.peewee-orm.com/en/latest/peewee/db_tools.html#migration-api>`_ (docs).
 
 Configuration options:
 
@@ -87,4 +87,4 @@ write manually.
 adopting migrations on a database that already matches the models.
 
 More details on Peewee's migration runner can be found in the
-:ref:`migration runner docs <https://docs.peewee-orm.com/en/latest/peewee/db_tools.html#module-playhouse.migrations>`_.
+`migration runner docs <https://docs.peewee-orm.com/en/latest/peewee/db_tools.html#module-playhouse.migrations>`_.

@@ -72,9 +72,11 @@ Admin
         :param model: peewee model to expose via the admin
         :param admin_class: :py:class:`ModelAdmin` or subclass to use with given model
 
-    .. py:method:: register_panel(title, panel)
+    .. py:method:: register_panel(title, panel, *args, **kwargs)
 
-        Register a :py:class:`AdminPanel` subclass for display in the admin dashboard.
+        Register a :py:class:`AdminPanel` subclass for display in the admin
+        dashboard. Extra arguments are passed through to the panel's
+        constructor.
 
         Example usage:
 
@@ -188,6 +190,7 @@ Exposing Models with the ModelAdmin
             * field on a model
             * attribute on a model instance
             * callable on a model instance (called with no parameters)
+            * method on the ``ModelAdmin`` (called with the model instance)
 
             If a column is a model field, it will be sortable.
 
@@ -248,6 +251,21 @@ Exposing Models with the ModelAdmin
         Per-field keyword arguments passed through to wtf-peewee's
         ``model_form``, e.g. ``{'content': {'label': 'Body'}}``. See
         :ref:`admin-interface` for form customization recipes.
+
+    .. py:attribute:: readonly_fields
+
+        List or tuple of field names to display without editing. Readonly
+        fields are removed from the generated form entirely, so they can
+        never be posted. The edit page renders them as inert values and
+        the add page omits them.
+
+    .. py:attribute:: fieldsets
+
+        List of ``(label, options)`` tuples grouping the add and edit forms
+        into sections, rendered in order. ``options`` is a dict with a
+        ``fields`` list and an optional ``collapsed`` flag. A ``None`` label
+        renders an unlabeled section, and fields missing from every section
+        render in a trailing unlabeled one.
 
     .. py:attribute:: paginate_by = 20
 
@@ -667,6 +685,8 @@ Auth
 
         Mark the given user as "logged-in". In the default implementation, this
         entails storing data in the ``Session`` to indicate the successful login.
+        The session is cleared first, so state from before authentication does
+        not survive login.
 
         :param user: ``User`` instance
 
@@ -725,6 +745,16 @@ Database
             'engine': 'peewee.SqliteDatabase',
         }
 
+    The database may also be given as a connection URL, using any scheme
+    ``playhouse.db_url`` understands, or as a pre-configured peewee
+    database instance (a ``Proxy`` works too):
+
+    .. code-block:: python
+
+        DATABASE = 'sqlite:///example.db'
+
+        DATABASE = PostgresqlDatabase('app', user='postgres')
+
     Here is an example of how you might use the database wrapper:
 
     .. code-block:: python
@@ -767,6 +797,14 @@ Database
         Initialize the Database wrapper with a Flask app you intend to use,
         optionally specifying a Peewee database instance. If ``database`` is
         None then the database will be loaded from ``app.config``.
+
+    .. py:method:: get_models()
+
+        Returns every model subclassing :py:attr:`~Database.Model`,
+        including subclasses of subclasses. The :ref:`CLI <cli>` uses this
+        for table creation and schema diffs.
+
+        :rtype: list of Model classes
 
     .. py:attribute:: Model
 
