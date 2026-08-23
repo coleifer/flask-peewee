@@ -24,11 +24,27 @@ class TestAuth(Auth):
         pass
 
 
+class ResetAuth(Auth):
+    # the shared app already has auth's handlers and context processors, so
+    # only the routes are needed.
+    def setup(self):
+        self.configure_routes()
+        self.register_blueprint()
+
+    def send_reset_email(self, user, reset_url):
+        self.sent.append((user, reset_url))
+
+
+reset_auth = ResetAuth(app, db, user_model=User, prefix='/reset-accounts',
+                       name='reset_auth', reset=True)
+
+
 class AuthTestCase(FlaskPeeweeTestCase):
     def setUp(self):
         super(AuthTestCase, self).setUp()
 
         self.test_auth = TestAuth(app, db)
+        reset_auth.sent = []
 
     def login(self, username='admin', password='admin', context=None):
         context = context or self.app
@@ -43,6 +59,15 @@ class AuthTestCase(FlaskPeeweeTestCase):
 
     def assertRedirect(self, resp):
         self.assertTrue(resp.status_code in (302, 303))
+
+    def assertResetRejected(self, token):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/reset-accounts/reset/%s/' % token)
+            self.assertRedirect(resp)
+            self.assertTrue(
+                resp.headers['location'].endswith('/reset-accounts/forgot/'))
+            self.assertEqual(get_flashed_messages(), [
+                'The password reset link is invalid or has expired'])
 
     def test_table(self):
         self.assertEqual(self.test_auth.User._meta.table_name, 'user')
@@ -309,3 +334,100 @@ class AuthTestCase(FlaskPeeweeTestCase):
             self.assertEqual(resp.status_code, 200)
 
             self.assertEqual(auth.get_logged_in_user(), self.admin)
+
+    def test_reset_flow(self):
+        user = self.create_user('huey', 'meow', email='huey@example.com')
+
+        with self.flask_app.test_client() as c:
+            resp = c.get('/reset-accounts/forgot/')
+            self.assertEqual(resp.status_code, 200)
+
+            resp = c.post('/reset-accounts/forgot/', data={
+                'email': 'huey@example.com'})
+            self.assertRedirect(resp)
+            self.assertEqual(get_flashed_messages(), [
+                'If the email address matches an account, a password reset '
+                'link has been sent'])
+
+            self.assertEqual(len(reset_auth.sent), 1)
+            sent_user, reset_url = reset_auth.sent[0]
+            self.assertEqual(sent_user, user)
+
+            reset_path = reset_url.replace('http://localhost', '')
+            self.assertTrue(reset_path.startswith('/reset-accounts/reset/'))
+
+            resp = c.get(reset_path)
+            self.assertEqual(resp.status_code, 200)
+
+            # mismatched confirmation re-renders with an error.
+            resp = c.post(reset_path, data={
+                'password': 'purr', 'confirm': 'nope'})
+            self.assertEqual(resp.status_code, 200)
+            frm = self.get_context('form')
+            self.assertEqual(frm.errors, {'confirm': ['Passwords must match']})
+
+            resp = c.post(reset_path, data={
+                'password': 'purr', 'confirm': 'purr'})
+            self.assertRedirect(resp)
+            self.assertTrue(
+                resp.headers['location'].endswith('/reset-accounts/login/'))
+
+        user = User.get(User.id == user.id)
+        self.assertTrue(user.check_password('purr'))
+        self.assertFalse(user.check_password('meow'))
+
+        # the new password works through the regular login view.
+        with self.flask_app.test_client() as c:
+            resp = c.post('/accounts/login/', data={
+                'username': 'huey', 'password': 'purr'})
+            self.assertRedirect(resp)
+            self.assertEqual(auth.get_logged_in_user(), user)
+
+    def test_reset_token_password_change(self):
+        user = self.create_user('huey', 'meow', email='huey@example.com')
+        token = reset_auth.make_reset_token(user)
+        self.assertEqual(reset_auth.parse_reset_token(token), user)
+
+        user.set_password('changed')
+        user.save()
+        self.assertEqual(reset_auth.parse_reset_token(token), None)
+        self.assertResetRejected(token)
+
+    def test_reset_token_expired(self):
+        user = self.create_user('huey', 'meow', email='huey@example.com')
+        token = reset_auth.make_reset_token(user)
+
+        reset_auth.reset_token_max_age = -1
+        self.addCleanup(delattr, reset_auth, 'reset_token_max_age')
+        self.assertEqual(reset_auth.parse_reset_token(token), None)
+        self.assertResetRejected(token)
+
+    def test_reset_token_garbage(self):
+        self.assertEqual(reset_auth.parse_reset_token('garbage'), None)
+        self.assertResetRejected('garbage')
+
+    def test_forgot_unknown_email(self):
+        self.create_user('huey', 'meow', email='huey@example.com')
+
+        with self.flask_app.test_client() as c:
+            resp = c.post('/reset-accounts/forgot/', data={
+                'email': 'huey@example.com'})
+            self.assertRedirect(resp)
+            known = get_flashed_messages()
+
+        with self.flask_app.test_client() as c:
+            resp = c.post('/reset-accounts/forgot/', data={
+                'email': 'nobody@example.com'})
+            self.assertRedirect(resp)
+            self.assertEqual(get_flashed_messages(), known)
+
+        # only the known email produced a send.
+        self.assertEqual(len(reset_auth.sent), 1)
+
+    def test_reset_disabled_by_default(self):
+        self.assertEqual(len(auth.get_urls()), 2)
+        self.assertEqual(len(self.test_auth.get_urls()), 2)
+
+        with self.flask_app.test_client() as c:
+            self.assertEqual(c.get('/accounts/forgot/').status_code, 404)
+            self.assertEqual(c.get('/accounts/reset/xyz/').status_code, 404)

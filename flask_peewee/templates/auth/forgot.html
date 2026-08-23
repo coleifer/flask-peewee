@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% from 'macros/forms.html' import with_errors %}
+
+{% block content_title %}Forgot password{% endblock %}
+
+{% block content %}
+  <form method="post" action="{{ forgot_url }}">
+    {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
+    {% for field in form %}
+      <div class="mb-3">
+        {{ field.label(class="form-label") }}
+        {{ with_errors(field) }}
+      </div>
+    {% endfor %}
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Send reset link</button></div>
+  </form>
+{% endblock %}

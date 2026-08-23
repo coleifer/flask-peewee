@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import os
 
 from flask import Blueprint
@@ -9,6 +10,8 @@ from flask import render_template
 from flask import request
 from flask import session
 from flask import url_for
+from itsdangerous import BadData
+from itsdangerous import URLSafeTimedSerializer
 from peewee import *
 from wtforms import Form
 from wtforms import PasswordField
@@ -20,6 +23,7 @@ from flask_peewee.utils import is_legacy_password
 from flask_peewee.utils import is_safe_url
 from flask_peewee.utils import make_password
 from wtforms.validators import DataRequired
+from wtforms.validators import EqualTo
 
 
 current_dir = os.path.dirname(__file__)
@@ -31,6 +35,16 @@ class LoginForm(Form):
     password = PasswordField('Password', validators=[DataRequired()])
 
 
+class ForgotPasswordForm(Form):
+    email = StringField('Email', validators=[DataRequired()])
+
+
+class ResetPasswordForm(Form):
+    password = PasswordField('New password', validators=[DataRequired()])
+    confirm = PasswordField('Confirm password', validators=[
+        DataRequired(), EqualTo('password', message='Passwords must match')])
+
+
 class BaseUser(object):
     def set_password(self, password):
         self.password = make_password(password)
@@ -40,8 +54,11 @@ class BaseUser(object):
 
 
 class Auth(object):
+    reset_token_max_age = 3600
+
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
-                 clear_session=False, default_next_url='/', db_table='user'):
+                 clear_session=False, default_next_url='/', db_table='user',
+                 reset=False):
         self.app = app
         self.db = db
 
@@ -53,6 +70,7 @@ class Auth(object):
 
         self.clear_session = clear_session
         self.default_next_url = default_next_url
+        self.reset_enabled = reset
 
         self.setup()
 
@@ -116,13 +134,25 @@ class Auth(object):
         )
 
     def get_urls(self):
-        return (
+        urls = (
             ('/logout/', self.logout),
             ('/login/', self.login),
         )
+        if self.reset_enabled:
+            urls += (
+                ('/forgot/', self.forgot),
+                ('/reset/<token>/', self.reset),
+            )
+        return urls
 
     def get_login_form(self):
         return LoginForm
+
+    def get_forgot_form(self):
+        return ForgotPasswordForm
+
+    def get_reset_form(self):
+        return ResetPasswordForm
 
     def test_user(self, test_fn):
         def decorator(fn):
@@ -159,6 +189,43 @@ class Auth(object):
             user.save()
 
         return user
+
+    def get_reset_serializer(self):
+        return URLSafeTimedSerializer(self.app.config['SECRET_KEY'],
+                                      salt='flask-peewee.reset')
+
+    def reset_fingerprint(self, user):
+        # binds the token to the current hash, so changing the password
+        # invalidates outstanding tokens.
+        return hashlib.sha256(user.password.encode('utf-8')).hexdigest()[:12]
+
+    def make_reset_token(self, user):
+        return self.get_reset_serializer().dumps(
+            [user._pk, self.reset_fingerprint(user)])
+
+    def parse_reset_token(self, token):
+        try:
+            pk, fingerprint = self.get_reset_serializer().loads(
+                token, max_age=self.reset_token_max_age)
+        except (BadData, TypeError, ValueError):
+            # BadData covers tampered and expired tokens, the others a
+            # validly-signed payload of an unexpected shape.
+            return None
+        user = self.User.get_or_none(
+            self.User.active==True,
+            self.User._meta.primary_key==pk)
+        if user is None or fingerprint != self.reset_fingerprint(user):
+            return None
+        return user
+
+    def get_reset_user(self, form):
+        return self.User.get_or_none(
+            self.User.active==True,
+            self.User.email==form.email.data)
+
+    def send_reset_email(self, user, reset_url):
+        raise NotImplementedError('Applications enabling password reset '
+                                  'must override send_reset_email().')
 
     def login_user(self, user):
         # drop pre-login session state (session fixation).
@@ -226,6 +293,56 @@ class Auth(object):
         if not is_safe_url(next_url):
             next_url = self.default_next_url
         return redirect(next_url)
+
+    def forgot(self):
+        Form = self.get_forgot_form()
+
+        if request.method == 'POST':
+            form = Form(request.form)
+            if form.validate():
+                user = self.get_reset_user(form)
+                if user is not None:
+                    reset_url = url_for(
+                        '%s.reset' % self.blueprint.name,
+                        token=self.make_reset_token(user),
+                        _external=True)
+                    self.send_reset_email(user, reset_url)
+
+                # identical response whether or not a user matched, to avoid
+                # leaking which emails have accounts.
+                flash('If the email address matches an account, a password '
+                      'reset link has been sent', 'success')
+                return redirect(url_for('%s.login' % self.blueprint.name))
+        else:
+            form = Form()
+
+        return render_template(
+            'auth/forgot.html',
+            form=form,
+            forgot_url=url_for('%s.forgot' % self.blueprint.name))
+
+    def reset(self, token):
+        user = self.parse_reset_token(token)
+        if user is None:
+            flash('The password reset link is invalid or has expired', 'danger')
+            return redirect(url_for('%s.forgot' % self.blueprint.name))
+
+        Form = self.get_reset_form()
+
+        if request.method == 'POST':
+            form = Form(request.form)
+            if form.validate():
+                user.set_password(form.password.data)
+                user.save()
+                flash('Your password has been reset, please log in', 'success')
+                return redirect(url_for('%s.login' % self.blueprint.name))
+        else:
+            form = Form()
+
+        return render_template(
+            'auth/reset.html',
+            form=form,
+            reset_url=url_for('%s.reset' % self.blueprint.name, token=token))
 
     def configure_routes(self):
         for url, callback in self.get_urls():

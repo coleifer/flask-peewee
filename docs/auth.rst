@@ -162,6 +162,30 @@ A real signup view also validates the input and handles duplicate
 usernames. The example app's ``/join/`` view shows the uniqueness check.
 
 
+Password reset
+--------------
+
+Pass ``reset=True`` to add two more views: ``/forgot/`` accepts an email
+address and sends a signed reset link, and ``/reset/<token>/`` lets the
+holder of a valid link choose a new password. Delivering the email is the
+application's job, so enabling the flag means overriding
+:py:meth:`Auth.send_reset_email`:
+
+.. code-block:: python
+
+    class MyAuth(Auth):
+        def send_reset_email(self, user, reset_url):
+            mailer.send(user.email, 'Password reset', reset_url)
+
+    auth = MyAuth(app, db, reset=True)
+
+Tokens are signed with the app's ``SECRET_KEY`` and expire after
+``Auth.reset_token_max_age`` seconds (default 3600). Each token is also
+bound to the user's current password hash, so completing a reset (or any
+other password change) invalidates outstanding tokens. The forgot view
+flashes the same message whether or not the email matched an account.
+
+
 Accessing the user in the templates
 -----------------------------------
 

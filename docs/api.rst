@@ -532,7 +532,7 @@ Extending admin functionality using AdminPanel
 Auth
 ----
 
-.. py:class:: Auth(app, db[, user_model[, prefix[, name[, clear_session[, default_next_url[, db_table]]]]]])
+.. py:class:: Auth(app, db[, user_model[, prefix[, name[, clear_session[, default_next_url[, db_table[, reset]]]]]]])
 
     The class that provides methods for authenticating users and tracking
     users across requests. It also provides a model for persisting users to
@@ -587,11 +587,17 @@ Auth
         ``?next=`` is given, defaults to ``/``
     :param db_table: table name for the default ``User`` model (``user`` is a
         reserved word in postgres)
+    :param reset: enable the ``/forgot/`` and ``/reset/<token>/`` password
+        reset views (requires overriding :py:meth:`Auth.send_reset_email`)
 
     .. py:attribute:: default_next_url = '/'
 
         The url to redirect to upon successful login in the event a ``?next=<xxx>``
         is not provided.
+
+    .. py:attribute:: reset_token_max_age = 3600
+
+        Number of seconds a password reset token remains valid.
 
     .. py:method:: get_logged_in_user()
 
@@ -655,24 +661,39 @@ Auth
     .. py:method:: get_urls()
 
         A mapping of url to view. The default implementation provides views for
-        login and logout only, but you might extend this to add registration and
-        password change views.
+        login and logout, plus the forgot and reset views when password reset
+        is enabled. You might extend this to add registration or password
+        change views.
 
         Default implementation:
 
         .. code-block:: python
 
             def get_urls(self):
-                return (
+                urls = (
                     ('/logout/', self.logout),
                     ('/login/', self.login),
                 )
+                if self.reset_enabled:
+                    urls += (
+                        ('/forgot/', self.forgot),
+                        ('/reset/<token>/', self.reset),
+                    )
+                return urls
 
         :rtype: a tuple of 2-tuples mapping url to view function.
 
     .. py:method:: get_login_form()
 
         :rtype: a ``wtforms.Form`` subclass to use for retrieving any user info required for login
+
+    .. py:method:: get_forgot_form()
+
+        :rtype: a ``wtforms.Form`` subclass used by the forgot view to collect the email address
+
+    .. py:method:: get_reset_form()
+
+        :rtype: a ``wtforms.Form`` subclass used by the reset view to collect the new password
 
     .. py:method:: authenticate(username, password)
 
@@ -694,6 +715,40 @@ Auth
 
         Mark the requesting user as logged-out, removing the auth keys from
         the session (or the whole session with ``clear_session``)
+
+    .. py:method:: get_reset_user(form)
+
+        Find the user a reset link should be sent to. The default
+        implementation matches the submitted email address against active
+        users.
+
+        :param form: the validated forgot-password form
+        :rtype: ``User`` instance, or ``None`` if no active user matched
+
+    .. py:method:: make_reset_token(user)
+
+        Create a signed reset token for the given user. The token embeds the
+        user's primary key and is bound to their current password hash, so
+        changing the password invalidates outstanding tokens.
+
+        :param user: ``User`` instance
+        :rtype: url-safe token string
+
+    .. py:method:: send_reset_email(user, reset_url)
+
+        Deliver the reset link to the user. The default implementation raises
+        ``NotImplementedError``, so enabling ``reset=True`` means overriding
+        this method.
+
+        :param user: ``User`` instance the reset was requested for
+        :param reset_url: absolute url containing the signed reset token
+
+    .. py:method:: parse_reset_token(token)
+
+        Validate a token produced by :py:meth:`Auth.make_reset_token`.
+
+        :rtype: the matching active ``User``, or ``None`` if the token is
+            invalid, expired, or issued before a password change
 
 
 The BaseUser mixin
