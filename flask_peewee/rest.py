@@ -1,6 +1,9 @@
+import datetime
 import functools
+import hashlib
 import json
 import operator
+import secrets
 
 from flask import Blueprint
 from flask import Response
@@ -155,6 +158,66 @@ class UserBearerAuthentication(BearerAuthentication):
                     else getattr(key, self.user_field)
 
         return g.user
+
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+
+class HashedBearerAuthentication(BearerAuthentication):
+    """
+    Bearer auth for tokens stored hashed at rest, as created by
+    make_token_model(). The presented token is hashed with sha256 and looked
+    up in the token_hash column, skipping revoked and expired rows. The
+    matching row is stored on g.api_key, and g.user is set to the row's user
+    when the model has a user foreign key.
+    """
+    token_field = 'token_hash'
+    user_field = 'user'
+
+    def get_query(self):
+        model = self.model
+        return model.select().where(
+            model.revoked == False,
+            model.expires.is_null() | (model.expires > datetime.datetime.now()))
+
+    def get_key(self, token):
+        return super(HashedBearerAuthentication, self).get_key(
+            _hash_token(token))
+
+    def authorize(self):
+        g.user = None
+        res = super(HashedBearerAuthentication, self).authorize()
+        if g.api_key is not None and self.user_field in self.model._meta.fields:
+            g.user = getattr(g.api_key, self.user_field)
+        return res
+
+
+def make_token_model(db, user_model=None, db_table='api_token'):
+    """
+    Create an ApiToken model bound to the given Database wrapper, for use
+    with HashedBearerAuthentication. When user_model is given the tokens
+    carry a foreign key to it. create_token() returns the new row and the
+    raw token, of which only the sha256 hash is stored.
+    """
+    class ApiToken(db.Model):
+        token_hash = CharField(unique=True)
+        created = DateTimeField(default=datetime.datetime.now)
+        expires = DateTimeField(null=True)
+        revoked = BooleanField(default=False)
+
+        class Meta:
+            table_name = db_table
+
+        @classmethod
+        def create_token(cls, **kwargs):
+            token = secrets.token_urlsafe(32)
+            return cls.create(token_hash=_hash_token(token), **kwargs), token
+
+    if user_model is not None:
+        ApiToken._meta.add_field('user', ForeignKeyField(user_model))
+
+    return ApiToken
 
 
 class UserAuthentication(Authentication):

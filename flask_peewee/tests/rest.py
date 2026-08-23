@@ -1,5 +1,6 @@
 import base64
 import datetime
+import hashlib
 import json
 import unittest
 
@@ -24,6 +25,8 @@ from flask_peewee.tests.test_app import EModel
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import HModel
+from flask_peewee.tests.test_app import HashedDoc
+from flask_peewee.tests.test_app import HashedToken
 from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
@@ -54,6 +57,9 @@ class RestApiTestCase(FlaskPeeweeTestCase):
     def auth_headers(self, username, password):
         data = '%s:%s' % (username, password)
         return {'Authorization': 'Basic %s' % base64.b64encode(data.encode('utf8')).decode('utf8')}
+
+    def bearer(self, token):
+        return {'Authorization': 'Bearer %s' % token}
 
     def conv_date(self, dt):
         return dt.isoformat()
@@ -1935,9 +1941,6 @@ class RestApiBearerAuthTestCase(RestApiTestCase):
         # APIKey row's "key" value is the bearer token.
         self.k1 = APIKey.create(key='tok', secret='s')
 
-    def bearer(self, token):
-        return {'Authorization': 'Bearer %s' % token}
-
     def test_missing_token(self):
         with self.flask_app.test_client() as c:
             resp = c.get('/api/bearerdoc/')
@@ -1987,9 +1990,6 @@ class RestApiUserBearerAuthTestCase(RestApiTestCase):
         ApiToken.create(token='ntok', user=self.normal)
         ApiToken.create(token='atok', user=self.admin)
 
-    def bearer(self, token):
-        return {'Authorization': 'Bearer %s' % token}
-
     def test_token_resolves_to_user_and_sets_owner(self):
         with self.flask_app.test_client() as c:
             resp = c.post('/api/tweet/', data=json.dumps({'content': 'hi'}),
@@ -2038,3 +2038,85 @@ class RestApiUserBearerAuthTestCase(RestApiTestCase):
                          headers=self.bearer('ntok'))
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(Tweet.get(id=tweet.id).content, 'edit')
+
+
+class RestApiHashedBearerAuthTestCase(RestApiTestCase):
+    def setUp(self):
+        super(RestApiHashedBearerAuthTestCase, self).setUp()
+        self.create_users()
+        # HashedDoc is owner-restricted and protected (all methods) by a
+        # hashed bearer auth over HashedToken, made by make_token_model.
+        self.token, self.raw = HashedToken.create_token(user=self.normal)
+
+    def test_only_hash_stored(self):
+        db_token = HashedToken.get(HashedToken.id == self.token.id)
+        self.assertEqual(
+            db_token.token_hash,
+            hashlib.sha256(self.raw.encode('utf-8')).hexdigest())
+        self.assertNotEqual(db_token.token_hash, self.raw)
+
+    def test_valid_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/hasheddoc/', headers=self.bearer(self.raw))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.api_key, self.token)
+            self.assertEqual(g.user, self.normal)
+
+    def test_bad_token(self):
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/hasheddoc/', headers=self.bearer('nope'))
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(g.user, None)
+
+            # the stored hash is not itself a valid token
+            resp = c.get('/api/hasheddoc/',
+                         headers=self.bearer(self.token.token_hash))
+            self.assertEqual(resp.status_code, 401)
+
+    def test_revoked_token(self):
+        self.token.revoked = True
+        self.token.save()
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/hasheddoc/', headers=self.bearer(self.raw))
+            self.assertEqual(resp.status_code, 401)
+
+    def test_expiry(self):
+        day = datetime.timedelta(days=1)
+        _, live = HashedToken.create_token(
+            user=self.normal, expires=datetime.datetime.now() + day)
+        _, dead = HashedToken.create_token(
+            user=self.normal, expires=datetime.datetime.now() - day)
+
+        with self.flask_app.test_client() as c:
+            resp = c.get('/api/hasheddoc/', headers=self.bearer(live))
+            self.assertEqual(resp.status_code, 200)
+
+            resp = c.get('/api/hasheddoc/', headers=self.bearer(dead))
+            self.assertEqual(resp.status_code, 401)
+
+            # null expiry never expires
+            resp = c.get('/api/hasheddoc/', headers=self.bearer(self.raw))
+            self.assertEqual(resp.status_code, 200)
+
+    def test_token_user_sets_owner(self):
+        with self.flask_app.test_client() as c:
+            resp = c.post('/api/hasheddoc/', data=json.dumps({'data': 'd1'}),
+                          headers=self.bearer(self.raw))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(g.user, self.normal)
+            self.assertEqual(HashedDoc.get(data='d1').user, self.normal)
+
+    def test_owner_restriction_via_token(self):
+        doc = HashedDoc.create(user=self.normal, data='orig')
+        _, admin_raw = HashedToken.create_token(user=self.admin)
+        with self.flask_app.test_client() as c:
+            resp = c.put('/api/hasheddoc/%s/' % doc.id,
+                         data=json.dumps({'data': 'hax'}),
+                         headers=self.bearer(admin_raw))
+            self.assertEqual(resp.status_code, 403)
+
+            resp = c.put('/api/hasheddoc/%s/' % doc.id,
+                         data=json.dumps({'data': 'edit'}),
+                         headers=self.bearer(self.raw))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(HashedDoc.get(id=doc.id).data, 'edit')

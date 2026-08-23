@@ -24,6 +24,8 @@ from flask_peewee.rest import APIKeyAuthentication
 from flask_peewee.rest import AdminAuthentication
 from flask_peewee.rest import BearerAuthentication
 from flask_peewee.rest import Authentication
+from flask_peewee.rest import HashedBearerAuthentication
+from flask_peewee.rest import make_token_model
 from flask_peewee.rest import RestAPI
 from flask_peewee.rest import RestResource
 from flask_peewee.rest import RestrictOwnerResource
@@ -156,6 +158,11 @@ class BulkItem(db.Model):
 class ApiToken(db.Model):
     token = CharField()
     user = ForeignKeyField(User)
+
+
+class HashedDoc(db.Model):
+    user = ForeignKeyField(User)
+    data = TextField()
 
 
 class Tweet(db.Model):
@@ -367,6 +374,10 @@ class TweetResource(RestrictOwnerResource):
 # resolves a token (ApiToken.token) to ApiToken.user and sets g.user
 user_bearer_auth = UserBearerAuthentication(ApiToken)
 
+# hashes the presented token for lookup and sets g.user from the row's user
+HashedToken = make_token_model(db, user_model=User)
+hashed_bearer_auth = HashedBearerAuthentication(HashedToken, ALL_METHODS)
+
 api = RestAPI(app, default_auth=user_auth)
 
 api.register(Message, RestrictOwnerResource)
@@ -377,6 +388,7 @@ api.register(Ping, PingResource)
 api.register(TestModel, auth=api_key_auth)
 api.register(BearerDoc, auth=bearer_auth)
 api.register(Tweet, TweetResource, auth=user_bearer_auth)
+api.register(HashedDoc, RestrictOwnerResource, auth=hashed_bearer_auth)
 api.register(AModel, AResource, auth=dummy_auth)
 api.register(BModel, BResource, auth=dummy_auth)
 api.register(CModel, CResource, auth=dummy_auth)

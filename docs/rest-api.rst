@@ -652,53 +652,53 @@ matched row is stored on ``g.api_key``:
 Bearer tokens
 ^^^^^^^^^^^^^
 
-:py:class:`BearerAuthentication` reads a token from the standard
+:py:class:`HashedBearerAuthentication` reads a token from the standard
 ``Authorization: Bearer <token>`` header, keeping the credential out of the
-query string and logs, and looks it up in a model with a ``token`` field.
-The matched row is stored on ``g.api_key``:
+query string and logs. Tokens are stored as sha256 hashes, so the raw token
+never touches the database. :py:func:`make_token_model` builds the token
+model, and its ``create_token()`` classmethod returns the new row along with
+the raw token:
 
 .. code-block:: python
 
-    from flask_peewee.rest import BearerAuthentication
+    from flask_peewee.rest import HashedBearerAuthentication
+    from flask_peewee.rest import make_token_model
 
-    class ApiToken(db.Model):
-        token = CharField()
+    ApiToken = make_token_model(db, user_model=User)
 
-    bearer_auth = BearerAuthentication(ApiToken)
-    api.register(SecretModel, auth=bearer_auth)
+    token, raw = ApiToken.create_token(user=some_user)
+    # show "raw" to the caller once. it cannot be recovered later.
 
-    # curl -H "Authorization: Bearer <token>" http://127.0.0.1:5000/api/secretmodel/
+    api.register(SecretModel, auth=HashedBearerAuthentication(ApiToken))
 
-Override ``token_field`` to use a differently-named column, and store
-high-entropy tokens (override ``get_key`` to keep them hashed at rest).
+    # curl -H "Authorization: Bearer <raw>" http://127.0.0.1:5000/api/secretmodel/
 
-Bearer tokens as users
-^^^^^^^^^^^^^^^^^^^^^^^
-
-:py:class:`UserBearerAuthentication` resolves the token to a user and sets
-``g.user`` (rather than ``g.api_key``), so bearer tokens work with
-:py:class:`RestrictOwnerResource` and anything else keyed off the authenticated
-user. The token model carries a foreign key to the user:
+The model has ``token_hash``, ``created``, ``expires`` and ``revoked``
+columns, plus a ``user`` foreign key when ``user_model`` is given. A token
+stops working when ``revoked`` is set or ``expires`` passes (null means no
+expiry):
 
 .. code-block:: python
 
-    from flask_peewee.rest import UserBearerAuthentication
+    ApiToken.create_token(user=some_user,
+                          expires=datetime.now() + timedelta(days=30))
 
-    class ApiToken(db.Model):
-        token = CharField()
-        user = ForeignKeyField(User)
+The matching row is stored on ``g.api_key``. When the model has a ``user``
+foreign key, ``g.user`` is set to the token's user, so bearer tokens work with
+:py:class:`RestrictOwnerResource` and anything else keyed off the
+authenticated user: new objects are assigned to the token's user, and they may
+only modify their own. Omit ``user_model`` for tokens tied to no user.
 
-    user_bearer_auth = UserBearerAuthentication(ApiToken)
+Custom token schemes
+^^^^^^^^^^^^^^^^^^^^
 
-    class MessageResource(RestrictOwnerResource):
-        owner_field = 'user'
-
-    api.register(Message, MessageResource, auth=user_bearer_auth)
-
-A request carrying a valid token is now treated as that token's user: new
-objects are assigned to them, and they may only modify their own. Set
-``user_field = None`` if the token lives directly on the user model instead of
-a separate token table.
+When the factory model does not fit, plain :py:class:`BearerAuthentication`
+looks the presented token up verbatim in a model with a ``token`` field
+(override ``token_field`` to rename it, or ``get_key`` to change the lookup)
+and sets ``g.api_key``. :py:class:`UserBearerAuthentication` extends it to
+resolve the row to a user through its ``user_field`` foreign key and set
+``g.user`` instead of ``g.api_key``. Set ``user_field = None`` when the token
+lives on the user model itself.
 
 
 Filtering records and querying

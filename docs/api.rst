@@ -1361,8 +1361,8 @@ Authenticating requests to the API
 
     .. py:method:: get_key(token)
 
-        Look the token up and return the matching row, or ``None``. Override
-        to store tokens hashed at rest.
+        Look the token up and return the matching row, or ``None``. See
+        :py:class:`HashedBearerAuthentication` for tokens hashed at rest.
 
 
 .. py:class:: UserBearerAuthentication(model[, protected_methods=None])
@@ -1375,6 +1375,26 @@ Authenticating requests to the API
 
         Name of the token model's foreign key to the user. Set to ``None``
         when the token lives on the user model itself.
+
+
+.. py:class:: HashedBearerAuthentication(model[, protected_methods=None])
+
+    :py:class:`BearerAuthentication` for tokens stored hashed at rest, as
+    created by :py:func:`make_token_model`. The presented token is hashed
+    with sha256 and looked up in the ``token_hash`` column, skipping revoked
+    and expired rows. The matching row is stored on ``g.api_key``, and
+    ``g.user`` is set to the row's user when the model has a user foreign
+    key.
+
+
+.. py:function:: make_token_model(db, user_model=None, db_table='api_token')
+
+    Create an ``ApiToken`` model bound to the given :py:class:`Database`
+    wrapper, with ``token_hash``, ``created``, ``expires`` and ``revoked``
+    columns, plus a foreign key to ``user_model`` when one is given. Its
+    ``create_token(**kwargs)`` classmethod generates a token, stores only the
+    sha256 hash (passing ``kwargs`` through to ``create()``), and returns
+    ``(instance, raw_token)``.
 
 
 .. py:data:: ALL_METHODS
