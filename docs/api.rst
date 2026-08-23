@@ -265,6 +265,18 @@ Exposing Models with the ModelAdmin
 
         Delete "dependencies" recursively
 
+    .. py:attribute:: can_add = True
+
+        Allow new instances to be added through the admin
+
+    .. py:attribute:: can_edit = True
+
+        Allow instances to be edited through the admin
+
+    .. py:attribute:: can_delete = True
+
+        Allow instances to be deleted through the admin
+
     .. py:method:: get_query()
 
         Determines the list of objects that will be exposed in the admin. By
@@ -359,6 +371,36 @@ Exposing Models with the ModelAdmin
         :param form: a validated form instance
         :param adding: boolean to indicate whether we are adding a new instance
                 or saving an existing
+
+    .. py:method:: check_add(user)
+
+        Returns whether ``user`` may add instances, checking
+        :py:attr:`~ModelAdmin.can_add` by default. Denials abort the add
+        view with a 403, and the templates hide the corresponding links.
+
+        :rtype: boolean
+
+    .. py:method:: check_edit(user)
+
+        Returns whether ``user`` may edit instances, checking
+        :py:attr:`~ModelAdmin.can_edit` by default. Checked in the edit
+        view before the row is fetched. Override for user-aware rules:
+
+        .. code-block:: python
+
+            class PageAdmin(ModelAdmin):
+                def check_edit(self, user):
+                    return user.username == 'admin'
+
+        :rtype: boolean
+
+    .. py:method:: check_delete(user)
+
+        Returns whether ``user`` may delete instances, checking
+        :py:attr:`~ModelAdmin.can_delete` by default. Enforced in the
+        delete views and in the index delete action.
+
+        :rtype: boolean
 
     .. py:method:: get_template_overrides()
 

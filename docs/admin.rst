@@ -187,9 +187,36 @@ Restricting access
 ^^^^^^^^^^^^^^^^^^
 
 Access to the admin is controlled by :py:meth:`Admin.check_user_permission`,
-which by default requires ``user.admin``. There are no per-model permission
-hooks at present, and registered models are reachable by anyone with access to
-the admin site. To restrict what data is shown, see the :py:meth:`~ModelAdmin.get_query`
+which by default requires ``user.admin``. Per-model permissions can be
+controlled by the following attrs on a :py:class:`ModelAdmin`:
+
+* ``can_add``
+* ``can_edit``
+* ``can_delete``
+
+By default all per-model permissions are enabled. Turning all three off makes a
+model read-only:
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        can_add = can_edit = can_delete = False
+
+The flags are checked via the following hooks, each of which takes a ``user``
+argument:
+
+* :py:meth:`ModelAdmin.check_add`
+* :py:meth:`ModelAdmin.check_edit`
+* :py:meth:`ModelAdmin.check_delete`
+
+.. code-block:: python
+
+    class MessageAdmin(ModelAdmin):
+        def check_edit(self, user):
+            # Only the user named 'admin' may edit messages.
+            return user.username == 'admin'
+
+To restrict what data is shown, see the :py:meth:`~ModelAdmin.get_query`
 example above.
 
 Customizing forms

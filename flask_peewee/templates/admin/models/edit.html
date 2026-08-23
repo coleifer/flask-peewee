@@ -33,7 +33,7 @@
         <button class="btn btn-secondary" name="save_add" type="submit">Save and add new</button>
         <button class="btn btn-secondary" name="save_edit" type="submit">Save and edit</button>
         <a class="btn btn-outline-secondary" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
-        <a class="btn btn-danger ms-auto" href="{{ url_for(model_admin.get_url_name('delete'), id=instance._pk) }}">Delete</a>
+        {% if model_admin.check_delete(user) %}<a class="btn btn-danger ms-auto" href="{{ url_for(model_admin.get_url_name('delete'), id=instance._pk) }}">Delete</a>{% endif %}
       </div>
     </fieldset>
   </form>

@@ -23,11 +23,13 @@ from flask_peewee.tests.test_app import AModel
 from flask_peewee.tests.test_app import BDetails
 from flask_peewee.tests.test_app import BModel
 from flask_peewee.tests.test_app import CModel
+from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import Entry
 from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
+from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import ScopedItem
 from flask_peewee.tests.test_app import ScopedRef
 from flask_peewee.tests.test_app import TSModel
@@ -129,10 +131,12 @@ class AdminTestCase(BaseAdminTestCase):
             admin._registry[BDetails],
             admin._registry[BModel],
             admin._registry[CModel],
+            admin._registry[Comment],
             admin._registry[DModel],
             admin._registry[Entry],
             admin._registry[Message],
             admin._registry[Note],
+            admin._registry[Ping],
             admin._registry[ScopedItem],
             admin._registry[ScopedRef],
             admin._registry[User],
@@ -1207,6 +1211,123 @@ class AdminFieldsetTestCase(BaseAdminTestCase):
             del entry_admin.get_form
 
 
+class AdminPermissionsTestCase(BaseAdminTestCase):
+    # Comment is registered read-only (all three flags off), Ping with
+    # can_delete off and a user-aware check_edit.
+
+    def assertForbidden(self, c, url, data, post_url=None):
+        self.assertEqual(c.get(url).status_code, 403)
+        self.assertEqual(c.post(post_url or url, data=data).status_code, 403)
+
+    def test_read_only_model(self):
+        self.create_users()
+        comment = Comment.create(user=self.normal, body='c1')
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # reads stay reachable.
+            self.assertEqual(c.get('/admin/comment/').status_code, 200)
+            self.assertEqual(c.get('/admin/comment/export/').status_code, 200)
+            self.assertEqual(c.get('/admin/comment/_ajax/').status_code, 200)
+
+            self.assertForbidden(c, '/admin/comment/add/',
+                                 {'user': self.normal.id, 'body': 'new'})
+            self.assertForbidden(c, '/admin/comment/%d/' % comment.id,
+                                 {'user': self.normal.id, 'body': 'edited'})
+            self.assertForbidden(
+                c, '/admin/comment/delete/?id=%d' % comment.id,
+                {'id': comment.id}, post_url='/admin/comment/delete/')
+
+            # the index delete action 403s, export still redirects.
+            resp = c.post('/admin/comment/',
+                          data={'action': 'delete', 'id': comment.id})
+            self.assertEqual(resp.status_code, 403)
+            resp = c.post('/admin/comment/',
+                          data={'action': 'export', 'id': comment.id})
+            self.assertRedirect(resp)
+
+        # nothing was created, changed or deleted.
+        self.assertEqual(Comment.select().count(), 1)
+        self.assertEqual(Comment.get(id=comment.id).body, 'c1')
+
+    def test_read_only_index_html(self):
+        self.create_users()
+        comment = Comment.create(user=self.normal, body='c1')
+        note = Note.create(user=self.normal, message='n1')
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # denied links disappear from the read-only index.
+            body = c.get('/admin/comment/').data.decode('utf-8')
+            self.assertNotIn('Add new', body)
+            self.assertNotIn('/admin/comment/add/', body)
+            self.assertNotIn('/admin/comment/%d/' % comment.id, body)
+            self.assertNotIn('/admin/comment/delete/', body)
+            self.assertNotIn("index_submit('delete')", body)
+
+            # a default admin still renders all of them.
+            body = c.get('/admin/note/').data.decode('utf-8')
+            self.assertIn('Add new', body)
+            self.assertIn('/admin/note/add/', body)
+            self.assertIn('/admin/note/%d/' % note.id, body)
+            self.assertIn('/admin/note/delete/', body)
+            self.assertIn("index_submit('delete')", body)
+
+    def test_dashboard_add_link(self):
+        self.create_users()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+            body = c.get('/admin/').data.decode('utf-8')
+            self.assertIn('/admin/note/add/', body)
+            self.assertNotIn('/admin/comment/add/', body)
+
+    def test_edit_page_delete_button(self):
+        self.create_users()
+        ping = Ping.create(user=self.normal, body='p1')
+        note = Note.create(user=self.normal, message='n1')
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            body = c.get('/admin/note/%d/' % note.id).data.decode('utf-8')
+            self.assertIn('/admin/note/delete/', body)
+
+            body = c.get('/admin/ping/%d/' % ping.id).data.decode('utf-8')
+            self.assertNotIn('/admin/ping/delete/', body)
+
+    def test_user_aware_check_edit(self):
+        self.create_users()
+        self.create_user('admin2', 'admin2', admin=True)
+        ping = Ping.create(user=self.normal, body='p1')
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # "admin" may edit, and index rows link to the edit page.
+            self.assertEqual(
+                c.get('/admin/ping/%d/' % ping.id).status_code, 200)
+            body = c.get('/admin/ping/').data.decode('utf-8')
+            self.assertIn('/admin/ping/%d/' % ping.id, body)
+
+        with self.flask_app.test_client() as c:
+            c.post('/accounts/login/',
+                   data={'username': 'admin2', 'password': 'admin2'})
+
+            # "admin2" cannot edit but may still browse and add.
+            self.assertForbidden(c, '/admin/ping/%d/' % ping.id,
+                                 {'user': self.normal.id, 'body': 'x'})
+            self.assertEqual(Ping.get(id=ping.id).body, 'p1')
+
+            self.assertEqual(c.get('/admin/ping/').status_code, 200)
+            self.assertEqual(c.get('/admin/ping/add/').status_code, 200)
+
+            body = c.get('/admin/ping/').data.decode('utf-8')
+            self.assertNotIn('/admin/ping/%d/' % ping.id, body)
+
+
 class LinkAdmin(ModelAdmin):
     filter_fields = ('src', 'dst', 'src__username', 'dst__username')
     search_fields = ('label', 'dst__username')
@@ -1533,10 +1654,12 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
             admin._registry[BDetails],
             admin._registry[BModel],
             admin._registry[CModel],
+            admin._registry[Comment],
             admin._registry[DModel],
             admin._registry[Entry],
             admin._registry[Message],
             admin._registry[Note],
+            admin._registry[Ping],
             admin._registry[ScopedItem],
             admin._registry[ScopedRef],
             admin._registry[User],

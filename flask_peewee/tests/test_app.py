@@ -261,6 +261,18 @@ class EntryAdmin(ModelAdmin):
         ('Meta', {'fields': ('created',), 'collapsed': True}),
     ]
 
+class ReadOnlyCommentAdmin(ModelAdmin):
+    columns = ('user', 'body',)
+    can_add = can_edit = can_delete = False
+
+class PingAdmin(ModelAdmin):
+    # user-aware check_edit, plus can_delete off so the edit page renders
+    # without its Delete button.
+    can_delete = False
+
+    def check_edit(self, user):
+        return user.username == 'admin'
+
 
 auth.register_admin(admin)
 admin.register(AModel, AAdmin)
@@ -273,6 +285,8 @@ admin.register(Note, NoteAdmin)
 admin.register(ScopedItem, ScopedItemAdmin)
 admin.register(ScopedRef, ScopedRefAdmin)
 admin.register(Entry, EntryAdmin)
+admin.register(Comment, ReadOnlyCommentAdmin)
+admin.register(Ping, PingAdmin)
 admin.register_panel('Notes', NotePanel)
 
 

@@ -31,8 +31,10 @@
           <td><a class="fw-semibold" href="{{ url_for(iter_admin.get_url_name('index')) }}">{{ admin.fix_underscores(iter_admin.get_admin_name()) }}</a></td>
           <td class="records text-end" style="font-variant-numeric: tabular-nums;">{{ iter_admin.get_query().count() }}</td>
           <td class="links text-end">
+            {% if iter_admin.check_add(user) %}
             <a href="{{ url_for(iter_admin.get_url_name('add')) }}">Add new</a>
             <span class="text-body-secondary mx-1">&middot;</span>
+            {% endif %}
             <a href="{{ url_for(iter_admin.get_url_name('export')) }}">Export</a>
           </td>
         </tr>

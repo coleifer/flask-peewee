@@ -140,6 +140,11 @@ class ModelAdmin(object):
     delete_collect_objects = True
     delete_recursive = True
 
+    # per-model permissions, consulted via check_add/check_edit/check_delete.
+    can_add = True
+    can_edit = True
+    can_delete = True
+
     # restrict which fields may be exported. export_fields is a whitelist of
     # field names, export_exclude a blacklist. Related models are restricted
     # by their own registered ModelAdmin's settings.
@@ -343,11 +348,26 @@ class ModelAdmin(object):
             return CombinedMultiDict((request.files, request.form))
         return request.form
 
+    def check_add(self, user):
+        return self.can_add
+
+    def check_edit(self, user):
+        return self.can_edit
+
+    def check_delete(self, user):
+        return self.can_delete
+
+    def _abort_unless(self, check):
+        # views run behind auth_required, so a user is always present.
+        if not check(self.admin.auth.get_logged_in_user()):
+            abort(403)
+
     def index(self):
         if request.method == 'POST':
             id_list = request.form.getlist('id')
             action = request.form['action']
             if action == 'delete':
+                self._abort_unless(self.check_delete)
                 return redirect(url_for(self.get_url_name('delete'), id=id_list))
             elif action == 'export':
                 return redirect(url_for(self.get_url_name('export'), id=id_list))
@@ -406,6 +426,7 @@ class ModelAdmin(object):
             )
 
     def add(self):
+        self._abort_unless(self.check_add)
         Form = self.get_add_form()
         instance = self.model()
 
@@ -427,6 +448,7 @@ class ModelAdmin(object):
         )
 
     def edit(self, pk):
+        self._abort_unless(self.check_edit)
         try:
             instance = self.get_object(pk)
         except self.model.DoesNotExist:
@@ -464,6 +486,7 @@ class ModelAdmin(object):
         return sorted(objects, key=lambda i: i[1].__name__)
 
     def delete(self):
+        self._abort_unless(self.check_delete)
         if request.method == 'GET':
             id_list = request.args.getlist('id')
         else:

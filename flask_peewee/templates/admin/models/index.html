@@ -7,7 +7,7 @@
       <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">With selected...</a>
       <ul class="dropdown-menu dropdown-menu-end">
         {% block export_action %}<li><a class="dropdown-item" href="#" onclick="Admin.index_submit('export'); return false;">Export</a></li>{% endblock %}
-        <li><a class="dropdown-item" href="#" onclick="Admin.index_submit('delete'); return false;">Delete</a></li>
+        {% if model_admin.check_delete(user) %}<li><a class="dropdown-item" href="#" onclick="Admin.index_submit('delete'); return false;">Delete</a></li>{% endif %}
         {% if model_admin.actions %}{% for action in model_admin.actions %}
           <li><a class="dropdown-item" href="#" onclick="Admin.index_submit('{{ action.name }}'); return false;">{{ action.name }}</a></li>
         {% endfor %}{% endif %}
@@ -59,21 +59,23 @@
         <td class="check"><input class="form-check-input" type="checkbox" name="id" value="{{ object._pk }}" /></td>
         {% if model_admin.columns %}
           {% for column in model_admin.columns %}
-            {% if loop.index == 1 %}
+            {% if loop.index == 1 and model_admin.check_edit(user) %}
               <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">{{ admin.get_model_field(object, column) }}</a></td>
             {% else %}
               <td>{{ admin.get_model_field(object, column) }}</td>
             {% endif %}
           {% endfor %}
-        {% else %}
+        {% elif model_admin.check_edit(user) %}
           <td><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">{{ object }}</a></td>
+        {% else %}
+          <td>{{ object }}</td>
         {% endif %}
         <td class="last links">
           {% block object_actions scoped %}
           <ul class="list-inline mb-0">
             {% block object_action_links %}{% endblock %}
-            <li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">Edit</a></li>
-            <li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('delete'), id=object._pk) }}">Delete</a></li>
+            {% if model_admin.check_edit(user) %}<li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('edit'), pk=object._pk) }}">Edit</a></li>{% endif %}
+            {% if model_admin.check_delete(user) %}<li class="list-inline-item"><a href="{{ url_for(model_admin.get_url_name('delete'), id=object._pk) }}">Delete</a></li>{% endif %}
           </ul>
           {% endblock %}
         </td>
