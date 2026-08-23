@@ -36,7 +36,7 @@ Add a field to a model:
         karma = IntegerField(default=0)
 
 ``diff`` prints what changed (we added the "karma" field), and ``generate``
-writes it the migration:
+writes the migration:
 
 .. code-block:: console
 

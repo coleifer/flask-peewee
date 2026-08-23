@@ -394,10 +394,12 @@ a page at a time), so any row is reachable no matter how large the table:
 In both contexts the candidate rows come from the related model's registered
 admin (if one exists), determined by its :py:meth:`~ModelAdmin.get_query`.
 
-Specifying foreign-key lookups is a best-practice when the related table is
-large.
+Specifying foreign-key lookups is a best practice when the related table is
+large. The select is replaced by the current value and a Select button:
 
 .. image:: fp-message-fk-btn.png
+
+The button opens a paginated, searchable picker:
 
 .. image:: fp-message-fk-modal.png
 

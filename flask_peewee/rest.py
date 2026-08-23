@@ -271,7 +271,7 @@ class RestResource(object):
     exclude = None
 
     # field names that clients may never write, even when they appear in an
-    # incoming POST/PUT body -- protects against mass assignment.
+    # incoming POST/PUT/PATCH body -- protects against mass assignment.
     readonly_fields = None
 
     # when True, a write payload containing unrecognized keys is rejected with
