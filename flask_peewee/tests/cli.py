@@ -8,8 +8,14 @@ from flask import Flask
 from peewee import *
 
 from flask_peewee import utils
+from flask_peewee.cli import Runner as _Runner
 from flask_peewee.auth import Auth
 from flask_peewee.db import Database
+
+
+# playhouse.migrations ships in peewee 4.4, absent from earlier releases.
+_requires_migrations = unittest.skipIf(
+    _Runner is None, 'requires playhouse.migrations')
 
 
 class CLITestCase(unittest.TestCase):
@@ -107,6 +113,7 @@ class CLITestCase(unittest.TestCase):
         with open(path, 'w') as fh:
             fh.write(body)
 
+    @_requires_migrations
     def test_up_down_status(self):
         result = self.runner.invoke(args=['fp', 'create', 'add color'])
         self.assertEqual(result.exit_code, 0)
@@ -146,6 +153,7 @@ class CLITestCase(unittest.TestCase):
         self.assertIn('reverted: 0001_add_color', result.output)
         self.assertFalse(self.db.database.table_exists('color'))
 
+    @_requires_migrations
     def test_fake(self):
         self.runner.invoke(args=['fp', 'create', 'add color'])
         self.write_migration(self.migration_path('0001_add_color.py'),
@@ -160,6 +168,7 @@ class CLITestCase(unittest.TestCase):
         result = self.runner.invoke(args=['fp', 'up'])
         self.assertEqual(result.output, 'nothing to do.\n')
 
+    @_requires_migrations
     def test_initial_generate_diff(self):
         class Tag(self.db.Model):
             pass
@@ -209,6 +218,7 @@ class CLITestCase(unittest.TestCase):
         result = self.runner.invoke(args=['fp', 'create'])
         self.assertEqual(result.exit_code, 2)
 
+    @_requires_migrations
     def test_migrations_table_config(self):
         self.app.config['MIGRATIONS_TABLE'] = 'fp_history'
         self.runner.invoke(args=['fp', 'create', 'x'])
