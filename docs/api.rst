@@ -271,6 +271,12 @@ Exposing Models with the ModelAdmin
 
         Number of records to display on index pages
 
+    .. py:attribute:: paginate_count = True
+
+        Set to ``False`` to skip ``COUNT()`` queries on huge tables. The list
+        view then paginates with previous/next links alone, and the dashboard
+        and tab record counts are hidden
+
     .. py:attribute:: filter_paginate_by = 15
 
         Default pagination when filtering in a modal dialog
@@ -1463,13 +1469,21 @@ Utilities
     :param s: any string to be slugified
     :rtype: url-friendly version of string ``s``
 
-.. py:class:: PaginatedQuery(query_or_model, paginate_by)
+.. py:class:: PaginatedQuery(query_or_model, paginate_by[, use_count=True])
 
-    A wrapper around a query (or model class) that handles pagination.
+    A wrapper around a query (or model class) that handles pagination. Pass
+    ``use_count=False`` to skip counting. :py:meth:`~PaginatedQuery.get_list`
+    then fetches one extra row and sets :py:attr:`~PaginatedQuery.has_next`
+    instead.
 
     .. py:attribute:: page_var = 'page'
 
         The URL variable used to store the current page
+
+    .. py:attribute:: has_next
+
+        Whether rows remain beyond the current page. Set by
+        :py:meth:`~PaginatedQuery.get_list` when ``use_count=False``
 
     Example:
 

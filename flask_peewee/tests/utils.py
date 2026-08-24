@@ -4,6 +4,7 @@ import json
 from flask import request
 from werkzeug.exceptions import NotFound
 
+from flask_peewee.utils import PaginatedQuery
 from flask_peewee.utils import check_password
 from flask_peewee.utils import deserialize_datetime
 from flask_peewee.utils import get_hexdigest
@@ -126,6 +127,33 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         for bad in ('', None, 'http://evil.com', 'https://evil.com/x',
                     '//evil.com', 'javascript:alert(1)'):
             self.assertFalse(is_safe_url(bad), bad)
+
+    def test_paginated_query_count_free(self):
+        user = self.create_user('u', 'u')
+        for i in range(20):
+            Note.create(user=user, message='n%02d' % i)
+
+        def get_page(page):
+            with flask_app.test_request_context('/?page=%d' % page):
+                pq = PaginatedQuery(Note.select().order_by(Note.id), 20,
+                                    use_count=False)
+                return pq.get_list(), pq.has_next
+
+        # exactly paginate_by rows fills the page with no next page.
+        rows, has_next = get_page(1)
+        self.assertEqual(len(rows), 20)
+        self.assertFalse(has_next)
+
+        extra = Note.create(user=user, message='n20')
+
+        # one row over the boundary means a next page holding just that row.
+        rows, has_next = get_page(1)
+        self.assertEqual(len(rows), 20)
+        self.assertTrue(has_next)
+
+        rows, has_next = get_page(2)
+        self.assertEqual(rows, [extra])
+        self.assertFalse(has_next)
 
     def test_get_model_from_dictionary(self):
         class User(Model):

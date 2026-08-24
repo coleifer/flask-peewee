@@ -168,6 +168,15 @@ Both accept ``__`` notation for related fields, so
 ``filter_exclude = ('user__password',)`` keeps a sensitive related column out of
 the filter UI entirely.
 
+Count-free pagination
+^^^^^^^^^^^^^^^^^^^^^
+
+The list view runs ``COUNT(*)`` to number its pages, and the dashboard and
+index tab count the table again. On a huge table those counts can cost more
+than the page itself, so set ``paginate_count = False`` on the ``ModelAdmin``
+to skip them. The list view then paginates with previous/next links alone and
+no record counts are displayed for the model.
+
 Restricting the queryset
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

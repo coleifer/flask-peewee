@@ -98,6 +98,10 @@ class ModelAdmin(object):
     # attributes, or callables on a model instance or the ModelAdmin.
     columns = None
 
+    # set False to skip COUNT(*) on huge tables. the list view then paginates
+    # with prev/next links only and the dashboard and tab counts are hidden.
+    paginate_count = True
+
     # exclude certian fields from being exposed as filters -- for related fields
     # use "__" notation, e.g. user__password
     filter_exclude = None
@@ -396,7 +400,7 @@ class ModelAdmin(object):
         query = self.apply_search(query, search_query)
 
         # create a paginated query out of our filtered results
-        pq = PaginatedQuery(query, self.paginate_by)
+        pq = PaginatedQuery(query, self.paginate_by, use_count=self.paginate_count)
 
         return render_template(self.templates['index'],
             admin=self.admin,

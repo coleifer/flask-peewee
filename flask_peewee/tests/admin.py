@@ -1016,6 +1016,97 @@ class AdminTestCase(BaseAdminTestCase):
             query = self.get_context('query')
             self.assertEqual(list(query.get_list()), notes[users[2]])
 
+    def test_index_pagination_count_free(self):
+        import logging
+        self.create_users()
+        for i in range(20):
+            Note.create(user=self.admin, message='n%02d' % i)
+
+        counts = []
+        class H(logging.Handler):
+            def emit(self, record):
+                if 'COUNT(' in record.getMessage().upper():
+                    counts.append(record.getMessage())
+        logger = logging.getLogger('peewee')
+        level, handler = logger.level, H()
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
+        note_admin = admin._registry[Note]
+        note_admin.paginate_count = False
+        try:
+            with self.flask_app.test_client() as c:
+                self.login(c)
+
+                # exactly one full page renders no pagination controls.
+                resp = c.get('/admin/note/?ordering=id')
+                self.assertEqual(resp.status_code, 200)
+                query = self.get_context('query')
+                self.assertEqual(len(query.get_list()), 20)
+                self.assertFalse(query.has_next)
+                self.assertNotIn(b'page-link', resp.data)
+                self.assertNotIn(b' record', resp.data)
+
+                extra = Note.create(user=self.admin, message='n20')
+
+                # first page: disabled prev, live next, no numbered links.
+                resp = c.get('/admin/note/?ordering=id')
+                query = self.get_context('query')
+                self.assertEqual(len(query.get_list()), 20)
+                self.assertTrue(query.has_next)
+                self.assertEqual(resp.data.count(b'page-link'), 2)
+                self.assertIn(b'<span class="page-link">Previous</span>', resp.data)
+                self.assertIn(b'page=2">Next</a>', resp.data)
+                self.assertNotIn(b' record', resp.data)
+
+                # last page: live prev, disabled next.
+                resp = c.get('/admin/note/?ordering=id&page=2')
+                query = self.get_context('query')
+                self.assertEqual(query.get_list(), [extra])
+                self.assertFalse(query.has_next)
+                self.assertEqual(resp.data.count(b'page-link'), 2)
+                self.assertIn(b'page=1">Previous</a>', resp.data)
+                self.assertIn(b'<span class="page-link">Next</span>', resp.data)
+        finally:
+            del note_admin.paginate_count
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+
+        # no COUNT(*) was issued by any of the count-free index views.
+        self.assertEqual(counts, [])
+
+    def test_paginate_count_suppresses_counts(self):
+        self.create_users()
+        Note.create(user=self.admin, message='n0')
+
+        def dashboard_count(data, name):
+            pattern = (r'href="/admin/%s/">%s</a></td>\s*'
+                       r'<td class="records[^>]*>(\d*)</td>') % (name, name.title())
+            return re.search(pattern.encode('utf8'), data).groups()[0]
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # counts show by default.
+            resp = c.get('/admin/note/')
+            self.assertIn(b'Note (1)', resp.data)
+            resp = c.get('/admin/')
+            self.assertEqual(dashboard_count(resp.data, 'note'), b'1')
+
+            note_admin = admin._registry[Note]
+            note_admin.paginate_count = False
+            try:
+                # tab count suppressed on the model views.
+                resp = c.get('/admin/note/')
+                self.assertNotIn(b'Note (', resp.data)
+
+                # dashboard cell empty for this model, others unaffected.
+                resp = c.get('/admin/')
+                self.assertEqual(dashboard_count(resp.data, 'note'), b'')
+                self.assertEqual(dashboard_count(resp.data, 'user'), b'3')
+            finally:
+                del note_admin.paginate_count
+
     def test_panel_simple(self):
         users = self.create_users()
 

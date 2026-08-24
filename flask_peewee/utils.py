@@ -40,8 +40,9 @@ def object_list(template_name, qr, var_name='object_list', **kwargs):
 class PaginatedQuery(object):
     page_var = 'page'
 
-    def __init__(self, query_or_model, paginate_by):
+    def __init__(self, query_or_model, paginate_by, use_count=True):
         self.paginate_by = paginate_by
+        self.use_count = use_count
 
         if isinstance(query_or_model, SelectQuery):
             self.query = query_or_model
@@ -68,7 +69,16 @@ class PaginatedQuery(object):
         return self._get_pages
 
     def get_list(self):
-        return self.query.paginate(self.get_page(), self.paginate_by)
+        query = self.query.paginate(self.get_page(), self.paginate_by)
+        if self.use_count:
+            return query
+        if not hasattr(self, '_get_list'):
+            # limit() overrides paginate()'s limit but keeps its offset, so
+            # the extra row determines has_next without a COUNT().
+            rows = list(query.limit(self.paginate_by + 1))
+            self.has_next = len(rows) > self.paginate_by
+            self._get_list = rows[:self.paginate_by]
+        return self._get_list
 
     def get_page_range(self, window=3):
         # a windowed list of page numbers around the current page, with None
