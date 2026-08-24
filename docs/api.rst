@@ -712,8 +712,6 @@ Auth
 
         Mark the given user as "logged-in". In the default implementation, this
         entails storing data in the ``Session`` to indicate the successful login.
-        The session is cleared first, so state from before authentication does
-        not survive login.
 
         :param user: ``User`` instance
 

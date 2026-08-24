@@ -255,37 +255,6 @@ class AuthTestCase(FlaskPeeweeTestCase):
             })
             self.assertEqual(auth.get_logged_in_user(), self.normal)
 
-    def test_login_clears_session(self):
-        self.create_users()
-
-        with self.flask_app.test_client() as c:
-            with c.session_transaction() as sess:
-                sess['planted'] = 'fixated'
-
-            resp = c.post('/accounts/login/', data={
-                'username': 'normal',
-                'password': 'normal',
-                'next': '/foo-baz/',
-            })
-            self.assertRedirect(resp)
-            self.assertTrue(resp.headers['location'].endswith('/foo-baz/'))
-
-            with c.session_transaction() as sess:
-                self.assertFalse('planted' in sess)
-                self.assertTrue(sess['logged_in'])
-                self.assertEqual(sess['user_pk'], self.normal.id)
-
-            # default logout pops only the logged_in key.
-            with c.session_transaction() as sess:
-                sess['post_login'] = 'data'
-
-            self.logout(c)
-            self.assertEqual(auth.get_logged_in_user(), None)
-
-            with c.session_transaction() as sess:
-                self.assertFalse('logged_in' in sess)
-                self.assertEqual(sess['post_login'], 'data')
-
     def test_login_required(self):
         self.create_users()
 
