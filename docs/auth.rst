@@ -134,6 +134,34 @@ defaults it to 31 days). The auth views flash their outcomes in the
 that renders flashed messages.
 
 
+Revocable sessions
+------------------
+
+A login normally lives in the cookie alone, so nothing on the server can
+end it early. Pass ``session_field`` naming a ``CharField`` on the user
+model and each login also carries a token stored on that row:
+
+.. code-block:: python
+
+    class User(db.Model, BaseUser):
+        ...
+        session_token = CharField(default='')
+
+    auth = Auth(app, db, user_model=User, session_field='session_token')
+
+The token is generated on the user's first login and reused after, so all of
+that user's sessions share it. A request counts as logged in only while the
+token in its cookie matches the row. Clearing the field ends every session
+for the user, which is what ``logout_user()`` now does, and what
+:py:meth:`Auth.revoke_session_token` does from outside a request:
+
+.. code-block:: python
+
+    auth.revoke_session_token(user)   # logged out everywhere
+
+With the default user model the field is added for you.
+
+
 Adding registration
 -------------------
 

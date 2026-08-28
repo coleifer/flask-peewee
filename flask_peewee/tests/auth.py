@@ -5,13 +5,19 @@ try:
 except ImportError:
     from urllib import parse as urlparse
 
+from flask import g
 from flask import get_flashed_messages
 from flask import request
 from flask import session
 from flask import url_for
 
+from peewee import BooleanField
+from peewee import CharField
+
 from flask_peewee.auth import Auth
+from flask_peewee.auth import BaseUser
 from flask_peewee.auth import LoginForm
+from flask_peewee.exceptions import ImproperlyConfigured
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import app
@@ -24,13 +30,15 @@ class TestAuth(Auth):
         pass
 
 
-class ResetAuth(Auth):
+class RoutesOnlyAuth(Auth):
     # the shared app already has auth's handlers and context processors, so
     # only the routes are needed.
     def setup(self):
         self.configure_routes()
         self.register_blueprint()
 
+
+class ResetAuth(RoutesOnlyAuth):
     def send_reset_email(self, user, reset_url):
         self.sent.append((user, reset_url))
 
@@ -39,12 +47,106 @@ reset_auth = ResetAuth(app, db, user_model=User, prefix='/reset-accounts',
                        name='reset_auth', reset=True)
 
 
+class TokenUser(db.Model, BaseUser):
+    username = CharField()
+    password = CharField()
+    email = CharField(default='')
+    active = BooleanField(default=True)
+    admin = BooleanField(default=False)
+    session_token = CharField(default='')
+
+
+token_auth = RoutesOnlyAuth(app, db, user_model=TokenUser,
+                            prefix='/token-accounts', name='token_auth',
+                            session_field='session_token')
+
+
 class AuthTestCase(FlaskPeeweeTestCase):
     def setUp(self):
         super(AuthTestCase, self).setUp()
 
         self.test_auth = TestAuth(app, db)
         reset_auth.sent = []
+        db.database.create_tables([TokenUser])
+
+    def tearDown(self):
+        db.database.drop_tables([TokenUser])
+        super(AuthTestCase, self).tearDown()
+
+    def create_token_user(self):
+        user = TokenUser(username='huey')
+        user.set_password('meow')
+        user.save()
+        return user
+
+    def assertNotLoggedIn(self, auth):
+        g.user = None
+        self.assertIsNone(auth.get_logged_in_user())
+
+    def assertLoggedIn(self, auth, user):
+        g.user = None
+        self.assertEqual(auth.get_logged_in_user(), user)
+
+    def test_session_field_required(self):
+        self.assertRaises(ImproperlyConfigured, TestAuth, app, db,
+                          user_model=User, session_field='session_token')
+
+    def test_session_field_default_model(self):
+        fake_auth = TestAuth(app, db, db_table='token_users',
+                             session_field='session_token')
+        self.assertIn('session_token', fake_auth.User._meta.fields)
+
+    def test_session_token(self):
+        user = self.create_token_user()
+        self.assertEqual(user.session_token, '')
+
+        with self.flask_app.test_request_context():
+            token_auth.login_user(user)
+            token = session['session_token']
+            self.assertTrue(token)
+            self.assertEqual(TokenUser.get_by_id(user.id).session_token, token)
+            self.assertLoggedIn(token_auth, user)
+
+            # Logging in again reuses the token.
+            token_auth.login_user(user)
+            self.assertEqual(session['session_token'], token)
+
+            # A cookie carrying a stale token is not logged in.
+            session['session_token'] = 'x' * 32
+            self.assertNotLoggedIn(token_auth)
+            session['session_token'] = token
+            self.assertLoggedIn(token_auth, user)
+
+            # Revoking on the row ends the session.
+            token_auth.revoke_session_token(user)
+            self.assertNotLoggedIn(token_auth)
+
+    def test_session_token_logout(self):
+        user = self.create_token_user()
+        with self.flask_app.test_request_context():
+            token_auth.login_user(user)
+            token = session['session_token']
+
+        def other_session():
+            ctx = self.flask_app.test_request_context()
+            ctx.push()
+            session.update(logged_in=True, user_pk=user.id,
+                           session_token=token)
+            return ctx
+
+        ctx = other_session()
+        self.assertLoggedIn(token_auth, user)
+        token_auth.logout_user()
+        self.assertNotIn('session_token', session)
+        self.assertNotIn('logged_in', session)
+        self.assertEqual(TokenUser.get_by_id(user.id).session_token, '')
+        ctx.pop()
+
+        # Logout cleared the row, so a second session with the same token is
+        # ended too.
+        ctx = other_session()
+        self.assertNotLoggedIn(token_auth)
+        ctx.pop()
 
     def login(self, username='admin', password='admin', context=None):
         context = context or self.app

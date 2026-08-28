@@ -1,6 +1,7 @@
 import functools
 import hashlib
 import os
+import secrets
 
 from flask import Blueprint
 from flask import flash
@@ -17,6 +18,7 @@ from wtforms import Form
 from wtforms import PasswordField
 from wtforms.fields import StringField
 
+from flask_peewee.exceptions import ImproperlyConfigured
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import is_legacy_password
@@ -58,12 +60,17 @@ class Auth(object):
 
     def __init__(self, app, db, user_model=None, prefix='/accounts', name='auth',
                  clear_session=False, default_next_url='/', db_table='user',
-                 reset=False):
+                 reset=False, session_field=None):
         self.app = app
         self.db = db
 
         self.db_table = db_table
+        self.session_field = session_field
         self.User = user_model or self.get_user_model()
+        if session_field and session_field not in self.User._meta.fields:
+            raise ImproperlyConfigured(
+                '%s has no field "%s" to hold the session token.' %
+                (self.User.__name__, session_field))
 
         self.blueprint = self.get_blueprint(name)
         self.url_prefix = prefix
@@ -91,6 +98,8 @@ class Auth(object):
             class Meta:
                 table_name = self.db_table
 
+        if self.session_field:
+            User._meta.add_field(self.session_field, CharField(default=''))
         return User
 
     def get_model_admin(self, model_admin=None):
@@ -227,33 +236,62 @@ class Auth(object):
         raise NotImplementedError('Applications enabling password reset '
                                   'must override send_reset_email().')
 
+    def get_session_token(self, user):
+        # Generated on first login and reused after, so all of a user's sessions
+        # share one token. Clearing the field on the row ends every one.
+        token = getattr(user, self.session_field)
+        if not token:
+            token = secrets.token_hex(16)
+            setattr(user, self.session_field, token)
+            user.save(only=[getattr(self.User, self.session_field)])
+        return token
+
+    def revoke_session_token(self, user):
+        setattr(user, self.session_field, '')
+        user.save(only=[getattr(self.User, self.session_field)])
+
     def login_user(self, user):
         session['logged_in'] = True
         session['user_pk'] = user._pk
+        if self.session_field:
+            session['session_token'] = self.get_session_token(user)
         session.permanent = True
         g.user = user
         flash('You are logged in as %s' % user, 'success')
 
     def logout_user(self):
+        if self.session_field:
+            user = self.get_logged_in_user()
+            if user is not None:
+                self.revoke_session_token(user)
         if self.clear_session:
             session.clear()
         else:
             session.pop('logged_in', None)
+            session.pop('session_token', None)
         g.user = None
         flash('You are now logged out', 'success')
 
     def get_logged_in_user(self):
-        if session.get('logged_in'):
-            if getattr(g, 'user', None):
-                return g.user
+        if not session.get('logged_in'):
+            return
 
-            try:
-                return self.User.select().where(
-                    self.User.active==True,
-                    self.User._meta.primary_key==session.get('user_pk')
-                ).get()
-            except self.User.DoesNotExist:
-                pass
+        if getattr(g, 'user', None):
+            return g.user
+
+        try:
+            user = self.User.select().where(
+                self.User.active==True,
+                self.User._meta.primary_key==session.get('user_pk')
+            ).get()
+        except self.User.DoesNotExist:
+            return
+
+        if self.session_field:
+            token = session.get('session_token')
+            if not token or token != getattr(user, self.session_field):
+                return
+        return user
 
     def login(self):
         error = None
