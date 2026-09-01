@@ -616,6 +616,25 @@ And the template:
 A panel can provide as many urls and views as you like. These views will all be
 protected by the same authentication as other parts of the admin area.
 
+Shipped panels
+^^^^^^^^^^^^^^
+
+``flask_peewee.panels`` ships a ready-made panel, ``RecentRowsPanel``. Extra
+arguments to ``register_panel`` are passed to the panel constructor.
+
+.. code-block:: python
+
+    from flask_peewee.panels import RecentRowsPanel
+
+    admin.register_panel('Recent messages', RecentRowsPanel, Message,
+        order_by=Message.pub_date)
+
+Rows are ordered descending by ``order_by``, which defaults to the primary
+key, and ``limit`` caps the row count (default 5). ``columns`` picks the
+fields to show, defaulting to those of the model's registered admin. The
+first cell links to the row's edit page when the model's admin allows the
+user to edit it.
+
 .. _admin-file-uploads:
 
 Handling File Uploads

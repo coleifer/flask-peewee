@@ -21,6 +21,7 @@ from flask_peewee.filters import FilterForm
 from flask_peewee.filters import FilterMapping
 from flask_peewee.filters import FilterModelConverter
 from flask_peewee.filters import make_field_tree
+from flask_peewee.panels import RecentRowsPanel
 from flask_peewee.utils import PaginatedQuery
 from flask_peewee.tests.base import FlaskPeeweeTestCase
 from flask_peewee.tests.test_app import AModel
@@ -37,8 +38,10 @@ from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import ScopedItem
 from flask_peewee.tests.test_app import ScopedRef
 from flask_peewee.tests.test_app import TSModel
+from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
 from flask_peewee.tests.test_app import admin
+from flask_peewee.tests.test_app import auth
 from flask_peewee.tests.test_app import db
 from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
@@ -148,6 +151,7 @@ class AdminTestCase(BaseAdminTestCase):
         ])
         self.assertContext('panels', [
             admin._panels['Notes'],
+            admin._panels['Recent messages'],
         ])
 
     def test_theme(self):
@@ -1613,6 +1617,75 @@ class AdminPermissionsTestCase(BaseAdminTestCase):
 
             body = c.get('/admin/ping/').data.decode('utf-8')
             self.assertNotIn('/admin/ping/%d/' % ping.id, body)
+
+
+class ShippedPanelTestCase(BaseAdminTestCase):
+    def setUp(self):
+        super(ShippedPanelTestCase, self).setUp()
+        self.create_users()
+        self.login()
+
+    def get_dashboard(self):
+        resp = self.app.get('/admin/')
+        self.assertEqual(resp.status_code, 200)
+        return resp.data.decode('utf-8')
+
+    def render_panel(self, panel):
+        with self.flask_app.test_request_context('/'):
+            auth.login_user(self.admin)
+            return panel.render()
+
+    def test_recent_rows_panel(self):
+        for i in range(7):
+            self.create_message(self.admin, 'message-%s' % i,
+                                pub_date=datetime.datetime(2026, 1, i + 1))
+        body = self.get_dashboard()
+
+        for i in range(2, 7):
+            self.assertIn('message-%s' % i, body)
+        self.assertNotIn('message-0', body)
+        self.assertNotIn('message-1', body)
+
+        newest = Message.select().order_by(Message.pub_date.desc()).get()
+        edit_url = '/admin/message/%s/' % newest.id
+        self.assertIn('href="%s"' % edit_url, body)
+        self.assertEqual(self.app.get(edit_url).status_code, 200)
+
+    def test_recent_rows_default_ordering(self):
+        for i in range(7):
+            Note.create(user=self.admin, message='note-%s' % i)
+
+        panel = RecentRowsPanel(admin, 'Latest notes', Note)
+        notes = list(panel.get_context()['object_list'])
+        self.assertEqual([note.message for note in notes],
+                         ['note-6', 'note-5', 'note-4', 'note-3', 'note-2'])
+
+    def test_recent_rows_columns(self):
+        panel = admin._panels['Recent messages']
+        self.assertEqual(panel.get_context()['columns'],
+                         admin._registry[Message].columns)
+
+        panel = RecentRowsPanel(admin, 'Recent tweets', Tweet)
+        self.assertIsNone(panel.get_context()['columns'])
+
+    def test_recent_rows_empty(self):
+        self.assertIn('No records.', self.get_dashboard())
+
+    def test_recent_rows_readonly_admin(self):
+        Comment.create(user=self.admin, body='comment-body')
+        panel = RecentRowsPanel(admin, 'Recent comments', Comment)
+        html = self.render_panel(panel)
+        self.assertIn('comment-body', html)
+        self.assertNotIn('<a href', html)
+
+    def test_recent_rows_unregistered_model(self):
+        Tweet.create(user=self.admin, content='tweet-body')
+        panel = RecentRowsPanel(admin, 'Recent tweets', Tweet,
+                                columns=('content',))
+        html = self.render_panel(panel)
+        self.assertIn('tweet-body', html)
+        self.assertNotIn('None', html)
+        self.assertNotIn('<a href', html)
 
 
 class LinkAdmin(ModelAdmin):

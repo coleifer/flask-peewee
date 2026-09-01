@@ -23,6 +23,7 @@ from flask_peewee.auth import Auth
 from flask_peewee.auth import BaseUser
 from flask_peewee.db import Database
 from flask_peewee.filters import QueryFilter
+from flask_peewee.panels import RecentRowsPanel
 from flask_peewee.rest import ALL_METHODS
 from flask_peewee.rest import APIKeyAuthentication
 from flask_peewee.rest import AdminAuthentication
@@ -340,6 +341,8 @@ admin.register(Entry, EntryAdmin)
 admin.register(Comment, ReadOnlyCommentAdmin)
 admin.register(Ping, PingAdmin)
 admin.register_panel('Notes', NotePanel)
+admin.register_panel('Recent messages', RecentRowsPanel, Message,
+                     order_by=Message.pub_date)
 
 
 class UserResource(RestResource):

@@ -565,6 +565,12 @@ Extending admin functionality using AdminPanel
         Render the panel template with the context. This is what gets displayed
         in the admin dashboard.
 
+``flask_peewee.panels`` ships one ready-made subclass.
+
+.. py:class:: RecentRowsPanel(admin, title, model[, columns[, limit[, order_by]]])
+
+    Display the newest rows of ``model``. See :ref:`admin-interface`.
+
 
 Auth
 ----

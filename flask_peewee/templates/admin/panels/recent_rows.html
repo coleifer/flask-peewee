@@ -1,0 +1,27 @@
+{% extends "admin/panels/default.html" %}
+
+{% block panel_content %}
+  {% if object_list %}
+    <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <tbody>
+        {% for object in object_list %}
+          {% set edit_url = panel.edit_url(object, user) %}
+          <tr>
+            {% for column in columns or [none] %}
+              {% set value = panel.admin.get_model_field(object, column) if column else object %}
+              {% if loop.first and edit_url %}
+                <td><a href="{{ edit_url }}">{{ value }}</a></td>
+              {% else %}
+                <td>{{ value }}</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="text-body-secondary mb-0">No records.</p>
+  {% endif %}
+{% endblock %}
