@@ -468,8 +468,8 @@ Exporting data
 
 Every registered model gets an "Export" view (also reachable from the list
 view's "With selected..." dropdown). It lets you choose which fields to
-include, across foreign keys too, and downloads the result as a JSON file,
-honoring whatever filters are currently applied.
+include, across foreign keys too, and downloads the result as a JSON or CSV
+file, honoring whatever filters are currently applied.
 
 By default every field is exportable. Two :py:class:`ModelAdmin` attributes
 restrict that:
@@ -502,7 +502,12 @@ produces:
 
 .. note::
     Because related data nests under its foreign key, that foreign key is
-    included automatically. There is no way to nest a related field without it.
+    included automatically, which in CSV leaves the foreign key's own column
+    empty. There is no way to nest a related field without it.
+
+The CSV export writes a header row of the selected field names. Related
+lookups keep their ``user__username`` form. Values go through the same
+conversions as the JSON export, and ``None`` becomes the empty string.
 
 
 Creating admin panels

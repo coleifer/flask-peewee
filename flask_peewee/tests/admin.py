@@ -1,5 +1,8 @@
 
+import base64
+import csv
 import datetime
+import io
 import json
 import re
 
@@ -40,6 +43,7 @@ from flask_peewee.utils import check_password
 from flask_peewee.utils import get_next
 from flask_peewee.utils import make_password
 
+from peewee import BlobField
 from peewee import CharField
 from peewee import ForeignKeyField
 from wtforms.fields import FieldList
@@ -926,6 +930,87 @@ class AdminTestCase(BaseAdminTestCase):
             for row in data:
                 self.assertEqual(list(row), [pk])
                 self.assertNotIn('password', row)
+
+    def parse_csv(self, data):
+        return list(csv.reader(io.StringIO(data.decode('utf-8'))))
+
+    def test_export_csv(self):
+        users = self.create_users()
+        dt = datetime.datetime(2020, 1, 2, 3, 4, 5)
+        for user in users:
+            Note.create(user=user, message='note-%s' % user.username,
+                        created_date=dt)
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            resp = c.post('/admin/note/export/', data={
+                'fields': ['message', 'user__username', 'created_date'],
+                'format': 'csv'})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.mimetype, 'text/csv')
+            # plain utf-8, no BOM before the header.
+            self.assertTrue(resp.data.startswith(b'message,'))
+
+            rows = self.parse_csv(resp.data)
+            self.assertEqual(rows[0], ['message', 'user__username', 'created_date'])
+            self.assertEqual(sorted(r[1] for r in rows[1:]),
+                             ['admin', 'inactive', 'normal'])
+            for row in rows[1:]:
+                self.assertEqual(row[0], 'note-%s' % row[1])
+
+            # datetimes are the same strings the json export produces.
+            resp = c.post('/admin/note/export/', data={
+                'fields': ['created_date'], 'format': 'json'})
+            self.assertEqual(
+                [r[2] for r in rows[1:]],
+                [r['created_date'] for r in json.loads(resp.data)])
+
+            # commas, quotes and newlines survive a round-trip. ?id= limits
+            # the rows.
+            tricky = 'a "quoted" bit, a comma\nand a newline'
+            note = Note.create(user=users[0], message=tricky)
+            resp = c.post('/admin/note/export/?id=%s' % note.id, data={
+                'fields': ['message'], 'format': 'csv'})
+            self.assertEqual(self.parse_csv(resp.data), [['message'], [tricky]])
+
+    def test_export_csv_none_empty(self):
+        self.create_users()
+        Link.create(src=self.admin, dst=self.normal, label='ab')
+        Link.create(src=self.admin, dst=None, label='a-null')
+
+        related = LinkAdmin(admin, Link).collect_related_fields(Link, {}, [])
+
+        def export_rows(fields):
+            export = Export(Link.select().order_by(Link.id), related, fields)
+            return self.parse_csv(b''.join(export.csv_response().response))
+
+        self.assertEqual(export_rows(['label', 'dst']), [
+            ['label', 'dst'],
+            ['ab', str(self.normal.id)],
+            ['a-null', '']])
+
+        # the null-dst row drops on the inner join, as in the json export.
+        self.assertEqual(export_rows(['label', 'dst', 'dst__username']), [
+            ['label', 'dst', 'dst__username'],
+            ['ab', '', 'normal']])
+
+    def test_export_csv_binary(self):
+        # binary columns take the serializer's base64 conversion, same as json.
+        class Blobby(db.Model):
+            data = BlobField()
+
+        db.database.create_tables([Blobby])
+        try:
+            payload = b'\x00\xffbytes\n'
+            Blobby.create(data=payload)
+            export = Export(Blobby.select(), {}, ['data'])
+            rows = self.parse_csv(b''.join(export.csv_response().response))
+            self.assertEqual(rows, [
+                ['data'],
+                [base64.b64encode(payload).decode('ascii')]])
+        finally:
+            db.database.drop_tables([Blobby])
 
     def test_admin_search(self):
         users = self.create_users()

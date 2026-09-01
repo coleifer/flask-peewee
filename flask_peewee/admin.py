@@ -1,4 +1,6 @@
+import csv
 import functools
+import io
 import json
 import operator
 import os
@@ -598,6 +600,8 @@ class ModelAdmin(object):
                 # it would dump excluded columns such as the password hash.
                 raw_fields = [self.pk.name]
             export = Export(query, related, raw_fields)
+            if request.form.get('format') == 'csv':
+                return export.csv_response('export-%s.csv' % self.get_admin_name())
             return export.json_response('export-%s.json' % self.get_admin_name())
 
         return render_template(self.templates['export'],
@@ -934,10 +938,22 @@ class Export(object):
             clone = clone.columns(*select)
         return clone, field_dict
 
-    def json_response(self, filename='export.json'):
+    def _response(self, generate, filename, mimetype):
+        headers = Headers()
+        headers.add('Content-Disposition', 'attachment; filename=%s' % filename)
+        return Response(generate(), mimetype=mimetype, headers=headers, direct_passthrough=True)
+
+    def rows(self):
+        # a generator function, not a generator expression. an expression over
+        # the ModelSelect would execute it while the response is being built,
+        # and the request teardown then closes the connection before the body
+        # is streamed.
         serializer = Serializer()
         prepared_query, field_dict = self.prepare_query()
+        for obj in prepared_query:
+            yield serializer.serialize_object(obj, field_dict)
 
+    def json_response(self, filename='export.json'):
         def generate():
             # prefix the separator from the second row on, rather than keying
             # commas off a pre-count. a count taken before iteration can
@@ -945,13 +961,41 @@ class Export(object):
             # delete), producing a missing or trailing comma and invalid JSON.
             yield b'[\n'
             first = True
-            for obj in prepared_query:
+            for obj_data in self.rows():
                 if not first:
                     yield b',\n'
                 first = False
-                obj_data = serializer.serialize_object(obj, field_dict)
                 yield json.dumps(obj_data).encode('utf-8')
             yield b'\n]'
-        headers = Headers()
-        headers.add('Content-Disposition', 'attachment; filename=%s' % filename)
-        return Response(generate(), mimetype='application/json', headers=headers, direct_passthrough=True)
+        return self._response(generate, filename, 'application/json')
+
+    def flatten_object(self, obj_data):
+        # a null fk yields None, which csv.writer renders as an empty cell.
+        row = []
+        for lookup in self.fields:
+            value = obj_data
+            for part in lookup.split('__'):
+                value = value.get(part) if isinstance(value, dict) else None
+            if isinstance(value, dict):
+                # an fk selected alongside a related lookup through it nests,
+                # so it has no scalar of its own.
+                value = None
+            row.append(value)
+        return row
+
+    def csv_response(self, filename='export.csv'):
+        def generate():
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+
+            def emit(row):
+                writer.writerow(row)
+                data = buf.getvalue()
+                buf.seek(0)
+                buf.truncate()
+                return data.encode('utf-8')
+
+            yield emit(self.fields)
+            for obj_data in self.rows():
+                yield emit(self.flatten_object(obj_data))
+        return self._response(generate, filename, 'text/csv')

@@ -59,7 +59,8 @@ PARAMS:
       {% endfor %}
 
       <div class="form-actions d-flex gap-2">
-        <button class="btn btn-primary" type="submit">Export JSON</button>
+        <button class="btn btn-primary" type="submit" name="format" value="json">Export JSON</button>
+        <button class="btn btn-secondary" type="submit" name="format" value="csv">Export CSV</button>
         <a class="btn btn-outline-secondary" href="{{ url_for(model_admin.get_url_name('index')) }}?{{ request.query_string.decode('utf8') }}">Cancel</a>
       </div>
     </fieldset>
