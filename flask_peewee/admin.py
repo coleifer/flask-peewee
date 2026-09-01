@@ -76,15 +76,21 @@ class AdminFilterModelConverter(FilterModelConverter):
 
 
 class Action(object):
-    def __init__(self, name=None, description=None):
+    def __init__(self, name=None, description=None, confirm=False,
+                 form_class=None):
         self.name = name or (type(self).__name__.replace('Action', ''))
         self.description = description or re.sub(r'[\-_]', ' ', self.name).title()
+        self.confirm = confirm or form_class is not None
+        self.form_class = form_class
 
     def callback(self, id_list):
         """
         Perform an action on the list of IDs specified. If the return value is
         a Response object, then that will be returned to the user. Otherwise,
         the return value is ignored and the user is redirected to the index.
+
+        With confirm=True the callback runs after a confirmation page. A
+        form_class action gets the validated form as callback(id_list, form).
         """
         raise NotImplementedError
 
@@ -166,6 +172,7 @@ class ModelAdmin(object):
         'add': 'admin/models/add.html',
         'edit': 'admin/models/edit.html',
         'delete': 'admin/models/delete.html',
+        'action_confirm': 'admin/models/action_confirm.html',
         'export': 'admin/models/export.html',
     }
 
@@ -286,6 +293,7 @@ class ModelAdmin(object):
             ('/', self.index),
             ('/add/', self.add),
             ('/delete/', self.delete),
+            ('/action/', self.action_confirm),
             ('/export/', self.export),
             ('/<pk>/', self.edit),
             ('/_ajax/', self.ajax_list),
@@ -368,6 +376,11 @@ class ModelAdmin(object):
         if not check(self.admin.auth.get_logged_in_user()):
             abort(403)
 
+    def _selected(self):
+        # honor get_query() so a scoped admin only acts on, and the confirm
+        # pages only disclose, rows the user is allowed to see.
+        return self.get_query().where(self.pk << request.values.getlist('id'))
+
     def index(self):
         if request.method == 'POST':
             id_list = request.form.getlist('id')
@@ -382,7 +395,12 @@ class ModelAdmin(object):
                     flash('Please select one or more rows.', 'warning')
                 else:
                     action_obj = self.action_map[action]
-                    maybe_response = action_obj.callback(id_list)
+                    if action_obj.confirm:
+                        return redirect(url_for(
+                            self.get_url_name('action_confirm'),
+                            name=action, id=id_list))
+                    maybe_response = action_obj.callback(
+                        [obj._pk for obj in self._selected()])
                     if isinstance(maybe_response, Response):
                         return maybe_response
             else:
@@ -493,14 +511,7 @@ class ModelAdmin(object):
 
     def delete(self):
         self._abort_unless(self.check_delete)
-        if request.method == 'GET':
-            id_list = request.args.getlist('id')
-        else:
-            id_list = request.form.getlist('id')
-
-        # honor get_query() so a scoped admin only deletes, and on the GET
-        # confirmation page only discloses, rows the user is allowed to see.
-        query = self.get_query().where(self.pk << id_list)
+        query = self._selected()
 
         if request.method == 'GET':
             collected = {}
@@ -523,6 +534,40 @@ class ModelAdmin(object):
             collected=collected,
             **self.get_extra_context()
         ))
+
+    def action_confirm(self):
+        action = self.action_map.get(request.values.get('name'))
+        if action is None or not action.confirm:
+            abort(404)
+
+        query = self._selected()
+
+        form = None
+        if action.form_class:
+            # an empty-but-present formdata makes wtforms clobber field
+            # defaults, so the GET render passes None.
+            data = request.form if request.method == 'POST' else None
+            form = action.form_class(data)
+
+        if request.method == 'POST' and (form is None or form.validate()):
+            id_list = [obj._pk for obj in query]
+            args = (id_list,) if form is None else (id_list, form)
+            maybe_response = action.callback(*args)
+            if isinstance(maybe_response, Response):
+                return maybe_response
+            flash('Successfully applied %s to %s %ss' % (
+                action.description, len(id_list), self.get_display_name()),
+                'success')
+            return self._index_redirect()
+
+        return render_template(self.templates['action_confirm'],
+            admin=self.admin,
+            model_admin=self,
+            action=action,
+            form=form,
+            query=query,
+            **self.get_extra_context()
+        )
 
     def get_export_fields(self, model=None):
         # the set of field names that may be exported for `model` -- the base

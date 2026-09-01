@@ -1,0 +1,57 @@
+{% extends "admin/models/base.html" %}
+
+{% block breadcrumbs %}
+ {{ super() }}
+ <li class="breadcrumb-item"><a href=".">{{ action.description }}</a></li>
+{% endblock %}
+
+{% block extra_tabs %}
+   <li class="nav-item"><a class="nav-link active" href=".">{{ action.description }}</a></li>
+{% endblock %}
+
+{% block content %}
+  {% if form and form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show">
+      <p class="mb-0">There were errors with your form submission</p>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+  <form action="." method="post" class="action-confirm">
+    <input type="hidden" name="name" value="{{ action.name }}" />
+    {% for object in query %}<input type="hidden" name="id" value="{{ object._pk }}" />{% endfor %}
+    <fieldset>
+      {% if csrf_token %}{# Support for flask-seasurf #}<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{% endif %}
+      <legend>{{ action.description }}</legend>
+
+      <div class="alert alert-warning">
+        You are about to perform "{{ action.description }}" on the following
+        {{ model_admin.get_display_name() }} record{{ query.count() != 1 and 's' or '' }}.
+      </div>
+
+      <div class="list-group mb-3">
+        {% for object in query %}
+          <div class="list-group-item">
+            <div class="fw-semibold">
+              {% if admin.get_admin_url(object) %}
+                <a href="{{ admin.get_admin_url(object) }}">{{ object }}</a>
+              {% else %}
+                {{ object }}
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if form %}
+        {% for field in form %}
+          {{ admin_field(field) }}
+        {% endfor %}
+      {% endif %}
+
+      <div class="form-actions d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Confirm</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for(model_admin.get_url_name('index')) }}">Cancel</a>
+      </div>
+    </fieldset>
+  </form>
+{% endblock %}

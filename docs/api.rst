@@ -435,6 +435,7 @@ Exposing Models with the ModelAdmin
         * add
         * edit
         * delete
+        * action_confirm
         * export
 
         .. code-block:: python
@@ -473,6 +474,36 @@ Exposing Models with the ModelAdmin
         * a tree-structure containing the fields available for filtering (:py:class:`FieldTreeNode`)
 
         :rtype: A tuple as described above
+
+
+Bulk actions with Action
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:class:: Action([name=None[, description=None[, confirm=False[, form_class=None]]]])
+
+    A custom bulk operation offered in the list view's "With selected..."
+    dropdown. Subclass it, implement :py:meth:`~Action.callback`, and list
+    an instance in :py:attr:`ModelAdmin.actions`. See :ref:`admin-interface`
+    for worked examples.
+
+    :param name: dropdown label, defaults to the class name minus the
+        "Action" suffix
+    :param description: heading shown on the confirmation page and in the
+        success message, defaults to a title-cased version of ``name``
+    :param confirm: when ``True``, run the callback only after the user
+        approves a confirmation page listing the selected rows
+    :param form_class: a wtforms form class to render on the confirmation
+        page. Setting it implies confirmation.
+
+    .. py:method:: callback(id_list[, form])
+
+        Perform the action on the selected rows. Receives the primary keys
+        the user checked, restricted to those matching
+        :py:meth:`ModelAdmin.get_query`. When ``form_class`` is set, the
+        validated form is passed as a second argument.
+
+        If the return value is a flask ``Response``, it is sent to the user
+        as-is. Any other return value redirects back to the list view.
 
 
 Extending admin functionality using AdminPanel

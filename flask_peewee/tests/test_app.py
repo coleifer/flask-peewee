@@ -10,8 +10,12 @@ from flask import request
 from flask import url_for
 
 from peewee import *
+from wtforms import Form
+from wtforms.fields import StringField
+from wtforms.validators import DataRequired
 
 # flask-peewee bindings
+from flask_peewee.admin import Action
 from flask_peewee.admin import Admin
 from flask_peewee.admin import AdminPanel
 from flask_peewee.admin import ModelAdmin
@@ -254,10 +258,46 @@ class MessageAdmin(ModelAdmin):
     columns = ('user', 'content', 'pub_date',)
     search_fields = ('content', 'user__username',)
 
+class UpperAction(Action):
+    def callback(self, id_list):
+        Note.update(message=fn.UPPER(Note.message)) \
+            .where(Note.id << id_list).execute()
+
+class LowerAction(Action):
+    def callback(self, id_list):
+        Note.update(message=fn.LOWER(Note.message)) \
+            .where(Note.id << id_list).execute()
+
+class NotePrefixForm(Form):
+    prefix = StringField('Prefix', [DataRequired()])
+
+class PrefixAction(Action):
+    def callback(self, id_list, form):
+        for note in Note.select().where(Note.id << id_list):
+            note.message = form.prefix.data + note.message
+            note.save()
+
+class DownloadAction(Action):
+    def callback(self, id_list):
+        return Response(','.join(str(i) for i in id_list))
+
+class MarkAction(Action):
+    def callback(self, id_list):
+        ScopedItem.update(label='marked') \
+            .where(ScopedItem.id << id_list).execute()
+
 class NoteAdmin(ModelAdmin):
     columns = ('user', 'message', 'created_date',)
+    actions = [
+        UpperAction(),
+        LowerAction(confirm=True),
+        PrefixAction(form_class=NotePrefixForm),
+        DownloadAction(confirm=True),
+    ]
 
 class ScopedItemAdmin(ModelAdmin):
+    actions = [MarkAction(confirm=True), MarkAction(name='MarkNow')]
+
     # scope every path, including delete, to non-hidden rows.
     def get_query(self):
         return ScopedItem.select().where(ScopedItem.hidden == False)

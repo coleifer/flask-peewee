@@ -462,6 +462,39 @@ If the callback returns anything else, the user is redirected back to the list
 view. Submitting an action with no rows selected flashes a warning and
 does nothing.
 
+By default the callback runs as soon as the user picks the action from the
+dropdown. Pass ``confirm=True`` and the user first sees a confirmation page
+listing the selected rows:
+
+.. code-block:: python
+
+    actions = [FlagAction(confirm=True)]
+
+An action can also prompt for input. Pass a wtforms form class as
+``form_class`` and the confirmation page renders its fields. The callback
+receives the validated form as a second argument:
+
+.. code-block:: python
+
+    from wtforms import Form
+    from wtforms.fields import StringField
+    from wtforms.validators import DataRequired
+
+    class ReasonForm(Form):
+        reason = StringField('Reason', [DataRequired()])
+
+    class FlagWithReasonAction(Action):
+        def callback(self, id_list, form):
+            (Message
+             .update(flagged=True, flag_reason=form.reason.data)
+             .where(Message.id << id_list)
+             .execute())
+
+    actions = [FlagWithReasonAction(form_class=ReasonForm)]
+
+If the form fails validation, the confirmation page re-renders with the errors
+and the callback does not run.
+
 
 Exporting data
 --------------

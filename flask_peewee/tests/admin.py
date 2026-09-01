@@ -7,6 +7,7 @@ import json
 import re
 
 from flask import g
+from flask import get_flashed_messages
 from flask import request
 from flask import session
 from flask import url_for
@@ -531,6 +532,116 @@ class AdminTestCase(BaseAdminTestCase):
             self.assertRedirect(resp)
             self.assertFalse(
                 ScopedItem.select().where(ScopedItem.id == visible.id).exists())
+
+    def create_notes(self):
+        self.create_users()
+        return (Note.create(user=self.normal, message='Alpha'),
+                Note.create(user=self.normal, message='Beta'))
+
+    def test_action_confirm(self):
+        n1, n2 = self.create_notes()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # the empty check precedes the confirmation redirect.
+            c.post('/admin/note/', data={'action': 'Lower'})
+            self.assertTrue('Please select one or more rows.' in
+                            get_flashed_messages())
+
+            # a plain action runs straight from the index post.
+            resp = c.post('/admin/note/', data={'action': 'Upper',
+                                                'id': [n1.id]})
+            self.assertRedirect(resp)
+            self.assertTrue(resp.headers['location'].endswith('/admin/note/'))
+            self.assertEqual(Note.get(Note.id == n1.id).message, 'ALPHA')
+            self.assertEqual(Note.get(Note.id == n2.id).message, 'Beta')
+
+            # an unrecognized name on the confirm url 404s, as does a
+            # non-confirm action.
+            resp = c.get('/admin/note/action/?name=Missing&id=%d' % n1.id)
+            self.assertEqual(resp.status_code, 404)
+            resp = c.get('/admin/note/action/?name=Upper&id=%d' % n1.id)
+            self.assertEqual(resp.status_code, 404)
+
+            # a confirm action redirects to the confirmation page instead.
+            resp = c.post('/admin/note/', data={'action': 'Lower',
+                                                'id': [n1.id, n2.id]})
+            self.assertRedirect(resp)
+            location = resp.headers['location']
+            self.assertTrue('/admin/note/action/?name=Lower' in location)
+
+            # nothing has run yet.
+            self.assertEqual(Note.get(Note.id == n1.id).message, 'ALPHA')
+
+            # the confirmation page lists the selected rows.
+            resp = c.get(location)
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(list(self.get_context('query')), [n1, n2])
+
+            # posting runs the callback and redirects to the index.
+            resp = c.post('/admin/note/action/', data={
+                'name': 'Lower', 'id': [n1.id, n2.id]})
+            self.assertRedirect(resp)
+            self.assertEqual(get_flashed_messages(),
+                             ['Successfully applied Lower to 2 Notes'])
+            self.assertEqual(Note.get(Note.id == n1.id).message, 'alpha')
+            self.assertEqual(Note.get(Note.id == n2.id).message, 'beta')
+
+            # a callback returning a Response is passed through.
+            resp = c.post('/admin/note/action/', data={
+                'name': 'Download', 'id': [n1.id]})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.data.decode('utf8'), str(n1.id))
+
+    def test_action_respects_get_query(self):
+        self.create_users()
+        hidden = ScopedItem.create(label='hidden', hidden=True)
+        v1 = ScopedItem.create(label='visible')
+        v2 = ScopedItem.create(label='visible')
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # the confirmation post marks only the visible row.
+            resp = c.post('/admin/scopeditem/action/', data={
+                'name': 'Mark', 'id': [v1.id, hidden.id]})
+            self.assertRedirect(resp)
+
+            # so does the immediate path.
+            resp = c.post('/admin/scopeditem/', data={
+                'action': 'MarkNow', 'id': [v2.id, hidden.id]})
+            self.assertRedirect(resp)
+
+        self.assertEqual([i.label for i in
+                          ScopedItem.select().order_by(ScopedItem.id)],
+                         ['hidden', 'marked', 'marked'])
+
+    def test_action_form(self):
+        n1, n2 = self.create_notes()
+
+        with self.flask_app.test_client() as c:
+            self.login(c)
+
+            # a form_class action implies confirmation.
+            resp = c.post('/admin/note/', data={'action': 'Prefix',
+                                                'id': [n1.id]})
+            self.assertRedirect(resp)
+
+            # a missing prefix re-renders with errors and runs nothing.
+            resp = c.post('/admin/note/action/', data={
+                'name': 'Prefix', 'id': [n1.id], 'prefix': ''})
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(self.get_context('form').errors)
+            self.assertEqual(list(self.get_context('query')), [n1])
+            self.assertEqual(Note.get(Note.id == n1.id).message, 'Alpha')
+
+            # a valid post reaches the callback with the form value.
+            resp = c.post('/admin/note/action/', data={
+                'name': 'Prefix', 'id': [n1.id], 'prefix': 'x-'})
+            self.assertRedirect(resp)
+            self.assertEqual(Note.get(Note.id == n1.id).message, 'x-Alpha')
+            self.assertEqual(Note.get(Note.id == n2.id).message, 'Beta')
 
     def test_ajax_list_respects_related_get_query(self):
         # the FK picker on ScopedRef.item enumerates ScopedItem through its
