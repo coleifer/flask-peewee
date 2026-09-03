@@ -14,6 +14,7 @@ from flask import url_for
 from peewee import BooleanField
 from peewee import CharField
 
+from flask_peewee.admin import ModelAdmin
 from flask_peewee.auth import Auth
 from flask_peewee.auth import BaseUser
 from flask_peewee.auth import LoginForm
@@ -86,6 +87,20 @@ class AuthTestCase(FlaskPeeweeTestCase):
     def assertLoggedIn(self, auth, user):
         g.user = None
         self.assertEqual(auth.get_logged_in_user(), user)
+
+    def test_user_admin_export_exclude_merged(self):
+        # password is added to the caller's export_exclude rather than
+        # replacing it.
+        class EmailUserAdmin(ModelAdmin):
+            export_exclude = ('email',)
+
+        self.assertEqual(auth.get_model_admin().export_exclude, ('password',))
+        self.assertEqual(auth.get_model_admin(EmailUserAdmin).export_exclude,
+                         ('email', 'password'))
+
+        # the session token is excluded too.
+        self.assertEqual(token_auth.get_model_admin(EmailUserAdmin).export_exclude,
+                         ('email', 'password', 'session_token'))
 
     def test_session_field_required(self):
         self.assertRaises(ImproperlyConfigured, TestAuth, app, db,

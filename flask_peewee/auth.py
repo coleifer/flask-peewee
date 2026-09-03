@@ -107,12 +107,17 @@ class Auth(object):
             from flask_peewee.admin import ModelAdmin
             model_admin = ModelAdmin
 
+        # always exclude credentials from export, in addition to whatever the
+        # caller excludes.
+        excluded = list(model_admin.export_exclude or ())
+        excluded.extend(f for f in ('password', self.session_field)
+                        if f and f not in excluded)
+
         class UserAdmin(model_admin):
             columns = getattr(model_admin, 'columns') or (
                     ['username', 'email', 'active', 'admin'])
 
-            # never expose the password hash through data export.
-            export_exclude = ('password',)
+            export_exclude = tuple(excluded)
 
             def save_model(self, instance, form, adding=False):
                 orig_password = instance.password

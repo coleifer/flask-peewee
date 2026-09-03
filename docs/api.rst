@@ -698,6 +698,10 @@ Auth
                     instance.save(force_insert=adding)
                     return instance
 
+        ``password`` is added to the ``export_exclude`` of the ``model_admin``
+        passed in, along with the ``session_field`` when one is configured.
+        Its ``columns`` are used as-is.
+
         :param model_admin: subclass of :py:class:`ModelAdmin` to use as the base class
         :rtype: a subclass of :py:class:`ModelAdmin` suitable for use with the ``User`` model
 
