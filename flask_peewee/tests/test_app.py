@@ -348,12 +348,24 @@ admin.register_panel('Recent messages', RecentRowsPanel, Message,
 class UserResource(RestResource):
     exclude = ('password', 'email',)
     readonly_fields = ('admin',)
+    # also limits ?ordering= and the filters a parent resource gets from
+    # include_resources
+    filter_fields = ('id', 'username', 'active', 'admin')
 
     def get_query(self):
         return User.select().where(User.active==True)
 
 class AResource(RestResource):
     pass
+
+class NoteResource(RestResource):
+    # every column of the related user is filterable under user__.
+    filter_recursive = True
+
+class LinkResource(RestResource):
+    # related columns listed explicitly, with recursion off.
+    filter_fields = ('id', 'label', 'src__username', 'src__active',
+                     'dst__username')
 
 class BResource(RestResource):
     include_resources = {'a': AResource}
@@ -425,7 +437,7 @@ api = RestAPI(app, default_auth=user_auth)
 
 api.register(Message, RestrictOwnerResource)
 api.register(User, UserResource, auth=admin_auth)
-api.register(Note)
+api.register(Note, NoteResource)
 api.register(Comment, CommentResource)
 api.register(Ping, PingResource)
 api.register(TestModel, auth=api_key_auth)
@@ -440,7 +452,7 @@ api.register(EModel, EResource, auth=dummy_auth)
 api.register(FModel, FResource, auth=dummy_auth)
 api.register(GModel, GResource, auth=dummy_auth)
 api.register(HModel, HResource, auth=dummy_auth)
-api.register(Link, auth=dummy_auth)
+api.register(Link, LinkResource, auth=dummy_auth)
 api.register(BulkItem, BulkItemResource, auth=dummy_auth)
 
 

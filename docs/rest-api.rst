@@ -824,16 +824,24 @@ repeated ``ne`` or negated values exclude every listed value.
 Restricting what can be filtered
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default every field on the model is filterable and joins may be traversed
-into related models. Since filters come straight off the query string, you will
-often want to lock this down, especially for sensitive columns. Three
+By default every field on the model is filterable, but related columns are
+not. Since filters come straight off the query string, you will often want to
+restrict this, especially for sensitive columns. Three
 :py:class:`RestResource` attributes control it:
 
-* ``filter_fields``: a whitelist, only these fields may be filtered on.
+* ``filter_fields``: a whitelist, only these fields may be filtered on. Related
+  columns use ``__`` notation, e.g. ``user__username``.
 * ``filter_exclude``: a blacklist of fields that may never be filtered on (use
   ``__`` notation for related columns, e.g. ``user__password``).
-* ``filter_recursive``: set to ``False`` to forbid filtering across foreign
-  keys entirely (no ``user__...`` lookups at all).
+* ``filter_recursive``: set to ``True`` to make every column of a related model
+  filterable, up to ``max_filter_depth`` foreign keys deep.
+
+.. warning::
+    A filter reveals the value of the column it tests, even when the column is
+    not serialized. ``?user__password__startswith=a`` tests the password hash
+    one character at a time, and ``exclude`` does not prevent it. For that
+    reason ``filter_recursive`` is off by default, and a resource in
+    ``include_resources`` adds only the filters in its own ``filter_fields``.
 
 .. code-block:: python
 

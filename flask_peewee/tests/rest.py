@@ -1045,6 +1045,57 @@ class RestApiBasicTestCase(RestApiTestCase):
         self.assertEqual(query.sql()[0].count('JOIN'), 1)
         self.assertEqual([l.label for l in query], ['a-to-b'])
 
+    def test_filter_recursive_off_by_default(self):
+        # related columns are not filterable unless listed in filter_fields.
+        users = self.create_users()
+        for user in users:
+            self.create_message(user, user.username)
+
+        # the message resource lists no user__ fields, so the password hash
+        # cannot be tested one character at a time.
+        resp = self.app.get('/api/message/?user__password__startswith=%s'
+                            % self.admin.password[:6])
+        self.assertEqual(len(self.response_json(resp)['objects']), 3)
+
+        resp = self.app.get('/api/message/?user__username=admin')
+        self.assertEqual(len(self.response_json(resp)['objects']), 3)
+
+    def test_filter_recursive_opt_in(self):
+        # NoteResource sets filter_recursive, so every user column is filterable
+        # under user__.
+        users = self.create_users()
+        for user in users:
+            Note.create(user=user, message=user.username)
+
+        resp = self.app.get('/api/note/?user__password__startswith=%s'
+                            % self.admin.password[:6])
+        self.assertEqual(len(self.response_json(resp)['objects']), 3)
+
+        resp = self.app.get('/api/note/?user__password__startswith=nomatch')
+        self.assertEqual(len(self.response_json(resp)['objects']), 0)
+
+    def test_nested_resource_filters_require_declaration(self):
+        # a nested resource without filter_fields adds no filters to the parent.
+        class BareUser(RestResource):
+            pass
+        class DeclaredUser(RestResource):
+            filter_fields = ('username',)
+        class WithBare(RestResource):
+            include_resources = {'user': BareUser}
+        class WithDeclared(RestResource):
+            include_resources = {'user': DeclaredUser}
+
+        bare = WithBare(api, Comment, Authentication())
+        self.assertEqual([f for f in bare._filter_fields if '__' in f], [])
+        self.assertEqual(bare._field_tree.children['user'].fields, [])
+
+        declared = WithDeclared(api, Comment, Authentication())
+        self.assertEqual([f for f in declared._filter_fields if '__' in f],
+                         ['user__username'])
+        self.assertEqual(
+            [f.name for f in declared._field_tree.children['user'].fields],
+            ['username'])
+
     def test_filter_negated_related(self):
         # negation survives the rebind onto the aliased field.
         self.create_links()

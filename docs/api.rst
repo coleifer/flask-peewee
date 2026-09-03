@@ -1011,9 +1011,12 @@ RESTful Resources and their subclasses
 
         A list of fields that can be used to filter the API results
 
-    .. py:attribute:: filter_recursive = True
+    .. py:attribute:: filter_recursive = False
 
-        Allow filtering on related resources
+        Make every column of a related model filterable through its foreign
+        key. Off by default, since a filter reveals a column's value even when
+        the column is not serialized. List related columns explicitly
+        (``user__username``) instead
 
     .. py:attribute:: max_filter_depth = 3
 

@@ -286,7 +286,12 @@ class RestResource(object):
     # use "__", e.g. user__password
     filter_exclude = None
     filter_fields = None
-    filter_recursive = True
+
+    # when True, a foreign key in filter_fields makes every column of the
+    # related model filterable. Off by default, since a filter reveals a
+    # column's value even when the column is not serialized. List related
+    # columns explicitly (user__username) instead.
+    filter_recursive = False
 
     # max related-model hops when building the filter field tree, so a long or
     # densely linked fk graph cannot explode it.
@@ -343,8 +348,13 @@ class RestResource(object):
                 self._exclude.update({(field_name,) + p: v
                                       for p, v in resource_obj._exclude.items()})
 
-                self._filter_fields.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_fields])
-                self._filter_exclude.extend(['%s__%s' % (field_name, ff) for ff in resource_obj._filter_exclude])
+                # a nested resource without filter_fields adds no filters. Its
+                # default is every column of its model.
+                if resource_obj.filter_fields:
+                    self._filter_fields.extend(['%s__%s' % (field_name, ff)
+                                                for ff in resource_obj._filter_fields])
+                self._filter_exclude.extend(['%s__%s' % (field_name, ff)
+                                             for ff in resource_obj._filter_exclude])
 
         self._field_tree = make_field_tree(
             self.model, self._filter_fields, self._filter_exclude,
