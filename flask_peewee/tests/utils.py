@@ -155,6 +155,31 @@ class UtilsTestCase(FlaskPeeweeTestCase):
         self.assertEqual(rows, [extra])
         self.assertFalse(has_next)
 
+    def test_paginated_query_page_clamped(self):
+        # a page past the end is clamped to the last page. isdigit() accepts
+        # any number of digits, and a huge page overflows the OFFSET.
+        user = self.create_user('u', 'u')
+        for i in range(25):
+            Note.create(user=user, message='n%02d' % i)
+
+        def get_page(page, **kwargs):
+            with flask_app.test_request_context('/?page=%s' % page):
+                pq = PaginatedQuery(Note.select().order_by(Note.id), 10,
+                                    **kwargs)
+                return pq.get_page(), len(list(pq.get_list()))
+
+        self.assertEqual(get_page(2), (2, 10))
+        self.assertEqual(get_page(0), (1, 10))
+        self.assertEqual(get_page(99999999999999999999), (3, 5))
+
+        # without a count there is no last page, so max_page is the bound.
+        self.assertEqual(get_page(99999999999999999999, use_count=False),
+                         (PaginatedQuery.max_page, 0))
+
+        # an empty result set has no pages at all.
+        Note.delete().execute()
+        self.assertEqual(get_page(5), (1, 0))
+
     def test_get_model_from_dictionary(self):
         class User(Model):
             username = CharField()

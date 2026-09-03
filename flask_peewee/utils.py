@@ -40,6 +40,10 @@ def object_list(template_name, qr, var_name='object_list', **kwargs):
 class PaginatedQuery(object):
     page_var = 'page'
 
+    # upper bound on ?page= when not counting, since there is no page count
+    # to clamp to.
+    max_page = 1000000
+
     def __init__(self, query_or_model, paginate_by, use_count=True):
         self.paginate_by = paginate_by
         self.use_count = use_count
@@ -54,7 +58,10 @@ class PaginatedQuery(object):
     def get_page(self):
         curr_page = request.args.get(self.page_var)
         if curr_page and curr_page.isdigit():
-            return int(curr_page)
+            # clamp to the last page. isdigit() accepts any number of digits,
+            # and a huge page overflows the OFFSET.
+            last = self.get_pages() if self.use_count else self.max_page
+            return min(max(int(curr_page), 1), last) or 1
         return 1
 
     def get_count(self):

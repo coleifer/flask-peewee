@@ -1096,6 +1096,18 @@ class RestApiBasicTestCase(RestApiTestCase):
             [f.name for f in declared._field_tree.children['user'].fields],
             ['username'])
 
+    def test_page_out_of_range(self):
+        # ?page= past the end is clamped to the last page instead of
+        # overflowing the OFFSET.
+        self.get_users_and_notes()
+
+        resp = self.app.get('/api/note/?page=99999999999999999999&limit=10')
+        self.assertEqual(resp.status_code, 200)
+        resp_json = self.response_json(resp)
+        self.assertEqual(resp_json['meta']['page'],
+                         resp_json['meta']['page_count'])
+        self.assertTrue(len(resp_json['objects']) > 0)
+
     def test_filter_negated_related(self):
         # negation survives the rebind onto the aliased field.
         self.create_links()

@@ -1527,6 +1527,11 @@ Utilities
         Whether rows remain beyond the current page. Set by
         :py:meth:`~PaginatedQuery.get_list` when ``use_count=False``
 
+    .. py:attribute:: max_page = 1000000
+
+        Upper bound on the requested page when ``use_count=False`` and there
+        is no page count to clamp to
+
     Example:
 
     .. code-block:: python
@@ -1546,6 +1551,9 @@ Utilities
         :rtype: a list of objects for the request page
 
     .. py:method:: get_page()
+
+        Clamped to the last page, so an out-of-range ``page`` does not
+        overflow the query's ``OFFSET``.
 
         :rtype: an integer representing the currently requested page
 
