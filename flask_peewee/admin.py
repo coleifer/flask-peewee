@@ -863,21 +863,21 @@ class Admin(object):
         self.register_blueprint()
 
     def get_model_field(self, model, field):
+        # a ModelAdmin method with the same name as a column overrides its
+        # display. Methods inherited from ModelAdmin itself do not count, since
+        # a column may share a name with one (export, add).
+        model_admin = self.get_admin_for(type(model))
+        if model_admin is not None:
+            attr = getattr(type(model_admin), field, None)
+            if callable(attr) and attr is not getattr(ModelAdmin, field, None):
+                return getattr(model_admin, field)(model)
+
         try:
             attr = getattr(model, field)
         except AttributeError:
-            model_admin = self[type(model)]
-            try:
-                attr = getattr(model_admin, field)
-            except AttributeError:
-                raise AttributeError('Could not find attribute or method '
-                                     'named "%s".' % field)
-            else:
-                return attr(model)
-        else:
-            if callable(attr):
-                attr = attr()
-            return attr
+            raise AttributeError('Could not find attribute or method '
+                                 'named "%s".' % field)
+        return attr() if callable(attr) else attr
 
     def get_form_field(self, form, field_name):
         return getattr(form, field_name)

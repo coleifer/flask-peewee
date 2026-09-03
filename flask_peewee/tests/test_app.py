@@ -314,6 +314,14 @@ class EntryAdmin(ModelAdmin):
         ('Meta', {'fields': ('created',), 'collapsed': True}),
     ]
 
+    # a method with the same name as a column overrides its display
+    def status(self, obj):
+        return obj.status.title()
+
+    # a method that is not a column
+    def word_count(self, obj):
+        return len(obj.body.split())
+
 class ReadOnlyCommentAdmin(ModelAdmin):
     columns = ('user', 'body',)
     can_add = can_edit = can_delete = False

@@ -1978,6 +1978,20 @@ class TemplateHelperTestCase(FlaskPeeweeTestCase):
         self.assertEqual(admin.get_model_field(self.admin, 'message_count'), 2)
         self.assertRaises(AttributeError, admin.get_model_field, self.admin, 'missing_attr')
 
+    def test_get_model_field_admin_override(self):
+        # a ModelAdmin method with the same name as a column overrides its
+        # display.
+        entry = Entry(title='t1', body='b1 b2', status='draft')
+        self.assertEqual(admin.get_model_field(entry, 'status'), 'Draft')
+        self.assertEqual(admin.get_model_field(entry, 'title'), 't1')
+
+        # a ModelAdmin method that is not a column
+        self.assertEqual(admin.get_model_field(entry, 'word_count'), 2)
+
+        # methods inherited from ModelAdmin itself are not overrides, so a
+        # column named export does not dispatch the view.
+        self.assertRaises(AttributeError, admin.get_model_field, entry, 'export')
+
     def test_get_form_field(self):
         form = model_form(User)(obj=self.admin)
         self.assertEqual(admin.get_form_field(form, 'username'), form.username)

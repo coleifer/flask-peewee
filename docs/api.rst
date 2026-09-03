@@ -190,7 +190,8 @@ Exposing Models with the ModelAdmin
             * field on a model
             * attribute on a model instance
             * callable on a model instance (called with no parameters)
-            * method on the ``ModelAdmin`` (called with the model instance)
+            * method on the ``ModelAdmin`` (called with the model instance),
+              which takes precedence over a model field of the same name
 
             If a column is a model field, it will be sortable.
 

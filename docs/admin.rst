@@ -125,7 +125,9 @@ Filtering is available, as is search:
 
 Columns are not limited to field names. A name in ``columns`` may also be a
 model method, or a ``ModelAdmin`` method taking the row instance, and the
-return value is displayed. Computed columns are not sortable. Headers come
+return value is displayed. A ``ModelAdmin`` method with the same name as a
+field takes precedence over the field, so a column's display can be overridden
+without renaming it. Computed columns are not sortable. Headers come
 from the name, so ``word_count`` becomes "Word Count". Return a
 ``markupsafe.Markup`` to display HTML, as the thumbnail column in
 :ref:`admin-file-uploads` does.
@@ -137,6 +139,13 @@ from the name, so ``word_count`` becomes "Word Count". Return a
 
         def posted(self, obj):
             return obj.pub_date.strftime('%b %d, %Y')
+
+    class EntryAdmin(ModelAdmin):
+        columns = ('title', 'status',)
+
+        # same name as the field, so the column shows this instead
+        def status(self, obj):
+            return STATUS_LABELS[obj.status]
 
 Searching
 ^^^^^^^^^
