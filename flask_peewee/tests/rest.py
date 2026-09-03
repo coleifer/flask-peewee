@@ -1096,6 +1096,18 @@ class RestApiBasicTestCase(RestApiTestCase):
             [f.name for f in declared._field_tree.children['user'].fields],
             ['username'])
 
+    def test_ordering_bounded_by_filterable_fields(self):
+        # only filterable columns are sortable.
+        resource = api._registry[User]
+        def ordering_sql(column):
+            with self.flask_app.test_request_context('/api/user/?ordering=%s'
+                                                     % column):
+                return resource.apply_ordering(resource.get_query()).sql()[0]
+
+        self.assertIn('ORDER BY', ordering_sql('username'))
+        self.assertNotIn('ORDER BY', ordering_sql('password'))
+        self.assertNotIn('ORDER BY', ordering_sql('email'))
+
     def test_page_out_of_range(self):
         # ?page= past the end is clamped to the last page instead of
         # overflowing the OFFSET.

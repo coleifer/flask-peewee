@@ -862,8 +862,9 @@ instead.
 Sorting results
 ---------------
 
-Results can be sorted by specifying an ``ordering`` as a GET argument. The ordering
-must be a column on the model.
+Results can be sorted by specifying an ``ordering`` as a GET argument. The
+ordering must be a column the resource allows filtering on. Anything else is
+ignored.
 
 `/api/message/?ordering=pub_date`
 

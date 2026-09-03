@@ -360,6 +360,10 @@ class RestResource(object):
             self.model, self._filter_fields, self._filter_exclude,
             self.filter_recursive, max_depth=self.max_filter_depth)
 
+        # only filterable columns are sortable. Ordering by an excluded column
+        # reveals its values.
+        self._sortable_fields = set(f.name for f in self._field_tree.fields)
+
     def authorize(self):
         return self.authentication.authorize()
 
@@ -644,7 +648,7 @@ class RestResource(object):
     def apply_ordering(self, query):
         ordering = request.args.get('ordering') or ''
         return order_query(query, self.model, ordering,
-                           self.model._meta.fields.__contains__)
+                           self._sortable_fields.__contains__)
 
     def get_request_metadata(self, paginated_query):
         var = paginated_query.page_var
