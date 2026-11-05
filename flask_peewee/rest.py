@@ -735,10 +735,10 @@ class RestResource(object):
     def _join_related(self, query, src, resource):
         for field_name, child in resource._resources.items():
             dest = child.model.alias()
-            fk = getattr(src, field_name)
-            pk = getattr(dest, child.model._meta.primary_key.name)
+            fk = resource.model._meta.fields[field_name]
+            on = getattr(src, field_name) == getattr(dest, fk.rel_field.name)
             query = query.select_extend(dest).join_from(
-                src, dest, JOIN.LEFT_OUTER, on=(fk == pk), attr=field_name)
+                src, dest, JOIN.LEFT_OUTER, on=on, attr=field_name)
             query = self._join_related(query, dest, child)
         return query
 

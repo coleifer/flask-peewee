@@ -220,6 +220,15 @@ class Flag(db.Model):
     value = BooleanField(null=True)
 
 
+class Tag(db.Model):
+    name = CharField(unique=True)
+
+
+class Tagged(db.Model):
+    # a foreign key that targets a non-primary-key column.
+    tag = ForeignKeyField(Tag, field='name')
+
+
 class Entry(db.Model):
     # exercises EntryAdmin's readonly_fields and fieldsets. status is listed
     # in no fieldset, so it renders in the trailing unlabeled section.
@@ -446,6 +455,9 @@ class FlagResource(RestResource):
     def check_put(self, obj):
         return False
 
+class TaggedResource(RestResource):
+    include_resources = {'tag': RestResource}
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -497,6 +509,7 @@ api.register(Reply, ReplyResource)
 api.register(ScopedItem, auth=dummy_auth, allowed_methods=['GET', 'POST'])
 api.register(Flag, FlagResource,
              auth=Authentication(protected_methods=['DELETE']))
+api.register(Tagged, TaggedResource, auth=dummy_auth)
 
 
 # views

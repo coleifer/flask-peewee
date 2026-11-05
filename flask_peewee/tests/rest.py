@@ -36,6 +36,8 @@ from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import Reply
 from flask_peewee.tests.test_app import ScopedItem
+from flask_peewee.tests.test_app import Tag
+from flask_peewee.tests.test_app import Tagged
 from flask_peewee.tests.test_app import TestModel
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
@@ -575,6 +577,15 @@ class RestApiResourceTestCase(RestApiTestCase):
         resp_json = self.response_json(resp)
         self.assertEqual(len(resp_json['objects']), 5)
         self.assertEqual(resp_json['meta']['page_count'], 2)  # ceil(8 / 5)
+
+    def test_include_resource_on_field_fk(self):
+        # "filler" makes ids and names disagree.
+        Tag.create(name='filler')
+        Tagged.create(tag=Tag.create(name='zed'))
+        resp = self.app.get('/api/tagged/')
+        self.assertEqual(resp.status_code, 200)
+        objects = self.response_json(resp)['objects']
+        self.assertEqual([o['tag'] for o in objects], [{'id': 2, 'name': 'zed'}])
 
     def test_boolean_filter_none(self):
         for value in (True, False, None):
