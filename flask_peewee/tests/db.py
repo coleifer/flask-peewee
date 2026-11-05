@@ -42,6 +42,14 @@ class DatabaseTestCase(unittest.TestCase):
         app.config.update({'DATABASE': 'bogus:///app.db'})
         self.assertRaises(ImproperlyConfigured, Database, app)
 
+    def test_initialize_bad_engine(self):
+        # not a Database subclass, not a class, no module path, no module.
+        for engine in ('builtins.str', 'os.path.join', 'SqliteDatabase',
+                       'nosuchmodule.Database'):
+            app = Flask(__name__)
+            app.config.update({'DATABASE': {'name': ':memory:', 'engine': engine}})
+            self.assertRaises(ImproperlyConfigured, Database, app)
+
     def test_initialize_explicit(self):
         app = Flask(__name__)
 

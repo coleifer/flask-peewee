@@ -48,12 +48,14 @@ class Database(object):
 
         try:
             self.database_class = load_class(self.database_engine)
-            assert issubclass(self.database_class, peewee.Database)
-        except ImportError:
+        except (ImportError, ValueError):
+            # ValueError: a name with no module path, e.g. "SqliteDatabase".
             raise ImproperlyConfigured('Unable to import: "%s"' % self.database_engine)
         except AttributeError:
             raise ImproperlyConfigured('Database engine not found: "%s"' % self.database_engine)
-        except AssertionError:
+
+        if not (isinstance(self.database_class, type) and
+                issubclass(self.database_class, peewee.Database)):
             raise ImproperlyConfigured('Database engine not a subclass of peewee.Database: "%s"' % self.database_engine)
 
         return self.database_class(self.database_name, **self.database_config)
