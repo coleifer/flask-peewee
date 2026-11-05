@@ -273,6 +273,7 @@ class Auth(object):
             session.clear()
         else:
             session.pop('logged_in', None)
+            session.pop('user_pk', None)
             session.pop('session_token', None)
         g.user = None
         flash('You are now logged out', 'success')

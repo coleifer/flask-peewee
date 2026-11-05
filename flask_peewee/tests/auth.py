@@ -358,6 +358,8 @@ class AuthTestCase(FlaskPeeweeTestCase):
 
             resp = c.post('/accounts/logout/')
             self.assertEqual(auth.get_logged_in_user(), None)
+            for key in ('logged_in', 'user_pk', 'session_token'):
+                self.assertNotIn(key, session)
 
             resp = c.post('/accounts/login/', data={
                 'username': 'admin',
