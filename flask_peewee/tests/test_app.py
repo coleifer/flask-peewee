@@ -211,6 +211,11 @@ class Labeled(db.Model):
     label = ForeignKeyField(Label)
 
 
+class Reply(db.Model):
+    message = ForeignKeyField(Message, null=True)
+    body = TextField()
+
+
 class Entry(db.Model):
     # exercises EntryAdmin's readonly_fields and fieldsets. status is listed
     # in no fieldset, so it renders in the trailing unlabeled section.
@@ -430,6 +435,9 @@ class PingResource(RestResource):
 class LabeledResource(RestResource):
     include_resources = {'label': RestResource}
 
+class ReplyResource(RestResource):
+    include_resources = {'message': RestrictOwnerResource}
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -477,6 +485,7 @@ api.register(BulkItem, BulkItemResource, auth=dummy_auth)
 api.register(Label, auth=Authentication(protected_methods=['PUT']),
              allowed_methods=['GET', 'PUT'])
 api.register(Labeled, LabeledResource, auth=dummy_auth)
+api.register(Reply, ReplyResource)
 
 
 # views

@@ -789,7 +789,12 @@ class RestResource(object):
                 # check_put, creating a new one runs check_post.
                 if existing is not None and existing.get_id() is not None:
                     method = 'PUT'
-                    allowed = rel_resource.check_put(rel_obj)
+                    # `existing` already holds the payload, including any owner
+                    # field it sets, so check the row as stored.
+                    current = rel_resource.get_query().where(
+                        rel_resource.pk == existing.get_id()).first()
+                    allowed = (current is not None and
+                               rel_resource.check_put(current))
                 else:
                     method = 'POST'
                     allowed = rel_resource.check_post(rel_obj)

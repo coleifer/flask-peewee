@@ -33,6 +33,7 @@ from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
+from flask_peewee.tests.test_app import Reply
 from flask_peewee.tests.test_app import TestModel
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
@@ -1480,6 +1481,38 @@ class RestApiUserAuthTestCase(RestApiTestCase):
             headers=self.auth_headers('normal', 'normal'))
         self.assertEqual(resp.status_code, 403)
         self.assertIsNone(User.get_or_none(User.username == 'nested'))
+
+    def test_nested_edit_checks_stored_owner(self):
+        # the payload's own "user" must not satisfy the owner check.
+        message = Message.create(user=self.admin, content='admin')
+        reply = Reply.create(message=message, body='r')
+        resp = self.app.put('/api/reply/%s/' % reply.id, data=json.dumps({
+            'message': {'content': 'taken', 'user': self.normal.id}}),
+            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 403)
+        message = Message.get(Message.id == message.id)
+        self.assertEqual((message.content, message.user), ('admin', self.admin))
+
+        # the owner can edit it.
+        resp = self.app.put('/api/reply/%s/' % reply.id, data=json.dumps({
+            'message': {'content': 'edited'}}),
+            headers=self.auth_headers('admin', 'admin'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Message.get(Message.id == message.id).content, 'edited')
+
+    def test_nested_edit_of_row_outside_get_query(self):
+        message = Message.create(user=self.normal, content='m')
+        reply = Reply.create(message=message, body='r')
+        nested = api._registry[Reply]._resources['message']
+        nested.get_query = lambda: Message.select().where(Message.id == 0)
+        try:
+            resp = self.app.put('/api/reply/%s/' % reply.id, data=json.dumps({
+                'message': {'content': 'x'}}),
+                headers=self.auth_headers('normal', 'normal'))
+        finally:
+            del nested.get_query
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(Message.get(Message.id == message.id).content, 'm')
 
     def test_nested_edit_follows_protected_methods(self):
         # Label protects PUT only. The request is a POST, which authorize()
