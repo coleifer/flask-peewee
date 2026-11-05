@@ -203,6 +203,14 @@ class Link(db.Model):
     label = TextField(default='')
 
 
+class Label(db.Model):
+    name = TextField()
+
+
+class Labeled(db.Model):
+    label = ForeignKeyField(Label)
+
+
 class Entry(db.Model):
     # exercises EntryAdmin's readonly_fields and fieldsets. status is listed
     # in no fieldset, so it renders in the trailing unlabeled section.
@@ -419,6 +427,9 @@ class AdminOnlyUserResource(UserResource):
 class PingResource(RestResource):
     include_resources = {'user': AdminOnlyUserResource}
 
+class LabeledResource(RestResource):
+    include_resources = {'label': RestResource}
+
 # rest api stuff
 dummy_auth = Authentication(protected_methods=[])
 user_auth = UserAuthentication(auth)
@@ -462,6 +473,10 @@ api.register(GModel, GResource, auth=dummy_auth)
 api.register(HModel, HResource, auth=dummy_auth)
 api.register(Link, LinkResource, auth=dummy_auth)
 api.register(BulkItem, BulkItemResource, auth=dummy_auth)
+# a nested write of a Label must follow both of these.
+api.register(Label, auth=Authentication(protected_methods=['PUT']),
+             allowed_methods=['GET', 'PUT'])
+api.register(Labeled, LabeledResource, auth=dummy_auth)
 
 
 # views

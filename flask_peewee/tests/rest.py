@@ -27,6 +27,8 @@ from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import HModel
 from flask_peewee.tests.test_app import HashedDoc
 from flask_peewee.tests.test_app import HashedToken
+from flask_peewee.tests.test_app import Label
+from flask_peewee.tests.test_app import Labeled
 from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
@@ -1436,42 +1438,82 @@ class RestApiUserAuthTestCase(RestApiTestCase):
         self.assertEqual(Note.get(message='via-column').user, self.inactive)
 
     def test_nested_readonly_mass_assignment_edit(self):
-        # A read-only field on a *nested* resource must be honored just like on
-        # a top-level one. A non-admin edits their own comment and tries to flip
-        # their user's "admin" flag through the nested user payload -- it must
-        # not take effect, even though the same user could not write to the
-        # admin-only /api/user/ endpoint directly.
-        comment = Comment.create(user=self.normal, body='hi')
+        # a nested resource's read-only fields are stripped like top-level
+        # ones. An admin edits their own comment and tries to clear their own
+        # "admin" flag through the nested user payload.
+        comment = Comment.create(user=self.admin, body='hi')
         url = '/api/comment/%s/' % comment.id
-        serialized = json.dumps({'body': 'edited', 'user': {'admin': True}})
+        serialized = json.dumps({'body': 'edited', 'user': {'admin': False}})
 
         resp = self.app.put(url, data=serialized,
-                            headers=self.auth_headers('normal', 'normal'))
+                            headers=self.auth_headers('admin', 'admin'))
         self.assertEqual(resp.status_code, 200)
-        # escalation blocked...
-        self.assertFalse(User.get(User.id == self.normal.id).admin)
-        # ...but the legitimate part of the write still applied.
+        self.assertTrue(User.get(User.id == self.admin.id).admin)
         self.assertEqual(Comment.get(Comment.id == comment.id).body, 'edited')
 
     def test_nested_readonly_mass_assignment_create(self):
-        # Creating a parent with a nested new user must not let a non-admin
-        # smuggle in a privileged ("admin": true) user via the nested payload.
-        admin_before = User.select().where(User.admin == True).count()
         serialized = json.dumps({
             'body': 'x',
-            'user': {'username': 'sneaky', 'password': 'x', 'email': '',
+            'user': {'username': 'nested', 'password': 'x', 'email': '',
                      'admin': True}})
 
         resp = self.app.post('/api/comment/', data=serialized,
-                             headers=self.auth_headers('normal', 'normal'))
+                             headers=self.auth_headers('admin', 'admin'))
         self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.get(User.username == 'nested').admin)
 
-        # whether or not a nested user is created, none may be an admin.
-        sneaky = User.get_or_none(User.username == 'sneaky')
-        if sneaky is not None:
-            self.assertFalse(sneaky.admin)
-        self.assertEqual(
-            User.select().where(User.admin == True).count(), admin_before)
+    def test_nested_write_requires_registered_auth(self):
+        # User is registered admin-only. A non-admin cannot write a user
+        # through a nested payload any more than through /api/user/.
+        comment = Comment.create(user=self.normal, body='hi')
+        url = '/api/comment/%s/' % comment.id
+        resp = self.app.put(url, data=json.dumps({
+            'body': 'edited', 'user': {'username': 'renamed'}}),
+            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(User.get(User.id == self.normal.id).username, 'normal')
+        self.assertEqual(Comment.get(Comment.id == comment.id).body, 'hi')
+
+        resp = self.app.post('/api/comment/', data=json.dumps({
+            'body': 'x', 'user': {'username': 'nested', 'password': 'x',
+                                  'email': ''}}),
+            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 403)
+        self.assertIsNone(User.get_or_none(User.username == 'nested'))
+
+    def test_nested_edit_follows_protected_methods(self):
+        # Label protects PUT only. The request is a POST, which authorize()
+        # would let through without credentials.
+        label = Label.create(name='l')
+        labeled = Labeled.create(label=label)
+        resp = self.app.post('/api/labeled/%s/' % labeled.id, data=json.dumps({
+            'label': {'name': 'edited'}}))
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(Label.get(Label.id == label.id).name, 'l')
+
+    def test_nested_create_follows_allowed_methods(self):
+        # Label does not allow POST.
+        resp = self.app.post('/api/labeled/', data=json.dumps({
+            'label': {'name': 'new'}}))
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(Label.select().count(), 0)
+
+    def test_authorize_nested_keeps_request_identity(self):
+        # Message's authentication resets g.user.
+        resource = api._registry[Note]
+        with self.flask_app.test_request_context('/', method='PUT'):
+            g.user = self.normal
+            resource.authorize_nested(api._registry[Message], 'PUT')
+            self.assertEqual(g.user, self.normal)
+
+    def test_can_authorize_without_protected_methods(self):
+        class CustomAuthentication(Authentication):
+            def __init__(self):
+                pass
+
+        resource = RestResource(api, Note, CustomAuthentication())
+        with self.flask_app.test_request_context('/', method='POST'):
+            self.assertTrue(resource.can_authorize('PUT'))
 
     def test_filter_join_with_nested_serialization(self):
         # a filter that joins a related table (DQ-based) must compose with the

@@ -18,6 +18,8 @@ from flask_peewee.tests.test_app import HashedToken
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import Message
+from flask_peewee.tests.test_app import Label
+from flask_peewee.tests.test_app import Labeled
 from flask_peewee.tests.test_app import Link
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import ScopedItem
@@ -33,7 +35,7 @@ class FlaskPeeweeTestCase(unittest.TestCase):
         # drop_tables/create_tables resolve foreign-key ordering for us.
         models = [User, Message, Note, Comment, EModel, FModel, GModel,
                   HModel, Ping, ApiToken, Tweet, ScopedItem, ScopedRef, Link,
-                  HashedToken, HashedDoc]
+                  HashedToken, HashedDoc, Label, Labeled]
         test_app.db.database.drop_tables(models)
         test_app.db.database.create_tables(models)
 

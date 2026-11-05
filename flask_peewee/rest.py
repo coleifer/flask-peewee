@@ -367,6 +367,14 @@ class RestResource(object):
     def authorize(self):
         return self.authentication.authorize()
 
+    def can_authorize(self, method):
+        # `method` is the operation being performed, which can differ from
+        # request.method, e.g. a POST that makes a nested edit. authorize()
+        # only looks at request.method, so if that is open and `method` is
+        # protected, it would allow the request without checking credentials.
+        protected = getattr(self.authentication, 'protected_methods', ())
+        return method not in protected or request.method in protected
+
     def get_api_name(self):
         return slugify(self.model.__name__)
 
@@ -748,6 +756,25 @@ class RestResource(object):
     def object_detail(self, obj):
         return self.response(self.serialize_object(obj))
 
+    def authorize_nested(self, resource, method):
+        # a nested write must pass the authentication and allowed_methods the
+        # child's model is registered with, as a direct request would. A model
+        # not registered with the api is writable through include_resources.
+        registered = self.api._registry.get(resource.model)
+        if registered is None:
+            return True
+        if method not in registered.allowed_methods:
+            return False
+        if not registered.can_authorize(method):
+            return False
+        # authorize() resets g.user and g.api_key. The parent's write and its
+        # owner stamping still need the request's own identity.
+        saved = g.get('user'), g.get('api_key')
+        try:
+            return bool(registered.authorize())
+        finally:
+            g.user, g.api_key = saved
+
     def save_related_objects(self, instance, data):
         if not self.nested_writes:
             return
@@ -761,10 +788,12 @@ class RestResource(object):
                 # resource would -- editing an existing related row runs
                 # check_put, creating a new one runs check_post.
                 if existing is not None and existing.get_id() is not None:
+                    method = 'PUT'
                     allowed = rel_resource.check_put(rel_obj)
                 else:
+                    method = 'POST'
                     allowed = rel_resource.check_post(rel_obj)
-                if not allowed:
+                if not allowed or not self.authorize_nested(rel_resource, method):
                     raise RestForbidden()
                 rel_resource.save_related_objects(rel_obj, v)
                 setattr(instance, k, rel_resource.save_object(rel_obj, v))
