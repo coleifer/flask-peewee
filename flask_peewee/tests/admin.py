@@ -5,6 +5,7 @@ import datetime
 import io
 import json
 import re
+import unittest
 
 from flask import g
 from flask import get_flashed_messages
@@ -12,6 +13,7 @@ from flask import request
 from flask import session
 from flask import url_for
 
+from flask_peewee.admin import Action
 from flask_peewee.admin import AdminFilterModelConverter
 from flask_peewee.admin import AdminPanel
 from flask_peewee.admin import Export
@@ -1969,6 +1971,19 @@ class AdminFilterTestCase(BaseAdminTestCase):
             self.assertEqual(rows, [{'note': 'n1', 'coded': {'label': 'Alpha'}}])
         finally:
             db.database.drop_tables([CodedRef, Coded])
+
+
+class ActionNameTestCase(unittest.TestCase):
+    def test_default_name_and_description(self):
+        class MarkPublishedAction(Action): pass
+        class ArchiveActionLogAction(Action): pass
+
+        for action, name, description in (
+                (MarkPublishedAction(), 'MarkPublished', 'Mark Published'),
+                (ArchiveActionLogAction(), 'ArchiveActionLog', 'Archive Action Log'),
+                (Action(name='flag_as-spam'), 'flag_as-spam', 'Flag As Spam'),
+                (Action(name='x', description='Custom'), 'x', 'Custom')):
+            self.assertEqual((action.name, action.description), (name, description))
 
 
 class TemplateHelperTestCase(FlaskPeeweeTestCase):

@@ -78,8 +78,10 @@ class AdminFilterModelConverter(FilterModelConverter):
 class Action(object):
     def __init__(self, name=None, description=None, confirm=False,
                  form_class=None):
-        self.name = name or (type(self).__name__.replace('Action', ''))
-        self.description = description or re.sub(r'[\-_]', ' ', self.name).title()
+        self.name = name or re.sub(r'Action$', '', type(self).__name__)
+        # "MarkPublished" and "mark_published" both read "Mark Published".
+        self.description = description or re.sub(
+            r'(?<=[a-z0-9])(?=[A-Z])|[\-_]', ' ', self.name).title()
         self.confirm = confirm or form_class is not None
         self.form_class = form_class
 
