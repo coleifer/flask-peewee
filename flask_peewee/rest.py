@@ -448,7 +448,8 @@ class RestResource(object):
             for op, arg_list, negated in filters:
                 clean_args = self.clean_arg_list(arg_list)
                 if isinstance(field, BooleanField):
-                    clean_args = [convert_boolean(arg) for arg in clean_args]
+                    clean_args = [arg if arg is None else convert_boolean(arg)
+                                  for arg in clean_args]
                 query = self.apply_filter(query, lhs, op, clean_args, negated)
 
         return query

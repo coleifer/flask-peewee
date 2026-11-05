@@ -576,6 +576,19 @@ class RestApiResourceTestCase(RestApiTestCase):
         self.assertEqual(len(resp_json['objects']), 5)
         self.assertEqual(resp_json['meta']['page_count'], 2)  # ceil(8 / 5)
 
+    def test_boolean_filter_none(self):
+        for value in (True, False, None):
+            Flag.create(value=value)
+
+        def get(qs):
+            resp = self.app.get('/api/flag/?%s&ordering=id' % qs)
+            return [o['value'] for o in self.response_json(resp)['objects']]
+
+        self.assertEqual(get('value=none'), [None])
+        self.assertEqual(get('value__is=None'), [None])
+        self.assertEqual(get('-value=none'), [True, False])
+        self.assertEqual(get('value=false'), [False])
+
     def test_nested_serialization_is_single_query(self):
         # listing rows with a nested chain (C -> b -> a) must not issue a
         # lookup per row -- the whole graph loads in one joined query.
