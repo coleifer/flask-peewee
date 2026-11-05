@@ -3,10 +3,8 @@
 Admin Interface
 ===============
 
-Many web applications ship with an "admin area", where privileged users can
-view and modify content. By introspecting your application's models, flask-peewee
-can provide you with straightforward, easily-extensible forms for managing your
-application content.
+By introspecting your application's models, flask-peewee can provide you with
+extensible forms for managing your application content.
 
 Here's a screen-shot of the admin dashboard:
 
@@ -18,8 +16,6 @@ You can also try out a custom theme. Here is the ``crux`` theme:
 
 Getting started
 ---------------
-
-To get started with the admin, there are just a couple steps:
 
 1. Instantiate an :py:class:`Auth` backend for your project. This component
    provides the security for the admin area
@@ -167,8 +163,8 @@ Filtering
 ^^^^^^^^^
 
 The list and export views expose per-field filters (equals, less-than, contains,
-etc., chosen by field type). By default every field is filterable. Two
-attributes narrow that:
+etc., chosen by field type). By default every field except a ``BlobField`` is
+filterable. To control which fields are filterable, set:
 
 * ``filter_fields``: a whitelist of the only fields that may be filtered
 * ``filter_exclude``: a blacklist of fields to hide from filtering
@@ -269,28 +265,8 @@ To make simple overrides to the default add/edit form, use
             },
         }
 
-For full control, return any form class from :py:meth:`~ModelAdmin.get_form`.
-This example shows how to add a file upload widget to a form (see also
-:ref:`admin-file-uploads`):
-
-.. code-block:: python
-
-    class PhotoAdmin(ModelAdmin):
-        columns = ['image', 'thumb']
-
-        def get_form(self, adding=False):
-            class PhotoForm(Form):
-                image = HiddenField()
-                image_file = FileField('Image file')
-
-            return PhotoForm
-
-        def save_model(self, instance, form, adding=False):
-            instance = super(PhotoAdmin, self).save_model(instance, form, adding)
-            if 'image_file' in request.files:
-                file = request.files['image_file']
-                instance.save_image(file)
-            return instance
+For full control, return any form class from :py:meth:`~ModelAdmin.get_form`
+(see also :ref:`admin-file-uploads`).
 
 To change how a field type is rendered, subclass the form converter and
 point ``form_converter`` at it. Here every ``TextField`` renders as a
@@ -305,6 +281,7 @@ single-line input instead of a textarea:
     class SingleLineConverter(AdminModelConverter):
         def __init__(self, *args, **kwargs):
             super(SingleLineConverter, self).__init__(*args, **kwargs)
+            self.defaults = dict(self.defaults)
             self.defaults[TextField] = fields.StringField
 
     class MessageAdmin(ModelAdmin):
@@ -350,8 +327,7 @@ for an individual ``Model``:
 
     admin.register(Message, MessageAdmin)
 
-This instructs the admin to use a custom template for the edit page in the Message
-admin. That template is stored in the application's templates. It might look
+That template is stored in the application's templates. It might look
 something like this:
 
 .. code-block:: jinja
@@ -360,12 +336,13 @@ something like this:
 
     {# override any blocks here #}
 
-There are five templates that can be overridden:
+You can override any of these templates:
 
 * index
 * add
 * edit
 * delete
+* action_confirm
 * export
 
 Templates resolve through flask's loader, so a file in your application's
@@ -376,9 +353,10 @@ defines one, else a minimal fallback shipped with flask-peewee.
 
 For smaller changes, extend a packaged template and override its blocks:
 
-* ``admin/base.html``: ``title``, ``theme_css``, ``extra_script``,
-  ``body_class``, ``sidebar``, ``content_title``, ``breadcrumbs``,
-  ``pre_content``, ``content``, ``footer``
+* ``admin/base.html``: ``title``, ``title_branding``, ``theme_css``,
+  ``extra_script``, ``body_class``, ``sidebar``, ``content_title``,
+  ``content_tagline``, ``breadcrumbs``, ``pre_content``, ``content``,
+  ``footer``
 * the model templates (``admin/models/*.html``): ``extra_tabs``,
   ``export_action``, ``export_tab``, ``tab_index_class``,
   ``tab_add_class``, ``tab_export_class``, ``extra_form``,
@@ -394,14 +372,15 @@ By default a foreign key renders as a ``<select>`` of the related rows.
 * In filters, the ``<select>`` is automatically limited to the first 20 rows
   (plus whichever row is currently selected), so the page stays small, but
   only those 20 rows are reachable.
-* In model forms (add/edit), the ``<select>`` is **not** limited. Every related
+* In model forms (add/edit), the ``<select>`` is not limited. Every related
   row is rendered.
 
 To handle large related tables, ``foreign_key_lookups`` allows a mapping from
-foreign-key field name to the related field to search and display. This
+foreign-key field name to the related field to search on. In forms this
 replaces the plain ``<select>`` with a paginated, type-ahead search backed by
-the model admin's ``ajax_list`` endpoint (matching ``<field> LIKE '%query%'``,
-a page at a time), so any row is reachable no matter how large the table:
+the model admin's ``ajax_list`` endpoint (a case-insensitive substring match
+on ``<field>``, a page at a time), so any row is reachable no matter how large
+the table:
 
 .. code-block:: python
 
@@ -412,8 +391,8 @@ a page at a time), so any row is reachable no matter how large the table:
 In both contexts the candidate rows come from the related model's registered
 admin (if one exists), determined by its :py:meth:`~ModelAdmin.get_query`.
 
-Specifying foreign-key lookups is a best practice when the related table is
-large. The select is replaced by the current value and a Select button:
+The select is replaced by a button labeled with the current value,
+or "Select..." when there is none:
 
 .. image:: fp-message-fk-btn.png
 
@@ -453,8 +432,7 @@ The action shows up in the "With selected..." dropdown labeled with its
 (``FlagAction`` becomes "Flag"). Pass ``name`` to the constructor to override
 it, e.g. ``FlagAction(name='Flag as spam')``.
 
-If a callback returns a Flask ``Response``, it is sent to the user as-is, handy
-for generating a download from the selected rows:
+If a callback returns a Flask ``Response``, it is sent to the user as-is:
 
 .. code-block:: python
 
@@ -513,8 +491,8 @@ view's "With selected..." dropdown). It lets you choose which fields to
 include, across foreign keys too, and downloads the result as a JSON or CSV
 file, honoring whatever filters are currently applied.
 
-By default every field is exportable. Two :py:class:`ModelAdmin` attributes
-restrict that:
+By default every field is exportable. To control which fields are exportable,
+set:
 
 * ``export_fields``: a whitelist of field names that may be exported
 * ``export_exclude``: a blacklist of field names to withhold
@@ -526,7 +504,7 @@ restrict that:
         export_exclude = ('password',)   # never allow the password hash out
 
 These restrictions are enforced server-side. Hand-posting a withheld field
-name will not dump it.
+name will not export it.
 
 Related fields are exported nested under their foreign key. A related model
 defers to its own registered :py:class:`ModelAdmin`'s
@@ -545,7 +523,8 @@ produces:
 .. note::
     Because related data nests under its foreign key, that foreign key is
     included automatically, which in CSV leaves the foreign key's own column
-    empty. There is no way to nest a related field without it.
+    empty if it is also selected. There is no way to nest a related field
+    without it.
 
 The CSV export writes a header row of the selected field names. Related
 lookups keep their ``user__username`` form. Values go through the same
@@ -622,9 +601,6 @@ And the template:
       </form>
     {% endblock %}
 
-A panel can provide as many urls and views as you like. These views will all be
-protected by the same authentication as other parts of the admin area.
-
 Shipped panels
 ^^^^^^^^^^^^^^
 
@@ -654,7 +630,7 @@ and generating form fields). Peewee, however, does not have a "file field".
 I generally store a path to a file on disk and thus use a ``CharField`` for
 the storage.
 
-Here's a very simple example of a "photo" model and a ``ModelAdmin`` that enables
+Here's a simple example of a "photo" model and a ``ModelAdmin`` that enables
 file uploads.
 
 .. code-block:: python
@@ -716,7 +692,7 @@ file uploads.
 
         def save_model(self, instance, form, adding=False):
             instance = super(PhotoAdmin, self).save_model(instance, form, adding)
-            if 'image_file' in request.files:
+            if request.files.get('image_file'):
                 file = request.files['image_file']
                 instance.save_image(file)
             return instance

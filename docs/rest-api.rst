@@ -8,13 +8,15 @@ REST API. There are several components to the ``rest`` module, but the basic
 setup is to create an instance of :py:class:`RestAPI` and then register your
 project's models with subclasses of :py:class:`RestResource`.
 
-Each :py:class:`RestResource` you expose via the API will support, by default,
-the following:
+By default, each :py:class:`RestResource` you expose via the API supports:
 
 * ``/api/<model name>/``: GET and POST requests
 * ``/api/<model name>/<primary key>/``: GET, PUT, PATCH and DELETE requests.
   POST also edits, and ``POST /<primary key>/delete/`` works as DELETE, for
-  clients that cannot issue PUT or DELETE.
+  clients that cannot issue PUT or DELETE. A POST edit runs ``check_put`` and
+  needs PUT in ``allowed_methods``. A POST delete runs ``check_delete`` and
+  needs DELETE. If PUT or DELETE is protected and POST is not, the POST is
+  refused.
 
 PUT and PATCH share partial-update semantics, changing only the fields
 present in the request body.
@@ -23,7 +25,7 @@ Also, you can filter results by columns on the model using django-style syntax,
 for example:
 
 * ``/api/blog/?name=Some%20Blog``
-* ``/api/blog/?author__username=some_blogger``
+* ``/api/blog/?author__username=some_blogger`` (with ``author__username`` in ``filter_fields``)
 
 Full operations:
 
@@ -38,12 +40,12 @@ Full operations:
 * ``__is``: is, ``?field__is=None`` or ``?-field__is=None`` for NOT NULL
 * ``__is_not``: is not, ``?field__is_not=None``
 * ``__is_null``: takes true/false, ``?field__is_null=true`` for IS NULL
-* ``__like``: wild-card matching, case-sensitive
+* ``__like``: wild-card matching, case-sensitive (SQLite runs it as ``GLOB``, with ``*`` and ``?`` wildcards)
 * ``__ilike``: wild-card matching, case-insensitive
 * ``__contains``: substring match, case-insensitive
 * ``__startswith``, ``__endswith``: prefix / suffix match, case-insensitive
 * ``__regexp``: regular-expression matching (database-specific)
-* ``__iregexp``: like ``regexp`` but case-insensitive
+* ``__iregexp``: like ``regexp`` but case-insensitive (not supported on SQLite)
 * ``__between``: two comma-separated bounds, inclusive, ``?id__between=2,5``
 
 To negate an operation, prefix it with the ``-`` character, e.g. the following
@@ -63,10 +65,8 @@ Special Python constants are supported when used as querystring parameters:
 Getting started with the API
 ----------------------------
 
-In this documentation we'll start with a very simple API and build it out. The
-complete version of this API is included in the `example app
-<https://github.com/coleifer/flask-peewee/tree/master/example>`_, so feel free
-to refer there.
+A version of this API is included in the `example app
+<https://github.com/coleifer/flask-peewee/tree/master/example>`_.
 
 The project will be a simple 'twitter-like' app where users can post short messages
 and "follow" other users.
@@ -156,7 +156,7 @@ Now if we hit our project at ``/api/message/`` we should get something like the 
     }
 
 Say we're interested in the first message, we can hit ``/api/message/1/`` to view
-just the details on that object:
+the details on that object:
 
 .. code-block:: javascript
 
@@ -171,7 +171,7 @@ just the details on that object:
 Customizing what is returned
 ----------------------------
 
-If you access the ``User`` API endpoint, we quickly notice a problem:
+If you access the ``User`` API endpoint, we notice a problem:
 
 .. code-block:: console
 
@@ -193,7 +193,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
           "email": "",
           "join_date": "2026-09-16T18:34:49",
           "active": true,
-          "password": "d033e22ae348aeb5660fc2140aec35850c4da997",
+          "password": "scrypt:32768:8:1$Ia5A1NX1shoHiCxVQru54Q$d6f8538b16970cc3...",
           "id": 1
         },
         {
@@ -202,7 +202,7 @@ If you access the ``User`` API endpoint, we quickly notice a problem:
           "email": "coleifer@gmail.com",
           "join_date": "2026-09-16T18:35:56",
           "active": true,
-          "password": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3",
+          "password": "scrypt:32768:8:1$AVkUcf3LPS1JjQHJqS4aPA$af54df0245f9d4a0...",
           "id": 2
         }
       ]
@@ -229,8 +229,6 @@ from serialization, subclass :py:class:`RestResource`:
     api.register(Relationship)
     api.register(Message)
 
-Now emails and passwords are no longer returned by the API.
-
 ``exclude`` is a blacklist. Its positive counterpart is ``fields``, a
 whitelist of the only fields to serialize. The resource above could instead expose just
 the username and id:
@@ -239,9 +237,6 @@ the username and id:
 
     class UserResource(RestResource):
         fields = ('username', 'id')
-
-Reach for whichever is more convenient: ``fields`` when you want to expose a
-small, fixed set of columns, ``exclude`` when you want everything but a few.
 
 For computed values, override :py:meth:`~RestResource.prepare_data`. It
 receives each object and its serialized dictionary on the way out:
@@ -259,7 +254,8 @@ receives each object and its serialized dictionary on the way out:
 Nested resources
 ----------------
 
-By default a foreign key is serialized as the related row's primary key. Notice
+By default a foreign key is serialized as the value it stores. That is the
+related row's primary key, unless the key was declared with ``field=``. Notice
 the ``"user": 1`` in the message output above. To embed the full related
 object instead, point ``include_resources`` at the resource that should render it:
 
@@ -304,23 +300,28 @@ foreign key. For example, a ``Relationship`` resource can expand both endpoints:
             'to_user': UserResource,
         }
 
-The whole nested tree is loaded in a single query, one ``JOIN`` per included
-foreign key, so embedding related objects does not incur the N+1 queries you
-would get from following each row's relations lazily.
+In a list response the whole nested tree is loaded in a single query, one
+``JOIN`` per included foreign key, so embedding related objects does not incur
+the N+1 queries you would get from following each row's relations lazily.
 
 Nested writes
 ^^^^^^^^^^^^^
 
 Included resources also work on the way in. A ``POST`` or ``PUT`` whose body
-carries a nested object (instead of a bare id) creates or updates the related row
-as part of the same request. Two rules keep that safe:
+contains a nested object (instead of a bare id) creates or updates the related row
+as part of the same request. A nested write follows the same rules as a direct
+write to that resource:
 
-* A resource's ``readonly_fields`` are stripped at every level of the
-  payload, so a nested object cannot smuggle in a field the resource protects
-  (e.g. slipping ``"admin": true`` into a nested user).
-* Each nested write must pass the child resource's own ``check_post`` /
-  ``check_put``, exactly as a direct write to that resource would, so nesting
-  can never be used to sidestep a resource's authorization.
+* Each resource strips its own ``readonly_fields`` from its level of the
+  payload, so a nested object cannot set a field the resource protects
+  (e.g. ``"admin": true`` in a nested user).
+* A nested edit runs the child resource's ``check_put`` on the row as stored.
+  A nested create runs its ``check_post``.
+* A nested edit counts as a ``PUT`` and a nested create as a ``POST``. That
+  method must be in the ``allowed_methods`` the child's model is registered
+  with, and must pass its authentication. If the authentication protects that
+  method but not the request's own method, the write is refused. A model not
+  registered with the API has no such check.
 
 The entire object graph is saved in a single transaction, so if any nested write
 is rejected the whole request rolls back. To disable nested writes for a
@@ -336,12 +337,12 @@ body (send ``Content-Type: application/json``), a form field named
 ``data`` holding a JSON string (the ``curl -d data='{...}'`` convention),
 or plain form fields, one per column.
 
-Write payloads are validated as they are deserialized, and problems surface as
-a 400 with a JSON error rather than a 500 (or worse, bad data):
+Write payloads are validated as they are deserialized, and problems are
+reported as a 400 with a JSON error rather than a 500:
 
 * A body that is not valid JSON, or whose JSON is not an object, is rejected.
-* Values that cannot be coerced to their field's type are rejected. This
-  includes date/time strings: a value like ``"pub_date": "not-a-date"`` returns
+* Date/time strings that cannot be parsed are rejected. A value like
+  ``"pub_date": "not-a-date"`` returns
   ``{"error": "Unrecognized date/time value for \"pub_date\": 'not-a-date'"}``
   instead of being written through to the database. Both ISO-8601 (what the
   API itself emits) and the field's own ``formats`` are accepted.
@@ -375,9 +376,10 @@ e.g. ``user__usernmae``.
 Error responses
 ---------------
 
-Every error the API returns is a JSON object with a single ``error`` key,
-whether it is a 400, 401, 403, 404 or 405. A 401 also carries the
-``WWW-Authenticate`` challenge header.
+An error from a resource is a JSON object with a single ``error`` key, whether
+it is a 400, 401, 403, 404 or 405. A 401 also includes the
+``WWW-Authenticate`` challenge header. A url no resource matches gets Flask's
+default HTML 404. A method outside ``allowed_methods`` gets its HTML 405.
 
 .. code-block:: console
 
@@ -405,15 +407,13 @@ resource and POST a JSON list to create many objects in one request:
 
 Each object passes through the same validation as a single create, and the
 whole batch is saved in one transaction. An object that fails returns a 400
-naming its index and nothing is saved. A list longer than ``max_bulk``
+that gives its index and nothing is saved. A list longer than ``max_bulk``
 objects (default 100) is rejected. On success the response is
 ``{"objects": [...]}`` with the created objects in order.
 
 
 Allowing users to post objects
 ------------------------------
-
-What if we want to create new messages via the Api? Or modify/delete existing messages?
 
 .. code-block:: console
 
@@ -480,7 +480,7 @@ The response object will look something like this:
     {
       'content': 'hello api',
       'user': 1,
-      'pub_date': '2026-09-22T11:25:02',
+      'pub_date': '2026-09-22T11:25:02.100159',
       'id': 3
     }
 
@@ -504,12 +504,12 @@ The response will look like this:
 
     {
       'content': 'haxed you, bro',
-      'pub_date': '2026-09-16T18:36:15',
+      'pub_date': '2026-09-16T18:46:59',
       'user': 2,
       'id': 2
     }
 
-This is a problem. We need a way of ensuring that users can only edit their
+We need a way of ensuring that users can only edit their
 own messages. Furthermore, when they create messages we need to make sure the
 message is assigned to them.
 
@@ -553,10 +553,10 @@ It is fine to modify our own message, though (message with id=1):
     )
     print(resp.status_code)  # 200
 
-Under-the-hood, the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py>`_ of the :py:class:`RestrictOwnerResource` is pretty simple.
+:py:class:`RestrictOwnerResource` applies these rules (see the `implementation <https://github.com/coleifer/flask-peewee/blob/master/flask_peewee/rest.py>`_):
 
-* PUT / PATCH / DELETE: verify the authenticated user is the owner of the object
-* POST: assign the authenticated user as the owner of the new object
+* PUT / PATCH / DELETE, and POST to a detail url: verify the authenticated user is the owner of the object
+* POST to the list url: assign the authenticated user as the owner of the new object
 
 
 Locking down a resource
@@ -685,8 +685,8 @@ expiry):
 
 The matching row is stored on ``g.api_key``. When the model has a ``user``
 foreign key, ``g.user`` is set to the token's user, so bearer tokens work with
-:py:class:`RestrictOwnerResource` and anything else keyed off the
-authenticated user: new objects are assigned to the token's user, and they may
+:py:class:`RestrictOwnerResource` and anything else that uses the
+authenticated user. New objects are assigned to the token's user, and they may
 only modify their own. Omit ``user_model`` for tokens tied to no user.
 
 Custom token schemes
@@ -698,14 +698,13 @@ looks the presented token up verbatim in a model with a ``token`` field
 and sets ``g.api_key``. :py:class:`UserBearerAuthentication` extends it to
 resolve the row to a user through its ``user_field`` foreign key and set
 ``g.user`` instead of ``g.api_key``. Set ``user_field = None`` when the token
-lives on the user model itself.
+is a field of the user model itself.
 
 
 Filtering records and querying
 ------------------------------
 
-A REST Api is not very useful if it cannot be queried in a meaningful fashion. To
-this end, the flask-peewee :py:class:`RestResource` objects support "django-style"
+The flask-peewee :py:class:`RestResource` objects support "django-style"
 filtering:
 
 .. code-block:: console
@@ -728,14 +727,15 @@ This call will return only messages by the ``User`` with id=2:
       "objects": [
         {
           "content": "haxed you, bro",
-          "pub_date": "2026-09-16T18:36:15",
+          "pub_date": "2026-09-16T18:46:59",
           "user": 2,
           "id": 2
         }
       ]
     }
 
-Joins can be traversed using the django double-underscore notation:
+Joins can be traversed using the django double-underscore notation, for related
+columns listed in ``filter_fields`` (see below):
 
 .. code-block:: console
 
@@ -754,14 +754,14 @@ Joins can be traversed using the django double-underscore notation:
       },
       "objects": [
         {
-          "content": "flask and peewee, together at last!",
+          "content": "haxed you, bro",
           "pub_date": "2026-09-16T18:36:15",
           "user": 1,
           "id": 1
         },
         {
           "content": "hello api",
-          "pub_date": "2026-09-22T11:25:02",
+          "pub_date": "2026-09-22T11:25:02.100159",
           "user": 1,
           "id": 3
         }
@@ -797,11 +797,6 @@ It is also supported to use different comparison operators with the same double-
     }
 
 
-Valid Comparison Operators are:
-    'eq', 'lt', 'lte', 'gt', 'gte', 'ne', 'in', 'not_in', 'is', 'is_not',
-    'is_null', 'like', 'ilike', 'contains', 'startswith', 'endswith',
-    'regexp', 'iregexp', 'between'
-
 The ``in`` and ``not_in`` operators accept a comma-separated list and/or
 repeated parameters, so ``?id__in=1,2`` and ``?id__in=1&id__in=2`` are
 equivalent. ``between`` takes exactly two comma-separated values.
@@ -815,7 +810,7 @@ repeated ``ne`` or negated values exclude every listed value.
     for filtering) are ignored by default, so a typo such as ``?usernam=x``
     silently returns every row. The lenient default keeps stray query-string
     parameters (cache-busters, tracking params) from breaking a request. Set
-    ``reject_unknown_filters = True`` on the resource to get a 400 naming the
+    ``reject_unknown_filters = True`` on the resource to get a 400 listing the
     offending parameters instead. Those stray parameters then 400 as well, so
     enable it only when clients send clean query strings. An unknown
     ``ordering`` column is always ignored.
@@ -824,10 +819,10 @@ repeated ``ne`` or negated values exclude every listed value.
 Restricting what can be filtered
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default every field on the model is filterable, but related columns are
-not. Since filters come straight off the query string, you will often want to
-restrict this, especially for sensitive columns. Three
-:py:class:`RestResource` attributes control it:
+By default every field on the model except a ``BlobField`` is filterable, but
+related columns are not. Since filters come straight off the query string, you
+will often want to restrict this, especially for sensitive columns. To control
+which fields are filterable, set:
 
 * ``filter_fields``: a whitelist, only these fields may be filtered on. Related
   columns use ``__`` notation, e.g. ``user__username``.

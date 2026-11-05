@@ -35,7 +35,7 @@ Add a field to a model:
         username = CharField()
         karma = IntegerField(default=0)
 
-``diff`` prints what changed (we added the "karma" field), and ``generate``
+``diff`` prints what changed, and ``generate``
 writes the migration:
 
 .. code-block:: console

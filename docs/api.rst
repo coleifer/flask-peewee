@@ -16,7 +16,7 @@ Admin
     a method for ensuring a user has permission to access the admin area.
 
     The Admin object requires an :py:class:`Auth` instance when being instantiated,
-    which in turn requires a Flask app and a py:class:`Database` wrapper.
+    which in turn requires a Flask app and a :py:class:`Database` wrapper.
 
     Here is an example of how you might instantiate an Admin object:
 
@@ -119,9 +119,6 @@ Admin
                 # run the WSGI application
                 app.run()
 
-        .. note::
-            call ``setup()`` after registering your models and panels
-
     .. py:method:: check_user_permission(user)
 
         Check whether the given user has permission to access the admin area. The
@@ -209,7 +206,8 @@ Exposing Models with the ModelAdmin
 
         Only allow filtering on the given fields
 
-    .. py:attribute:: max_filter_depth = 3
+    .. py:attribute:: max_filter_depth
+        :value: 3
 
         How many foreign-key hops the filter and export field trees may
         traverse into related models
@@ -221,8 +219,8 @@ Exposing Models with the ModelAdmin
 
     .. py:attribute:: foreign_key_lookups
 
-        Mapping of foreign-key field name to the related field to search and
-        display on, e.g. ``{'user': 'username'}``. Replaces the plain
+        Mapping of foreign-key field name to the related field to search
+        on, e.g. ``{'user': 'username'}``. Replaces the plain
         ``<select>`` with a paginated type-ahead picker
 
     .. py:attribute:: actions
@@ -247,7 +245,8 @@ Exposing Models with the ModelAdmin
 
         Only display the given fields on the "add" and "edit" form
 
-    .. py:attribute:: field_args = None
+    .. py:attribute:: field_args
+        :value: None
 
         Per-field keyword arguments passed through to wtf-peewee's
         ``model_form``, e.g. ``{'content': {'label': 'Body'}}``. See
@@ -268,37 +267,46 @@ Exposing Models with the ModelAdmin
         renders an unlabeled section, and fields missing from every section
         render in a trailing unlabeled one.
 
-    .. py:attribute:: paginate_by = 20
+    .. py:attribute:: paginate_by
+        :value: 20
 
         Number of records to display on index pages
 
-    .. py:attribute:: paginate_count = True
+    .. py:attribute:: paginate_count
+        :value: True
 
         Set to ``False`` to skip ``COUNT()`` queries on huge tables. The list
-        view then paginates with previous/next links alone, and the dashboard
-        and tab record counts are hidden
+        view then paginates with previous/next links alone, and the
+        dashboard, tab and export page record counts are hidden
 
-    .. py:attribute:: filter_paginate_by = 15
+    .. py:attribute:: filter_paginate_by
+        :value: 15
 
-        Default pagination when filtering in a modal dialog
+        Default pagination when searching in the ``foreign_key_lookups`` picker
 
-    .. py:attribute:: delete_collect_objects = True
+    .. py:attribute:: delete_collect_objects
+        :value: True
 
         Collect and display a list of "dependencies" when deleting
 
-    .. py:attribute:: delete_recursive = True
+    .. py:attribute:: delete_recursive
+        :value: True
 
-        Delete "dependencies" recursively
+        Delete "dependencies" recursively. A dependent row whose foreign key
+        is nullable is kept, with the key set to NULL.
 
-    .. py:attribute:: can_add = True
+    .. py:attribute:: can_add
+        :value: True
 
         Allow new instances to be added through the admin
 
-    .. py:attribute:: can_edit = True
+    .. py:attribute:: can_edit
+        :value: True
 
         Allow instances to be edited through the admin
 
-    .. py:attribute:: can_delete = True
+    .. py:attribute:: can_delete
+        :value: True
 
         Allow instances to be deleted through the admin
 
@@ -368,7 +376,7 @@ Exposing Models with the ModelAdmin
         index/export views. This form is slightly different in that it is tailored for use
         when filtering the list of models.
 
-        :rtype: A special Form instance (:py:class:`FilterForm`) that will be used
+        :rtype: A ``FilterForm`` instance that will be used
                 when filtering the list of objects in the index view.
 
     .. py:method:: save_model(instance, form, adding=False)
@@ -392,7 +400,8 @@ Exposing Models with the ModelAdmin
                 instance.save(force_insert=adding)
                 return instance
 
-        :param instance: an unsaved model instance
+        :param instance: a new, unsaved model instance when adding, or the
+                instance being edited
         :param form: a validated form instance
         :param adding: boolean to indicate whether we are adding a new instance
                 or saving an existing
@@ -459,8 +468,9 @@ Exposing Models with the ModelAdmin
 
     .. py:method:: get_url_name(name)
 
-        Since urls are namespaced, this function provides an easy way to get
-        full urls to views provided by this ModelAdmin
+        Since urls are namespaced, this function provides a way to get
+        the full endpoint names, for ``url_for()``, of views provided by this
+        ModelAdmin
 
     .. py:method:: process_filters(query)
 
@@ -472,7 +482,7 @@ Exposing Models with the ModelAdmin
         * special ``Form`` instance containing fields for filtering
         * filtered query
         * a list containing the currently selected filters
-        * a tree-structure containing the fields available for filtering (:py:class:`FieldTreeNode`)
+        * a tree-structure containing the fields available for filtering (``FieldTreeNode``)
 
         :rtype: A tuple as described above
 
@@ -490,7 +500,8 @@ Bulk actions with Action
     :param name: dropdown label, defaults to the class name minus the
         "Action" suffix
     :param description: heading shown on the confirmation page and in the
-        success message, defaults to a title-cased version of ``name``
+        success message, defaults to ``name`` split into capitalized words
+        (``MarkPublished`` and ``mark_published`` both give "Mark Published")
     :param confirm: when ``True``, run the callback only after the user
         approves a confirmation page listing the selected rows
     :param form_class: a wtforms form class to render on the confirmation
@@ -538,11 +549,12 @@ Extending admin functionality using AdminPanel
 
     .. py:method:: get_url_name(name)
 
-        Since urls are namespaced, this function provides an easy way to get
-        full urls to views provided by this panel
+        Since urls are namespaced, this function provides a way to get
+        the full endpoint names, for ``url_for()``, of views provided by this
+        panel
 
         :param name: string representation of the view function whose url you want
-        :rtype: String representing url
+        :rtype: String endpoint name, for ``url_for()``
 
         .. code-block:: html
 
@@ -576,7 +588,7 @@ Extending admin functionality using AdminPanel
 Auth
 ----
 
-.. py:class:: Auth(app, db[, user_model[, prefix[, name[, clear_session[, default_next_url[, db_table[, reset]]]]]]])
+.. py:class:: Auth(app, db[, user_model[, prefix[, name[, clear_session[, default_next_url[, db_table[, reset[, session_field]]]]]]]])
 
     The class that provides methods for authenticating users and tracking
     users across requests. It also provides a model for persisting users to
@@ -620,7 +632,7 @@ Auth
         to retrieve the current logged-in user and store it on the global flask
         variable ``g``.
 
-    :param app: flask application to bind admin to
+    :param app: flask application to bind auth to
     :param db: :py:class:`Database` database wrapper for flask app
     :param user_model: ``User`` model to use
     :param prefix: url to bind authentication views to, defaults to ``/accounts``
@@ -633,13 +645,17 @@ Auth
         reserved word in postgres)
     :param reset: enable the ``/forgot/`` and ``/reset/<token>/`` password
         reset views (requires overriding :py:meth:`Auth.send_reset_email`)
+    :param session_field: name of a ``CharField`` on the user model that
+        stores a revocable session token. See :ref:`authentication`.
 
-    .. py:attribute:: default_next_url = '/'
+    .. py:attribute:: default_next_url
+        :value: '/'
 
         The url to redirect to upon successful login in the event a ``?next=<xxx>``
         is not provided.
 
-    .. py:attribute:: reset_token_max_age = 3600
+    .. py:attribute:: reset_token_max_age
+        :value: 3600
 
         Number of seconds a password reset token remains valid.
 
@@ -669,6 +685,33 @@ Auth
         :param func: a view function to be marked as login-required
         :rtype: if the user is logged in, return the view as normal, otherwise
             returns a redirect to the login page
+
+    .. py:method:: test_user(test_fn)
+
+        Build a decorator that requires a logged-in user for whom
+        ``test_fn(user)`` is truthy. Other requests are redirected to the
+        login view with ``?next=`` set to the requested url.
+
+    .. py:method:: admin_required(func)
+
+        Decorator equivalent to ``test_user(lambda user: user.admin)``.
+
+    .. py:method:: login()
+
+        The login view. A valid POST calls :py:meth:`~Auth.login_user` and
+        redirects to ``next`` when it is a relative url, else to
+        ``default_next_url``.
+
+    .. py:method:: get_session_token(user)
+
+        Return the user's session token, generating and saving one on first
+        use. Called by :py:meth:`~Auth.login_user` when ``session_field`` is
+        set.
+
+    .. py:method:: revoke_session_token(user)
+
+        Clear the user's session token, which ends every session for that
+        user. Usable outside a request.
 
     .. py:method:: get_user_model()
 
@@ -701,7 +744,7 @@ Auth
 
         ``password`` is added to the ``export_exclude`` of the ``model_admin``
         passed in, along with the ``session_field`` when one is configured.
-        Its ``columns`` are used as-is.
+        Its ``columns`` are used as-is when set.
 
         :param model_admin: subclass of :py:class:`ModelAdmin` to use as the base class
         :rtype: a subclass of :py:class:`ModelAdmin` suitable for use with the ``User`` model
@@ -808,13 +851,13 @@ The BaseUser mixin
 
     .. py:method:: set_password(password)
 
-        Encrypts the given password and stores the encrypted version on the model.
+        Hashes the given password and stores the hash on the model.
         This method is useful when registering a new user and storing the password,
         or modifying the password when a user elects to change.
 
     .. py:method:: check_password(password)
 
-        Verifies if the given plaintext password matches the encrypted version stored
+        Verifies if the given plaintext password matches the hash stored
         on the model. This method on the User model is called specifically by
         the :py:meth:`Auth.authenticate` method.
 
@@ -938,13 +981,16 @@ REST API
         # configure URLs
         api.setup()
 
-    .. note:: Like the flask admin, the ``RestAPI`` has a ``setup()`` method which
-        must be called after all resources have been registered.
-
     :param app: flask application to bind API to
     :param prefix: url to serve REST API from
     :param default_auth: default :py:class:`Authentication` type to use with registered resources
     :param name: the name for the API blueprint
+
+    .. py:attribute:: default_auth
+
+        The :py:class:`Authentication` used for resources registered without
+        ``auth``. Defaults to ``Authentication()``, which rejects every
+        ``POST``, ``PUT``, ``PATCH`` and ``DELETE``.
 
     .. py:method:: register(model[, provider=RestResource[, auth=None[, allowed_methods=None]]])
 
@@ -988,7 +1034,8 @@ RESTful Resources and their subclasses
         # assume we have a "User" model, register it with the custom resource
         api.register(User, UserResource)
 
-    .. py:attribute:: paginate_by = 20
+    .. py:attribute:: paginate_by
+        :value: 20
 
         The default page size for a given API query.
 
@@ -996,15 +1043,18 @@ RESTful Resources and their subclasses
             ``limit``. ``paginate_by`` is only the default, not a maximum.
             Use ``max_paginate_by`` to cap what a client may request.
 
-    .. py:attribute:: max_paginate_by = None
+    .. py:attribute:: max_paginate_by
+        :value: None
 
         When set, caps the page size a client may request with ``limit``.
 
-    .. py:attribute:: fields = None
+    .. py:attribute:: fields
+        :value: None
 
         A list or tuple of fields to expose when serializing
 
-    .. py:attribute:: exclude = None
+    .. py:attribute:: exclude
+        :value: None
 
         A list or tuple of fields to omit when serializing
 
@@ -1016,35 +1066,42 @@ RESTful Resources and their subclasses
 
         A list of fields that can be used to filter the API results
 
-    .. py:attribute:: filter_recursive = False
+    .. py:attribute:: filter_recursive
+        :value: False
 
         Make every column of a related model filterable through its foreign
         key. Off by default, since a filter reveals a column's value even when
         the column is not serialized. List related columns explicitly
         (``user__username``) instead
 
-    .. py:attribute:: max_filter_depth = 3
+    .. py:attribute:: max_filter_depth
+        :value: 3
 
         How many foreign-key hops filtering may traverse into related models
 
-    .. py:attribute:: readonly_fields = None
+    .. py:attribute:: readonly_fields
+        :value: None
 
         A list or tuple of field names that clients may never write. They are
-        stripped from incoming ``POST``/``PUT`` payloads at every level,
-        protecting against mass assignment. The primary key is always
+        stripped from incoming ``POST``/``PUT``/``PATCH`` payloads,
+        protecting against mass assignment. A resource in
+        ``include_resources`` strips its own ``readonly_fields`` from its
+        nested object. The primary key is always
         read-only.
 
-    .. py:attribute:: reject_unknown_fields = False
+    .. py:attribute:: reject_unknown_fields
+        :value: False
 
         When ``True``, a write payload containing unrecognized keys is
         rejected with a 400 listing them, instead of the keys being silently
         ignored. Read-only fields are stripped, not rejected, and a foreign
         key may be written by field name or column name (``user`` / ``user_id``).
 
-    .. py:attribute:: reject_unknown_filters = False
+    .. py:attribute:: reject_unknown_filters
+        :value: False
 
         When ``True``, a query-string filter that matches no filterable field
-        is rejected with a 400 naming it, instead of being silently ignored.
+        is rejected with a 400 listing it, instead of being silently ignored.
         Stray non-filter query parameters get the same 400, so enable this
         only for APIs whose clients send clean query strings.
 
@@ -1085,29 +1142,36 @@ RESTful Resources and their subclasses
               }
             }
 
-    .. py:attribute:: nested_writes = True
+    .. py:attribute:: nested_writes
+        :value: True
 
         Whether a nested object in a write payload may create or update the
         related row. When ``False`` a nested object is ignored, though the
-        foreign key may still be assigned by bare id.
+        foreign key may still be assigned by bare id. A nested write must pass
+        the authentication and ``allowed_methods`` the related model is
+        registered with (see :py:meth:`~RestResource.authorize_nested`).
 
-    .. py:attribute:: allow_bulk = False
+    .. py:attribute:: allow_bulk
+        :value: False
 
         When ``True``, POST also accepts a JSON list of objects, created in
         one transaction. An object that fails validation rolls the whole
-        batch back with a 400 naming its index.
+        batch back with a 400 that gives its index.
 
-    .. py:attribute:: max_bulk = 100
+    .. py:attribute:: max_bulk
+        :value: 100
 
         Maximum number of objects accepted in one bulk POST.
 
-    .. py:attribute:: delete_recursive = True
+    .. py:attribute:: delete_recursive
+        :value: True
 
-        Recursively delete dependencies
+        Recursively delete dependencies. A dependent row whose foreign key is
+        nullable is kept, with the key set to NULL.
 
     .. py:method:: get_query()
 
-        Returns the list of objects to be exposed by the API. Provides an easy
+        Returns the list of objects to be exposed by the API. Provides a
         hook for restricting objects:
 
         .. code-block:: python
@@ -1122,9 +1186,9 @@ RESTful Resources and their subclasses
     .. py:method:: prepare_data(obj, data)
 
         This method provides a hook for modifying outgoing data. The default
-        implementation no-ops, but you could do any kind of munging here. The
-        data returned by this method is passed to the serializer before being
-        returned as a json response.
+        implementation no-ops, but you could modify the data here. The
+        data returned by this method is passed to ``json.dumps`` as is, so it
+        must be JSON-serializable.
 
         :param obj: the object being serialized
         :param data: the dictionary representation of a model returned by the ``Serializer``
@@ -1149,16 +1213,20 @@ RESTful Resources and their subclasses
 
         :rtype: ``Response``
 
-    .. py:method:: api_detail(pk)
+    .. py:method:: api_detail(pk[, method=None])
 
         A view that dispatches based on the HTTP verb to either:
 
         * GET: :py:meth:`~RestResource.object_detail`
-        * PUT, PATCH or POST: :py:meth:`~RestResource.edit`
+        * PUT or PATCH: :py:meth:`~RestResource.edit`
         * DELETE: :py:meth:`~RestResource.delete`
 
-        ``POST /<pk>/delete/`` is also accepted as an alias for DELETE, for
-        clients that cannot issue PUT or DELETE requests.
+        A POST to the detail url is handled as a PUT, and ``POST
+        /<pk>/delete/`` as a DELETE, for clients that cannot issue PUT or
+        DELETE requests. A POST edit needs PUT in ``allowed_methods``, and a
+        POST delete needs DELETE, or the response is a 405. If PUT is protected
+        and POST is not, a POST edit gets a 401. The same goes for DELETE and a
+        POST delete.
 
         :rtype: ``Response``
 
@@ -1169,7 +1237,7 @@ RESTful Resources and their subclasses
 
         :rtype: ``Response``
 
-    .. py:method:: object_detail()
+    .. py:method:: object_detail(obj)
 
         Returns a serialized ``Model`` instance.
 
@@ -1181,14 +1249,14 @@ RESTful Resources and their subclasses
 
         :rtype: ``Response`` containing serialized new object
 
-    .. py:method:: edit()
+    .. py:method:: edit(obj)
 
         Edits an existing ``Model`` instance, updating it with the deserialized
         PUT or PATCH body.
 
         :rtype: ``Response`` containing serialized edited object
 
-    .. py:method:: delete()
+    .. py:method:: delete(obj)
 
         Deletes an existing ``Model`` instance from the database.
 
@@ -1212,15 +1280,18 @@ RESTful Resources and their subclasses
 
     .. py:method:: check_post([obj=None])
 
-        A hook for pre-authorizing a POST request. By default returns ``True``.
-        ``obj`` is provided when the POST addresses an existing object (a
-        detail-url edit or a nested write), and is ``None`` for a create.
+        A hook for pre-authorizing a create, at the list url or nested. By
+        default returns ``True``. ``obj`` is ``None`` at the list url, and the
+        object being created for a nested create.
 
         :rtype: Boolean indicating whether to allow the request to continue
 
     .. py:method:: check_put(obj)
 
-        A hook for pre-authorizing a PUT request. By default returns ``True``.
+        A hook for pre-authorizing an edit, by PUT or by a POST to the detail
+        url. By default returns ``True``. Also runs for a nested edit, on the
+        related row as stored. A nested edit of a row that
+        :py:meth:`~RestResource.get_query` does not return is refused.
 
         :rtype: Boolean indicating whether to allow the request to continue
 
@@ -1237,6 +1308,28 @@ RESTful Resources and their subclasses
 
         :rtype: Boolean indicating whether to allow the request to continue
 
+    .. py:method:: can_authorize(method)
+
+        Returns ``False`` if the authentication protects ``method`` but not
+        the request's method. ``authorize()`` only checks credentials for the
+        request's method, so it would allow the operation without them. Called
+        for a nested write and for a POST to the detail url.
+
+        :param method: an HTTP verb
+        :rtype: Boolean
+
+    .. py:method:: authorize_nested(resource, method)
+
+        Whether a nested write to ``resource``'s model is allowed. ``method``
+        is ``POST`` for a create and ``PUT`` for an edit. Returns ``True`` when
+        the model is not registered with the API. Otherwise the method must be
+        in the registered ``allowed_methods``,
+        :py:meth:`~RestResource.can_authorize` must return ``True`` and the
+        registered authentication must authorize the request. Override to
+        change the policy for nested writes.
+
+        :rtype: Boolean
+
 
 .. py:class:: RestrictOwnerResource(RestResource)
 
@@ -1247,7 +1340,8 @@ RESTful Resources and their subclasses
     Additionally, it sets the "owner" to the authenticated user whenever saving
     or creating new instances.
 
-    .. py:attribute:: owner_field = 'user'
+    .. py:attribute:: owner_field
+        :value: 'user'
 
         Field on the model to use to verify ownership of the given instance.
 
@@ -1272,14 +1366,14 @@ Authenticating requests to the API
 .. py:class:: Authentication([protected_methods=None])
 
     Not to be confused with the :py:class:`Auth` class in ``flask_peewee.auth``,
-    this class provides a single method, ``authorize``, which is used to
-    determine whether to allow a given request to the API.
+    this class provides ``authorize``, which is used to determine whether to
+    allow a given request to the API.
 
     :param protected_methods: A list or tuple of HTTP verbs to require auth for
 
     .. py:method:: authorize()
 
-        This single method is called per-API-request.
+        This method is called per-API-request.
 
         :rtype: Boolean indicating whether to allow the given request through or not
 
@@ -1404,7 +1498,8 @@ Authenticating requests to the API
     :param model: model persisting the tokens
     :param protected_methods: A list or tuple of HTTP verbs to require auth for
 
-    .. py:attribute:: token_field = 'token'
+    .. py:attribute:: token_field
+        :value: 'token'
 
         Name of the column holding the token.
 
@@ -1417,13 +1512,15 @@ Authenticating requests to the API
 .. py:class:: UserBearerAuthentication(model[, protected_methods=None])
 
     :py:class:`BearerAuthentication` that resolves the token to a user and
-    sets ``g.user``, so it works with :py:class:`RestrictOwnerResource`. The
-    token model carries a foreign key to the user in :py:attr:`user_field`.
+    sets ``g.user`` instead of ``g.api_key``, so it works with
+    :py:class:`RestrictOwnerResource`. The token model has a foreign key to the
+    user in :py:attr:`user_field`.
 
-    .. py:attribute:: user_field = 'user'
+    .. py:attribute:: user_field
+        :value: 'user'
 
         Name of the token model's foreign key to the user. Set to ``None``
-        when the token lives on the user model itself.
+        when the token is a field of the user model itself.
 
 
 .. py:class:: HashedBearerAuthentication(model[, protected_methods=None])
@@ -1457,7 +1554,7 @@ Utilities
 
 .. py:function:: get_object_or_404(query_or_model, *query)
 
-    Provides a handy way of getting an object or 404ing if not found, useful
+    Provides a way of getting an object or 404ing if not found, useful
     for urls that match based on ID.
 
     :param query_or_model: a query or model to filter using the given expressions
@@ -1519,7 +1616,8 @@ Utilities
     then fetches one extra row and sets :py:attr:`~PaginatedQuery.has_next`
     instead.
 
-    .. py:attribute:: page_var = 'page'
+    .. py:attribute:: page_var
+        :value: 'page'
 
         The URL variable used to store the current page
 
@@ -1528,7 +1626,8 @@ Utilities
         Whether rows remain beyond the current page. Set by
         :py:meth:`~PaginatedQuery.get_list` when ``use_count=False``
 
-    .. py:attribute:: max_page = 1000000
+    .. py:attribute:: max_page
+        :value: 1000000
 
         Upper bound on the requested page when ``use_count=False`` and there
         is no page count to clamp to
@@ -1545,7 +1644,7 @@ Utilities
 
         pq.get_page() # returns 3
 
-        pq.get_pages() # returns total objects / objects-per-page
+        pq.get_pages() # returns total objects / objects-per-page, rounded up
 
     .. py:method:: get_list()
 

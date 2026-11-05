@@ -3,16 +3,12 @@
 Utilities
 =========
 
-flask-peewee ships with several useful utilities. If you're coming from the
-django world, some of these functions may look familiar to you.
-
-
 Getting objects
 ---------------
 
 :py:func:`get_object_or_404`
 
-    Provides a handy way of getting an object or 404ing if not found, useful
+    Provides a way of getting an object or 404ing if not found, useful
     for urls that match based on ID.
 
     .. code-block:: python
@@ -64,7 +60,7 @@ Getting objects
         
         pq.get_page() # returns 3
         
-        pq.get_pages() # returns total objects / objects-per-page
+        pq.get_pages() # returns total objects / objects-per-page, rounded up
 
         pq.get_count() # total number of matching rows
 
@@ -80,7 +76,7 @@ Misc
 ----
 
 
-.. py:function:: slugify(string)
+.. py:function:: slugify(s)
     :no-index:
 
     Convert a string into something suitable for use as part of a URL,

@@ -31,14 +31,15 @@ following code:
     if __name__ == '__main__':
         app.run()
 
-This isn't very exciting, but we can check out our project by running the app:
+We can check out our project by running the app:
 
 .. code-block:: console
 
     $ python app.py
      * Serving Flask app 'app'
      * Debug mode: off
-     * Running on http://127.0.0.1:5000/
+    WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+     * Running on http://127.0.0.1:5000
     Press CTRL+C to quit
 
 Navigating to the url listed will show a simple 404 page, because we haven't
@@ -95,13 +96,13 @@ Now we can create a model:
 
 .. note::
     The model we created, ``Note``, subclasses ``db.Model``, which in turn is
-    a subclass of ``peewee.Model`` that is pre-configured to talk to our database.
+    a subclass of ``peewee.Model`` that is pre-configured to use our database.
 
 
 Setting up a simple base template
 ---------------------------------
 
-We'll need a simple template to serve as the base template for our app, so create
+We'll want a simple template to serve as the base template for our app, so create
 a folder named ``templates``. In the ``templates`` folder create a file ``base.html``
 and add the following:
 
@@ -121,7 +122,7 @@ Adding users to the site
 ------------------------
 
 Before we can edit these ``Note`` models in the admin, we'll need to have some
-way of authenticating users on the site. This is where :py:class:`Auth` comes in.
+way of authenticating users on the site.
 :py:class:`Auth` provides a ``User`` model and views for logging in and logging out,
 among other things, and is required by the :py:class:`Admin`.
 
@@ -190,7 +191,7 @@ following:
 Managing content using the admin area
 -------------------------------------
 
-Now we're ready to add the admin. Place the following lines of code after
+Place the following lines of code after
 the initialization of the ``Auth`` class:
 
 .. code-block:: python
@@ -203,7 +204,7 @@ the initialization of the ``Auth`` class:
     admin.setup()
 
 
-We now have a functioning admin site! Of course, we'll need a user to log in
+We'll need a user to log in
 with. Run ``flask fp createsuperuser`` (see :ref:`cli`), or open up an
 interactive python shell in the directory alongside the app and run the
 following:
@@ -224,12 +225,12 @@ It should now be possible to:
 
 .. image:: fp-getting-started.png
 
-The dashboard is pretty empty right now. Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/). If you navigate now to the note
+Go ahead and add a few notes (http://127.0.0.1:5000/admin/note/). If you navigate now to the note
 modeladmin you will see something like this:
 
 .. image:: fp-note-admin.png
 
-This is pretty lousy so let's clean it up to display the message and when it was
+Let's clean it up to display the message and when it was
 published. We can do that by customizing the columns displayed. Edit the app with
 the following changes:
 
@@ -268,7 +269,6 @@ The admin supports themes. Here is how to use the ``crux`` theme, for example:
 Exposing content using a REST API
 ---------------------------------
 
-Adding a REST API is very similar to how we added the :py:class:`Admin` interface.
 We will create a :py:class:`RestAPI` object, and then register our project's models
 with it. If we want to customize things, we can subclass :py:class:`RestResource`.
 
@@ -293,7 +293,7 @@ register the ``Note`` model from earlier:
     api.setup()
 
 Assuming your project is still running, try executing the following command (or
-just browse to the url listed):
+browse to the url listed):
 
 .. code-block:: console
 
@@ -353,8 +353,9 @@ our :py:class:`RestAPI`.
     :py:class:`Authentication` class.
 
 To allow users of the site to post notes, we will use the :py:class:`UserAuthentication`
-subclass, which requires that API requests be made with HTTP Basic auth and that the
-auth credentials match those of one of the ``auth.User`` models.
+subclass, which requires that POST, PUT, PATCH and DELETE requests be made with
+HTTP Basic auth and that the auth credentials match those of one of the
+``auth.User`` models.
 
 .. code-block:: python
 
@@ -378,12 +379,5 @@ Now we can post new notes using a command-line tool like curl:
       "created": "2026-07-07T13:43:02.200138"
     }
 
-You can see that it returns a serialized copy of the new ``Note`` object.
-
 .. note::
-    This is a small example of what you can do with the Rest API. Refer to
-    the :ref:`Rest API docs <rest-api>` for more detailed information, including
-
-    * limiting access on a per-model basis
-    * customizing which fields are returned by the API
-    * filtering and querying using GET parameters
+    Refer to the :ref:`Rest API docs <rest-api>` for more detailed information.

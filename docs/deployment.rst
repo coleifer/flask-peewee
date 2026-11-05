@@ -24,12 +24,12 @@ Any WSGI server runs a flask-peewee app. With the tutorial's ``app.py``:
 
 The REST api's basic-auth backends read the ``Authorization`` header. If
 API writes start returning 401 behind a new server or proxy, check that
-the header survives the hop.
+the server or proxy passes the header through.
 
 Behind a proxy
 --------------
 
-When nginx or another proxy fronts the app, trust its forwarded headers
+When the app runs behind nginx or another proxy, trust its forwarded headers
 so redirects and generated urls come out right, including when the app is
 mounted under a path prefix:
 
@@ -37,7 +37,7 @@ mounted under a path prefix:
 
     from werkzeug.middleware.proxy_fix import ProxyFix
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_prefix=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 Sessions
 --------
@@ -52,15 +52,15 @@ Login state is stored in the flask session. Use a long random
     SESSION_COOKIE_SAMESITE = 'Lax'
 
 :py:meth:`Auth.login_user` marks the session permanent, so
-``PERMANENT_SESSION_LIFETIME`` bounds how long a login lasts (flask
+``PERMANENT_SESSION_LIFETIME`` bounds how long an idle login lasts (flask
 defaults it to 31 days). See also ``clear_session`` in
 :ref:`authentication`.
 
 CSRF protection
 ---------------
 
-The form templates, the login page included, carry a hidden
-``_csrf_token`` input wired for
+The form templates, the login page included, contain a hidden
+``_csrf_token`` input for
 `flask-seasurf <https://pypi.org/project/flask-seasurf/>`_:
 
 .. code-block:: python
@@ -71,8 +71,9 @@ The form templates, the login page included, carry a hidden
     csrf.exempt_urls(('/api',))
 
 With SeaSurf initialized, a form post without a valid token is rejected
-with a 403. The REST api authenticates by header rather than by session,
-so exempt its prefix as above, or every API write is rejected too.
+with a 403. The REST api authenticates with credentials sent on each request
+rather than by session, so exempt its prefix as above, or every API write is
+rejected too.
 
 Static files
 ------------

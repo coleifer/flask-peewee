@@ -8,15 +8,11 @@ of the site. It is designed to work out-of-the-box with a simple ``User`` model,
 but can be heavily customized.
 
 The :py:class:`Auth` system is comprised of a single class which is responsible
-for coordinating incoming requests to your project with known users. It provides
-the following:
+for coordinating incoming requests to your project with known users. It provides:
 
 * views for login and logout
 * model to store user data (or you can provide your own)
 * mechanism for identifying users across requests (uses session storage)
-
-All of these pieces can be customized, but the default out-of-box implementation
-aims to provide a good starting place.
 
 The auth system is also designed to work closely with the :ref:`admin-interface`.
 
@@ -68,15 +64,15 @@ initially.
 Requiring specific permissions
 ------------------------------
 
-:py:meth:`Auth.login_required` only checks that someone is logged in. When a
-view should be restricted further, two more decorators are available:
+:py:meth:`Auth.login_required` only checks that someone is logged in. To
+restrict a view further, use:
 
 * :py:meth:`Auth.admin_required` additionally requires the user's ``admin``
   flag to be set.
 * :py:meth:`Auth.test_user` takes a predicate ``fn(user)`` and builds a
   decorator that requires a logged-in user for whom it returns a truthy value.
 
-In fact ``login_required`` and ``admin_required`` are nothing more than
+``login_required`` and ``admin_required`` are nothing more than
 ``test_user(lambda user: True)`` and ``test_user(lambda user: user.admin)``. Use
 ``test_user`` to express any rule you like:
 
@@ -88,7 +84,7 @@ In fact ``login_required`` and ``admin_required`` are nothing more than
         # only reachable by a logged-in user whose is_staff attribute is truthy
         ...
 
-A request that fails the check is redirected to the login view, exactly like
+A request that fails the check is redirected to the login view, like
 ``login_required``.
 
 
@@ -108,7 +104,7 @@ Logging users in and out programmatically
 
 Sometimes you need to establish the session yourself, for instance to log a
 user in immediately after they register. :py:meth:`Auth.login_user` and
-:py:meth:`Auth.logout_user` do exactly that from within a request:
+:py:meth:`Auth.logout_user` do that from within a request:
 
 .. code-block:: python
 
@@ -128,7 +124,7 @@ wipe the entire session too:
     auth = Auth(app, db, clear_session=True)
 
 ``login_user`` marks the session permanent, so
-``PERMANENT_SESSION_LIFETIME`` bounds how long a login lasts (flask
+``PERMANENT_SESSION_LIFETIME`` bounds how long an idle login lasts (flask
 defaults it to 31 days). The auth views flash their outcomes in the
 ``success`` and ``danger`` categories, picked up by any base template
 that renders flashed messages.
@@ -137,9 +133,10 @@ that renders flashed messages.
 Revocable sessions
 ------------------
 
-A login normally lives in the cookie alone, so nothing on the server can
-end it early. Pass ``session_field`` naming a ``CharField`` on the user
-model and each login also carries a token stored on that row:
+A login is normally stored in the cookie alone. Apart from deactivating or
+deleting the user, nothing on the server can end it early. Pass
+``session_field``, the name of a ``CharField`` on the user model, and each
+login's session also holds a token stored on that row:
 
 .. code-block:: python
 
@@ -152,7 +149,7 @@ model and each login also carries a token stored on that row:
 The token is generated on the user's first login and reused after, so all of
 that user's sessions share it. A request counts as logged in only while the
 token in its cookie matches the row. Clearing the field ends every session
-for the user, which is what ``logout_user()`` now does, and what
+for the user, which is what ``logout_user()`` does, and what
 :py:meth:`Auth.revoke_session_token` does from outside a request:
 
 .. code-block:: python
@@ -189,7 +186,7 @@ usernames. The example app's ``/join/`` view shows the uniqueness check.
 Password reset
 --------------
 
-Pass ``reset=True`` to add two more views: ``/forgot/`` accepts an email
+Pass ``reset=True`` to add two more views. ``/forgot/`` accepts an email
 address and sends a signed reset link, and ``/reset/<token>/`` lets the
 holder of a valid link choose a new password. Delivering the email is the
 application's job, so enabling the flag means overriding
@@ -228,7 +225,7 @@ user available in any template:
 Using a custom "User" model
 ---------------------------
 
-It is easy to use your own model for the ``User``, though depending on the amount
+You can use your own model for the ``User``, though depending on the amount
 of changes it may be necessary to override methods in both the :py:class:`Auth` and
 :py:class:`Admin` classes.
 
@@ -236,7 +233,7 @@ Unless you want to override the default behavior of the :py:class:`Auth` class' 
 for actually authenticating users (which you may want to do if relying on a 3rd-party
 for auth), be sure your ``User`` model implements two methods:
 
-* ``set_password(password)``: takes a raw password and stores an encrypted version on model
+* ``set_password(password)``: takes a raw password and stores a hash of it on model
 * ``check_password(password)``: returns whether or not the supplied password matches
   the one stored on the model instance
 
@@ -250,13 +247,11 @@ Here's a simple example of extending the auth system to use a custom user model:
 
 .. code-block:: python
 
-    from flask_peewee.auth import BaseUser # <-- implements set_password and check_password
+    from flask_peewee.auth import BaseUser
 
     app = Flask(__name__)
     db = Database(app)
     
-    # create our custom user model, mixing in BaseUser for the default
-    # "set_password" and "check_password" implementations
     class User(db.Model, BaseUser):
         username = CharField()
         password = CharField()

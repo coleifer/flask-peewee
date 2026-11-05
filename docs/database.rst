@@ -11,18 +11,17 @@ is created for every incoming request, and closed upon request completion. It
 also provides a subclass of ``Model`` which works with the database specified
 in your app's configuration.
 
-Most features of ``flask-peewee`` require a database wrapper, so you very likely
-always create one.
+Most features of ``flask-peewee`` require a database wrapper.
 
 The database wrapper reads its configuration from the Flask application. The
 configuration requires only two arguments, but any additional arguments will
-be passed to the database driver when connecting:
+be passed to the database class:
 
 `name`
     The name of the database to connect to (or filename if using sqlite3)
 
 `engine`
-    The database driver to use, must be a subclass of ``peewee.Database``.
+    The import path of the database class, which must be a subclass of ``peewee.Database``.
 
 .. code-block:: python
 
@@ -121,10 +120,3 @@ To connect to Postgres / MySQL without pool:
         'user': 'db_user',
         'password': 'secret password',
     }
-
-We can specify the database directly, as well:
-
-.. code-block:: python
-
-    pg_db = PostgresqlDatabase('pg_database')
-    db = Database(app, pg_db)
