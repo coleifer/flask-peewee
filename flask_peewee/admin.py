@@ -107,7 +107,8 @@ class ModelAdmin(object):
     columns = None
 
     # set False to skip COUNT(*) on huge tables. the list view then paginates
-    # with prev/next links only and the dashboard and tab counts are hidden.
+    # with prev/next links only, and the dashboard, tab and export page
+    # counts are hidden.
     paginate_count = True
 
     # exclude certian fields from being exposed as filters -- for related fields

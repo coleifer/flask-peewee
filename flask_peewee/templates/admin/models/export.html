@@ -17,7 +17,7 @@
   {% include "admin/includes/filter_widgets.html" %}
 
   <div class="card card-body mb-3">
-    <h4 id="export-summary" class="mb-0">Currently {{ query.count() }} records are scheduled for export <small><a href="#" onclick="document.getElementById('export-details').classList.toggle('d-none'); return false;">details</a></small></h4>
+    <h4 id="export-summary" class="mb-0">{% if model_admin.paginate_count %}Currently {{ query.count() }} records are scheduled for export{% else %}Rows matching the current filters will be exported{% endif %} <small><a href="#" onclick="document.getElementById('export-details').classList.toggle('d-none'); return false;">details</a></small></h4>
     <div id="export-details" class="d-none">
       <pre class="mb-0 mt-3">SQL:
 {{ sql[0] }}

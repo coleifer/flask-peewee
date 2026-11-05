@@ -1290,6 +1290,8 @@ class AdminTestCase(BaseAdminTestCase):
             # counts show by default.
             resp = c.get('/admin/note/')
             self.assertIn(b'Note (1)', resp.data)
+            resp = c.get('/admin/note/export/')
+            self.assertIn(b'Currently 1 records', resp.data)
             resp = c.get('/admin/')
             self.assertEqual(dashboard_count(resp.data, 'note'), b'1')
 
@@ -1304,6 +1306,10 @@ class AdminTestCase(BaseAdminTestCase):
                 resp = c.get('/admin/')
                 self.assertEqual(dashboard_count(resp.data, 'note'), b'')
                 self.assertEqual(dashboard_count(resp.data, 'user'), b'3')
+
+                # the export page does not count either.
+                resp = c.get('/admin/note/export/')
+                self.assertNotIn(b'Currently', resp.data)
             finally:
                 del note_admin.paginate_count
 
