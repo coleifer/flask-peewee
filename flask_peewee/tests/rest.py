@@ -22,6 +22,7 @@ from flask_peewee.tests.test_app import CModel
 from flask_peewee.tests.test_app import Comment
 from flask_peewee.tests.test_app import DModel
 from flask_peewee.tests.test_app import EModel
+from flask_peewee.tests.test_app import Flag
 from flask_peewee.tests.test_app import FModel
 from flask_peewee.tests.test_app import GModel
 from flask_peewee.tests.test_app import HModel
@@ -34,6 +35,7 @@ from flask_peewee.tests.test_app import Message
 from flask_peewee.tests.test_app import Note
 from flask_peewee.tests.test_app import Ping
 from flask_peewee.tests.test_app import Reply
+from flask_peewee.tests.test_app import ScopedItem
 from flask_peewee.tests.test_app import TestModel
 from flask_peewee.tests.test_app import Tweet
 from flask_peewee.tests.test_app import User
@@ -1238,6 +1240,31 @@ class RestApiErrorsTestCase(RestApiTestCase):
         self.assertEqual(resp.headers['WWW-Authenticate'],
                          'Basic realm="Login Required"')
 
+    def test_post_edit_and_delete_follow_allowed_methods(self):
+        # ScopedItem allows GET and POST only.
+        item = ScopedItem.create(label='i')
+        resp = self.app.post('/api/scopeditem/%s/' % item.id,
+                             data=json.dumps({'label': 'edited'}))
+        self.assertJSONError(resp, 405, 'Unsupported method "POST"')
+        resp = self.app.post('/api/scopeditem/%s/delete/' % item.id)
+        self.assertJSONError(resp, 405, 'Unsupported method "POST"')
+        self.assertEqual(ScopedItem.get(ScopedItem.id == item.id).label, 'i')
+
+    def test_post_edit_runs_check_put(self):
+        flag = Flag.create(value=True)
+        for call in (self.app.put, self.app.patch, self.app.post):
+            resp = call('/api/flag/%s/' % flag.id,
+                        data=json.dumps({'value': False}))
+            self.assertEqual(resp.status_code, 403)
+        self.assertTrue(Flag.get(Flag.id == flag.id).value)
+
+    def test_post_delete_follows_protected_methods(self):
+        # Flag protects DELETE only.
+        flag = Flag.create(value=True)
+        resp = self.app.post('/api/flag/%s/delete/' % flag.id)
+        self.assertJSONError(resp, 401, 'Authentication failed')
+        self.assertEqual(Flag.select().count(), 1)
+
 
 class RestApiUserAuthTestCase(RestApiTestCase):
     def setUp(self):
@@ -1513,6 +1540,15 @@ class RestApiUserAuthTestCase(RestApiTestCase):
             del nested.get_query
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(Message.get(Message.id == message.id).content, 'm')
+
+    def test_nested_create_of_owned_row(self):
+        # checked like a create at the list url, then stamped with the
+        # requesting user as owner.
+        resp = self.app.post('/api/reply/', data=json.dumps({
+            'body': 'r', 'message': {'content': 'new'}}),
+            headers=self.auth_headers('normal', 'normal'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Message.get(Message.content == 'new').user, self.normal)
 
     def test_nested_edit_follows_protected_methods(self):
         # Label protects PUT only. The request is a POST, which authorize()

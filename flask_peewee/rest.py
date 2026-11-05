@@ -633,19 +633,27 @@ class RestResource(object):
             return self.create()
 
     def api_detail(self, pk, method=None):
+        # POST /<pk>/ edits and POST /<pk>/delete/ deletes, for clients that
+        # cannot send PUT or DELETE. They follow the rules for PUT and DELETE.
+        if method is None:
+            method = 'PUT' if request.method == 'POST' else request.method
+        if method != request.method:
+            if method not in self.allowed_methods:
+                return self.response_bad_method()
+            if not self.can_authorize(method):
+                return self.api.response_auth_failed()
+
         try:
             obj = self.get_query().where(self.pk==pk).get()
         except self.model.DoesNotExist:
             return self.response_not_found()
-
-        method = method or request.method
 
         if not getattr(self, 'check_%s' % method.lower())(obj):
             return self.response_forbidden()
 
         if method == 'GET':
             return self.object_detail(obj)
-        elif method in ('PUT', 'PATCH', 'POST'):
+        elif method in ('PUT', 'PATCH'):
             return self.edit(obj)
         elif method == 'DELETE':
             return self.delete(obj)
@@ -889,12 +897,6 @@ class RestrictOwnerResource(RestResource):
 
     def set_owner(self, obj, user):
         setattr(obj, self.owner_field, user)
-
-    def check_post(self, obj=None):
-        # a list POST creates a new object (obj is None) and is open, becoming
-        # owned by the caller in save_object. a detail POST edits an existing
-        # object and must clear the same owner check as PUT.
-        return obj is None or self.validate_owner(g.user, obj)
 
     def check_put(self, obj):
         return self.validate_owner(g.user, obj)
